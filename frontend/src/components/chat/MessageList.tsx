@@ -1,7 +1,16 @@
-import { forwardRef, useImperativeHandle, useRef, memo } from "react"
+import { forwardRef, useImperativeHandle, useRef, memo, useMemo } from "react"
 import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso"
 import type { Message } from "../../store/types"
+import { dayKey, formatDateSeparator } from "../../lib/utils"
 import { MessageItem } from "./MessageItem"
+
+const TAG = "date"
+type DateSeparatorEntry = { __t: typeof TAG; label: string; key: string }
+type RowItem = Message | DateSeparatorEntry
+
+function isSep(r: RowItem): r is DateSeparatorEntry {
+  return r != null && (r as DateSeparatorEntry).__t === TAG
+}
 
 interface MessageListProps {
   chatId: string
@@ -54,6 +63,20 @@ const listComponents: Components<Message, ListContext> = {
   Footer: ListFooter,
 }
 
+// WhatsApp-style floating day pill. Rendered inside a message row (rather than
+// as its own Virtuoso row) so the row index stays 1:1 with messages[] — see
+// the local-index conversion in itemContent below.
+const DateSeparator = memo(function DateSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex justify-center py-2 select-none">
+      <span className="rounded-full bg-white/80 dark:bg-white/10 px-3 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 shadow-sm">
+        {label}
+      </span>
+    </div>
+  )
+})
+DateSeparator.displayName = "DateSeparator"
+
 export const MessageList = forwardRef<MessageListHandle, MessageListProps>(function MessageList(
   {
     chatId,
@@ -73,6 +96,42 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
   ref,
 ) {
   const virtuosoRef = useRef<VirtuosoHandle>(null)
+
+  // Walk the messages once and inject a date-separator entry before the first
+  // message of each new day. This is the source of truth for which rows show a
+  // pill; the entries are mapped back onto message indices below so Virtuoso
+  // still renders exactly one row per message.
+  const rows = useMemo<ReadonlyArray<RowItem>>(() => {
+    const out: RowItem[] = []
+    let prevDay = ""
+    for (let i = 0; i < messages.length; i++) {
+      const ts = messages[i]?.Info?.Timestamp
+      const dk = ts ? dayKey(ts) : ""
+      if (dk && dk !== prevDay) {
+        prevDay = dk
+        out.push({ __t: TAG, label: formatDateSeparator(dk), key: `d_${dk}` })
+      }
+      out.push(messages[i])
+    }
+    return out
+  }, [messages])
+
+  // Map each message's index in messages[] to the separator that precedes it.
+  const separatorsByIndex = useMemo<Map<number, DateSeparatorEntry>>(() => {
+    const map = new Map<number, DateSeparatorEntry>()
+    let msgIndex = 0
+    let pending: DateSeparatorEntry | null = null
+    for (const row of rows) {
+      if (isSep(row)) {
+        pending = row
+      } else {
+        if (pending) map.set(msgIndex, pending)
+        pending = null
+        msgIndex++
+      }
+    }
+    return map
+  }, [rows])
 
   useImperativeHandle(
     ref,
@@ -115,29 +174,34 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
       context={{ isLoading }}
       components={listComponents}
       itemContent={(_index, msg) => {
-        // WhatsApp-style grouping: consecutive messages from the same sender
-        // form a run — only the first shows the sender name/avatar, and runs
-        // are separated by a larger gap than messages within a run.
+        // Virtuoso's index is global (firstItemIndex starts at START_INDEX =
+        // 1,000,000), so keep the local-index conversion into messages[] for
+        // every lookup — including the new separator/dayKey lookups. Never
+        // walk rows with the raw Virtuoso index.
         const prev = messages[_index - firstItemIndex - 1]
         const firstInGroup =
           !prev || prev.Info.IsFromMe !== msg.Info.IsFromMe || prev.Info.Sender !== msg.Info.Sender
+        const sep = separatorsByIndex.get(_index - firstItemIndex)
         // No overflow-hidden on the row: hiding one axis forces the other to
         // 'auto', which clips the reaction pills that hang below bubbles.
         // Horizontal overflow is already contained at the panel level.
         return (
-          <div data-message-id={msg.Info.ID} className={firstInGroup ? "pt-2 pb-px" : "py-px"}>
-            <MemoizedMessageItem
-              message={msg}
-              chatId={chatId}
-              firstInGroup={firstInGroup}
-              pinnedIds={pinnedIds}
-              sentMediaCache={sentMediaCache}
-              onReply={onReply}
-              onQuotedClick={onQuotedClick}
-              highlightedMessageId={highlightedMessageId}
-              isAnnounceGroup={isAnnounceGroup}
-            />
-          </div>
+          <>
+            {sep && <DateSeparator key={sep.key} label={sep.label} />}
+            <div data-message-id={msg.Info.ID} className={firstInGroup ? "pt-2 pb-px" : "py-px"}>
+              <MemoizedMessageItem
+                message={msg}
+                chatId={chatId}
+                firstInGroup={firstInGroup}
+                pinnedIds={pinnedIds}
+                sentMediaCache={sentMediaCache}
+                onReply={onReply}
+                onQuotedClick={onQuotedClick}
+                highlightedMessageId={highlightedMessageId}
+                isAnnounceGroup={isAnnounceGroup}
+              />
+            </div>
+          </>
         )
       }}
     />
