@@ -1,3 +1,3 @@
 #!/bin/sh
-./scripts/build -debug
+./scripts/build.sh -debug
 ./build/bin/whats4linux

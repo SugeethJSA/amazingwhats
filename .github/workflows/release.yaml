@@ -1,5 +1,8 @@
 name: Release
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   schedule:
@@ -9,8 +12,54 @@ on:
 env:
   IS_NIGHTLY: ${{ github.event_name == 'schedule' }}
 
+concurrency:
+  group: release-nightly
+  cancel-in-progress: false
+
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check nightly state
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Fetch all tags: a missing `nightly` tag is expected on first run and
+          # is handled by the rev-parse branch below, while a network/auth failure
+          # still fails the job under set -euo pipefail.
+          git fetch origin --tags --force
+
+          if git rev-parse --verify -q nightly >/dev/null; then
+            nightly_sha="$(git rev-list -n 1 nightly)"
+          else
+            nightly_sha=""
+          fi
+
+          if [ "$GITHUB_SHA" = "$nightly_sha" ]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+
     strategy:
       fail-fast: true
       matrix:
@@ -58,7 +107,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.26"
 
       - name: Install Wails
         run: |
@@ -117,13 +166,15 @@ jobs:
           path: build/bin/${{ matrix.binary }}*
 
   publish-nightly:
-    # if: github.event_name == 'schedule'
-    needs: build
+    if: github.event_name == 'schedule' && needs.prepare.outputs.should_build == 'true'
+    needs: [build, prepare]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -132,13 +183,14 @@ jobs:
 
       - name: Update nightly tag
         run: |
-          git tag -f nightly
+          git tag -f nightly "${{ github.sha }}"
           git push -f origin nightly
 
       - name: Publish nightly GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
+          target_commitish: ${{ github.sha }}
           name: Nightly Build
           prerelease: true
           files: dist/**/*
