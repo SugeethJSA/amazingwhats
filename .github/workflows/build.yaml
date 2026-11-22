@@ -34,12 +34,20 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26.5"
+          go-version: "1.27.3"
 
       - name: Install Wails 3
         run: |
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
           echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Verify Wails 3 toolchain
+        run: wails3 doctor
+
+      - name: Verify generated bindings are current
+        run: |
+          wails3 generate bindings -ts
+          git diff --exit-code -- frontend/bindings
 
       - name: Build Wails app
         run: |

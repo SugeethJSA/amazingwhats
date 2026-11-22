@@ -22,7 +22,13 @@ Application lifecycle events use `app.Event.OnApplicationEvent(events.Common.App
 ```ts
 import { Events } from '@wailsio/runtime'
 
-Events.On('update', (data) => { /* ... */ })
+// v3 callbacks receive a WailsEvent wrapper; the payload is `ev.data`.
+// `Events.On` returns an unsubscribe function - keep and call it on teardown.
+const unsubscribe = Events.On('update', (ev) => {
+  const data = ev.data
+  // ...
+})
+// Later: unsubscribe()
 Events.Emit('action', payload)
 ```
 

@@ -59,6 +59,17 @@ tasks:
     cmds:
       - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -ts
 
+  verify:bindings:
+    summary: Regenerate bindings and fail if tracked output is stale (D-AUD-007f)
+    deps:
+      - task: generate:bindings
+    cmds:
+      - git diff --exit-code -- frontend/bindings
+
+  # NOTE (D-AUD-009f): build/windows/installer/{project.nsi,wails_tools.nsh}
+  # are legacy v2 NSIS assets. v3 packaging ships a plain binary + LICENSE zip
+  # from CI; the AGPL license page in project.nsi is retained and must not be
+  # removed until a v3 NSIS path is regenerated and verified.
   generate:icons:
     summary: Generates Windows .ico and macOS .icns from build/appicon.png
     dir: build

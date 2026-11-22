@@ -45,8 +45,8 @@ go test ./...
 wails3 generate bindings
 wails3 doctor
 # frontend
-pnpm install --frozen-lockfile   # or npm ci
-pnpm build && pnpm test -- --run
+npm ci
+npm run build && npm test
 ```
 
 ## Companion skills

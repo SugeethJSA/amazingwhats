@@ -9,9 +9,9 @@ on:
     # Nightly build at 02:00 UTC
     - cron: "0 2 * * *"
 
-env:
-  IS_NIGHTLY: ${{ github.event_name == 'schedule' }}
-
+# D-AUD-009a: nightly status is derived inline from github.event_name at each
+# use site. Never read it from a string-valued env var: "false" is truthy in
+# expression && chains and would stamp manual runs as nightly.
 concurrency:
   group: release-nightly
   cancel-in-progress: false
@@ -118,18 +118,29 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26.5"
+          go-version: "1.27.3"
 
       - name: Install Wails 3
         run: |
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
+      - name: Verify Wails 3 toolchain
+        run: wails3 doctor
+
+      - name: Verify generated bindings are current
+        if: matrix.os == 'ubuntu-24.04'
+        shell: bash
+        run: |
+          wails3 generate bindings -ts
+          git diff --exit-code -- frontend/bindings
+
       - name: Build binaries
         shell: bash
         run: |
+          # D-AUD-009a: gate nightly flags on the event, not on a string env var.
           wails3 build PRODUCTION=true ARCH=amd64 \
-            ${{ env.IS_NIGHTLY && 'LDFLAGS="-s -w -X main.version=v1.0.0 -X main.buildType=nightly"' || '' }}
+            ${{ github.event_name == 'schedule' && 'LDFLAGS="-s -w -X main.version=v1.0.0 -X main.buildType=nightly"' || '' }}
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv bin/whats4linux.exe "bin/${{ matrix.binary }}"
@@ -137,6 +148,16 @@ jobs:
             # Produce bin/whats4linux.app for the ditto step below.
             wails3 task darwin:create:app:bundle
           fi
+
+      - name: Package Windows binary with AGPL license (zip)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # D-AUD-009d: AGPL-3.0 requires the license text to ship with the binary.
+          Copy-Item LICENSE bin/LICENSE
+          $zipName = [System.IO.Path]::GetFileNameWithoutExtension('${{ matrix.binary }}') + '.zip'
+          Compress-Archive -Path "bin/${{ matrix.binary }}", "bin/LICENSE" -DestinationPath "bin/$zipName"
+          Write-Host "Created bin/$zipName"
 
       - name: Download appimagetool
         if: matrix.os == 'ubuntu-24.04'
@@ -175,8 +196,15 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}${{ env.IS_NIGHTLY && '-nightly' || '' }}
+          name: ${{ matrix.artifact }}${{ github.event_name == 'schedule' && '-nightly' || '' }}
           path: bin/${{ matrix.binary }}*
+
+      - name: Upload licensed Windows zip
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-licensed${{ github.event_name == 'schedule' && '-nightly' || '' }}
+          path: bin/whats4linux-windows.zip
 
   publish-nightly:
     if: github.event_name == 'schedule' && needs.prepare.outputs.should_build == 'true'

@@ -16,7 +16,8 @@
       packages = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
-        in { default = pkgs.callPackage ./package.nix { }; }
+        # D-AUD-009b: pass pkgs and the v3 CLI explicitly; no v2 fallback.
+        in { default = pkgs.callPackage ./package.nix { inherit pkgs; wails3 = pkgs.wails3; }; }
       );
 
       devShells = forAllSystems (system:
@@ -29,6 +30,12 @@
         let
           pkgs = import nixpkgs { inherit system; };
 
+          # D-AUD-009b/009g: checks must use the v3 CLI and the GTK4 /
+          # WebKitGTK 6.0 stack, matching package.nix. If the pinned nixpkgs
+          # predates `wails3`, add an override input / overlay that provides it
+          # rather than falling back to v2 `wails`.
+          wails3 = pkgs.wails3;
+
           writableTmpDirAsHomeHook =
             pkgs.writableTmpDirAsHomeHook or pkgs.stdenvNoCC.cc.libc.out;
 
@@ -40,8 +47,11 @@
 
             nativeBuildInputs = with pkgs; [
               go
-              webkitgtk_4_1
-              wails
+              wails3
+              pkg-config
+              gtk4
+              webkitgtk_6_0
+              libsoup_3
               writableTmpDirAsHomeHook
               fontconfig
             ];
@@ -64,7 +74,11 @@
             nativeBuildInputs = with pkgs; [
               golangci-lint
               go
-              wails
+              wails3
+              pkg-config
+              gtk4
+              webkitgtk_6_0
+              libsoup_3
               writableTmpDirAsHomeHook
               fontconfig
             ];

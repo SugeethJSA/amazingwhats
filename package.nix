@@ -1,14 +1,16 @@
 {
   lib,
+  pkgs,
   version ? "0.0.1",
   makeWrapper,
   buildGoModule,
   buildNpmPackage,
   pkg-config,
-  wails,
-  # Wails v3 CLI; override with `wails3 = <v3 CLI derivation>` if `wails`
-  # points at the v2 package. The binary invoked below is `wails3`.
-  wails3 ? wails,
+  # D-AUD-009b: Wails v3 CLI only - there is intentionally no v2 `wails`
+  # fallback. If the pinned nixpkgs does not provide `wails3`, pass a v3 CLI
+  # derivation explicitly (overlay / override input, or `wails3 = <drv>` at
+  # the callPackage site) instead of falling back to the v2 package.
+  wails3 ? pkgs.wails3,
   gtk4,
   pango,
   glib,
@@ -47,6 +49,9 @@ frontend = buildNpmPackage {
       runHook preInstall
       mkdir -p $out
       cp -r dist $out/
+      # D-AUD-009c: expose node_modules so the sandbox build never needs to
+      # reach the npm registry when the Taskfile installs frontend deps.
+      cp -r node_modules $out/
       runHook postInstall
     '';
   };
@@ -89,12 +94,16 @@ buildGoModule {
   
   # Build frontend first
   preBuild = ''
-    # Copy pre-built frontend
+    # D-AUD-009c: copy pre-built assets AND node_modules into the source tree.
+    # The Taskfile's install:frontend:deps task then sees node_modules already
+    # present and skips `npm install`, keeping the Nix sandbox network-free.
     cp -r ${frontend}/dist frontend/
-    
+    rm -rf frontend/node_modules
+    cp -r ${frontend}/node_modules frontend/
+
     # Set up a proper home directory for binding generation
     export HOME=$(mktemp -d)
-    
+
     # v3 build system: Taskfile-driven, GTK4/WebKitGTK6 by default.
     # v3 output is ./bin, not the v2 ./build/bin.
     wails3 build PRODUCTION=true
