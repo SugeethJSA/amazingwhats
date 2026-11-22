@@ -15,6 +15,12 @@ export async function initSelf() {
   }
 }
 
+// Clear the cached identity on logout so isMe() cannot classify a new
+// account's senders against the previous account's phone number.
+export function resetSelf() {
+  myUser = ""
+}
+
 // Whether a reaction sender is us ("me" is the optimistic local marker).
 export function isMe(senderId: string): boolean {
   if (!senderId) return false

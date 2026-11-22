@@ -1122,7 +1122,9 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
 
         updateSingleChat(jid, { avatar: avatarURL })
 
-        if (selectedChatId === jid) {
+        // Read selection from the store at callback time: this listener is
+        // registered once, so the render-time `selectedChatId` would be stale.
+        if (useChatStore.getState().selectedChatId === jid) {
           const existing = getChat(jid)
           if (existing) {
             selectChat({ ...existing, avatar: avatarURL })

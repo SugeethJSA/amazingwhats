@@ -6,15 +6,27 @@ import { useChatStore } from "../store/useChatStore"
 import { useMuteStore } from "../store/useMuteStore"
 
 export function useWailsEvents() {
-  const { addNotification } = useUIStore()
+  const addNotification = useUIStore(s => s.addNotification)
 
   useEffect(() => {
     // 1. Message Read / Receipt Events
     const unsubReceipt = EventsOn(
       "wa:message_receipt",
-      (data: { chatId: string; messageID: string; status: string }) => {
-        if (!data?.chatId || !data?.messageID) return
-        useMessageStore.getState().updateMessageReceipt(data.chatId, data.messageID, data.status)
+      (data: { chatId: string; status: string; messageIDs?: string[]; messageID?: string }) => {
+        if (!data?.chatId || !data?.status) return
+        // The backend's events.Receipt carries every acked id in MessageIDs
+        // (serialized as a string array). Older emitters sent a single
+        // messageID, so keep that path working too.
+        const ids = Array.isArray(data.messageIDs)
+          ? data.messageIDs
+          : data.messageID
+            ? [data.messageID]
+            : []
+        if (ids.length === 0) return
+        const { updateMessageReceipt } = useMessageStore.getState()
+        for (const id of ids) {
+          if (id) updateMessageReceipt(data.chatId, id, data.status)
+        }
       },
     )
 
@@ -29,11 +41,26 @@ export function useWailsEvents() {
     )
 
     // 3. User Online / Offline Presence Events
-    const unsubPresence = EventsOn("wa:presence", (data: { sender: string; status: string }) => {
-      if (!data?.sender) return
-      const isOnline = data.status === "available"
-      useUIStore.getState().setOnlineStatus(data.sender, isOnline)
-    })
+    const unsubPresence = EventsOn(
+      "wa:presence",
+      (data: {
+        jid?: string
+        unavailable?: boolean
+        lastSeen?: number
+        sender?: string
+        status?: string
+      }) => {
+        // Backend emits { jid, unavailable, lastSeen } from events.Presence;
+        // legacy payloads used { sender, status: "available" }.
+        const jid = data?.jid || data?.sender
+        if (!jid) return
+        const isOnline =
+          typeof data.unavailable === "boolean"
+            ? !data.unavailable
+            : data.status === "available"
+        useUIStore.getState().setOnlineStatus(jid, isOnline)
+      },
+    )
 
     // 4. Mute State Updates
     const unsubMuteUpdate = EventsOn(
@@ -47,15 +74,18 @@ export function useWailsEvents() {
     // 5. Poll Vote Events
     const unsubPollVote = EventsOn(
       "wa:poll_vote_submitted",
-      (data: { chatId: string; messageID: string; sender?: string }) => {
+      (data: { chatId: string }) => {
         if (data?.chatId) {
+          // This event is emitted only for our own vote (SendPollVote) and has
+          // no sender field, so the chat-list preview must read "You".
           useChatStore
             .getState()
             .updateChatLastMessage(
               data.chatId,
               "Vote submitted",
               Math.floor(Date.now() / 1000),
-              data.sender || "Someone",
+              "You",
+              true,
             )
         }
       },
@@ -74,20 +104,26 @@ export function useWailsEvents() {
 
     const unsubNewsletterUpdate = EventsOn(
       "wa:newsletter_update",
-      (data: { channelId: string; name?: string }) => {
-        if (data?.channelId && data?.name) {
-          useChatStore.getState().updateSingleChat(data.channelId, { name: data.name })
-        }
+      (data: { jid?: string; channelId?: string; name?: string }) => {
+        // NewsletterLiveUpdate emits { jid }; older payloads used { channelId }.
+        const channelId = data?.jid || data?.channelId
+        if (!channelId || !data?.name) return
+        useChatStore.getState().updateSingleChat(channelId, { name: data.name })
       },
     )
 
     // 7. Label Events
     const unsubLabelChat = EventsOn(
       "wa:label_chat",
-      (data: { chatId: string; labelId: string; labeled: boolean }) => {
-        if (data?.chatId) {
-          useChatStore.getState().updateSingleChat(data.chatId, {})
-        }
+      (data: { jid?: string; labelId?: string; chatId?: string; labeled?: boolean }) => {
+        // Backend emits { jid, labelId }; older payloads used { chatId, labeled }.
+        const chatId = data?.jid || data?.chatId
+        if (!chatId) return
+        const labeled = data?.labeled ?? !!data?.labelId
+        // Labels stay backend-managed and ChatItem has no label field, so no
+        // label state is fabricated here. Touch the labeled chat in place;
+        // remote label changes are otherwise reflected via chat_list_refresh.
+        if (labeled) useChatStore.getState().updateSingleChat(chatId, {})
       },
     )
 

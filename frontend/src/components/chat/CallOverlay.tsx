@@ -13,7 +13,6 @@ import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linu
 import type * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { useChatStore } from "../../store/useChatStore"
 import { formatPhone, phoneFromJID } from "../../lib/utils"
-import { createPortal } from "react-dom"
 
 interface CallState {
   callID: string
@@ -36,7 +35,6 @@ function parseJID(jid: string): { user: string; server: string } {
 export function CallOverlay() {
   const [activeCall, setActiveCall] = useState<CallState | null>(null)
   const [callDuration, setCallDuration] = useState(0)
-  const [isMuted, setIsMuted] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [stats, setStats] = useState<api.CallStats | null>(null)
   const [showAddParticipant, setShowAddParticipant] = useState(false)
@@ -50,7 +48,19 @@ export function CallOverlay() {
   } | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const statsRef = useRef<NodeJS.Timeout | null>(null)
+  // Synchronous mirror of the visible call id. Async contact/profile lookups
+  // compare against it before calling setActiveCall so a slow lookup for a call
+  // that already ended cannot bring back a ghost overlay.
+  const activeCallIDRef = useRef<string | null>(null)
   const chatsById = useChatStore(s => s.chatsById)
+
+  const clearCall = useCallback((callID?: string) => {
+    // When an id is given, only clear that exact call. No id = explicit clear.
+    if (callID && activeCallIDRef.current !== callID) return
+    activeCallIDRef.current = null
+    setActiveCall(null)
+    setCallDuration(0)
+  }, [])
 
   const onDragStart = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -122,11 +132,18 @@ export function CallOverlay() {
 
   useEffect(() => {
     const onCallEvent = (data: any, status: CallState["status"]) => {
+      const callID: string = data.callID
+      if (!callID) return
       const isGroup = !!data.isGroup
       const groupJID = data.groupJID || ""
+      // Claim the call synchronously so a newer call supersedes this one.
+      activeCallIDRef.current = callID
       resolveContact({ peerJID: data.peerJID, isGroup, groupJID }, (name, avatar, participants) => {
+        // The profile/avatar/name awaits above can outlive the call. Never
+        // resurrect a call that ended or was replaced while they were pending.
+        if (activeCallIDRef.current !== callID) return
         setActiveCall({
-          callID: data.callID,
+          callID,
           peerJID: data.peerJID,
           isVideo: data.isVideo,
           isGroup,
@@ -151,27 +168,42 @@ export function CallOverlay() {
 
     const onAccepted = (data: any) => {
       console.log("[VoIP] Call accepted:", data)
-      setActiveCall(prev => (prev ? { ...prev, status: "active" } : null))
+      if (!data?.callID) return
+      // Ignore acceptance of a different (stale) call id.
+      setActiveCall(prev =>
+        prev && prev.callID === data.callID ? { ...prev, status: "active" } : prev,
+      )
     }
 
     const onEnded = (data: any) => {
       console.log("[VoIP] Call ended:", data)
-      setActiveCall(prev => (prev && prev.callID === data.callID ? null : prev))
-      setCallDuration(0)
+      if (!data?.callID) return
+      clearCall(data.callID)
+    }
+
+    const onParticipantAdded = (data: { callID?: string; targetJID?: string }) => {
+      if (!data?.callID) return
+      setActiveCall(prev =>
+        prev && prev.callID === data.callID
+          ? { ...prev, participants: prev.participants + 1 }
+          : prev,
+      )
     }
 
     const offIncoming = EventsOn("call:incoming", onIncoming)
     const offOutgoing = EventsOn("call:outgoing", onOutgoing)
     const offAccepted = EventsOn("call:accepted", onAccepted)
     const offEnded = EventsOn("call:ended", onEnded)
+    const offParticipantAdded = EventsOn("call:participant_added", onParticipantAdded)
 
     return () => {
       offIncoming()
       offOutgoing()
       offAccepted()
       offEnded()
+      offParticipantAdded()
     }
-  }, [])
+  }, [clearCall])
 
   // Call duration timer
   useEffect(() => {
@@ -211,31 +243,35 @@ export function CallOverlay() {
   if (!activeCall) return null
 
   const handleAccept = async () => {
+    const callID = activeCall.callID
     try {
-      await AcceptCall(activeCall.callID)
-      setActiveCall(prev => (prev ? { ...prev, status: "active" } : null))
+      await AcceptCall(callID)
+      if (activeCallIDRef.current !== callID) return
+      setActiveCall(prev => (prev && prev.callID === callID ? { ...prev, status: "active" } : prev))
     } catch (err) {
       console.error("Failed to accept call", err)
-      setActiveCall(null)
+      clearCall(callID)
     }
   }
 
   const handleReject = async () => {
+    const callID = activeCall.callID
     try {
-      await RejectCall(activeCall.callID)
+      await RejectCall(callID)
     } catch (err) {
       console.error("Failed to reject call", err)
     }
-    setActiveCall(null)
+    clearCall(callID)
   }
 
   const handleEnd = async () => {
+    const callID = activeCall.callID
     try {
-      await EndCall(activeCall.callID)
+      await EndCall(callID)
     } catch (err) {
       console.error("Failed to end call", err)
     }
-    setActiveCall(null)
+    clearCall(callID)
   }
 
   const formatTimer = (seconds: number) => {
@@ -346,23 +382,6 @@ export function CallOverlay() {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-center gap-6 w-full pt-1">
-          {activeCall.status !== "ringing" && (
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className={`p-3 rounded-full transition-all duration-150 ${
-                isMuted
-                  ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                  : "bg-white/10 text-gray-300 hover:bg-white/20"
-              }`}
-              title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-              </svg>
-            </button>
-          )}
-
           {activeCall.status === "active" && (
             <button
               onClick={() => {
