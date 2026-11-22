@@ -21,7 +21,7 @@ export interface ChatItem {
   isCommunityParent?: boolean
 }
 
-/** Mirror of the backend's store.DecodedMessageInfo (wailsjs/go/models). */
+/** Mirror of the backend's store.DecodedMessageInfo (generated v3 bindings). */
 export interface DecodedMessageInfo {
   ID: string
   Timestamp: string
