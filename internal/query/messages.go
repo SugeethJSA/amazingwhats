@@ -218,10 +218,13 @@ const (
 	UpdateMutedChatsJID           = `UPDATE muted_chats SET chat_jid = ? WHERE chat_jid = ?;`
 	UpdateReadReceiptsJID         = `UPDATE read_receipts SET chat_jid = ? WHERE chat_jid = ?;`
 
+	// ESCAPE '\' keeps user-supplied %, _ and \ literal so a search for "100%"
+	// or "a_b" does not match every row (D-AUD-005e). The caller escapes the
+	// query with escapeLike() before binding it.
 	SearchMessagesSelect = `
 SELECT m.chat_jid, m.message_id, m.sender_jid, m.timestamp, m.text, m.is_from_me, m.has_media, COALESCE(mm.type, 0), m.edited, m.forwarded
 FROM messages m
 LEFT JOIN message_media mm ON mm.message_id = m.message_id
-WHERE COALESCE(m.text, '') LIKE '%' || ? || '%'
+WHERE COALESCE(m.text, '') LIKE '%' || ? || '%' ESCAPE '\'
 `
 )

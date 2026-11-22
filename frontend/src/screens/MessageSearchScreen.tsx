@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import clsx from "clsx"
 import { SearchMessages, GetSearchSuggestions } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useMessageStore } from "../store"
+import { htmlToPlainText } from "../lib/utils"
 import { GoBackIcon } from "../assets/svgs/header_icons"
 
 interface SearchResult {
@@ -227,7 +228,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
                 {r.is_from_me ? "You" : r.sender_jid.split("@")[0]}
               </span>
               <span className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted truncate">
-                {r.text ||
+                {htmlToPlainText(r.text) ||
                   (r.media_type === 1 ? "🖼 Image" : r.media_type === 2 ? "🎵 Audio" : "[Media]")}
               </span>
             </div>

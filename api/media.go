@@ -164,11 +164,12 @@ func (a *Api) DownloadMedia(chatJID string, messageID string) (string, error) {
 		return "", fmt.Errorf("failed to download media: %v", err)
 	}
 
-	// Save to cache for images and stickers
-	if mediaType == whatsmeow.MediaImage {
-		_, err = a.imageCache.SaveImage(messageID, data, mimeType, width, height)
-		if err != nil {
-			// Log error but continue
+	// Save to cache for images. The cache can be nil during startup/shutdown
+	// (D-AUD-003a), and only a valid image MIME belongs in the image index
+	// (D-AUD-003d) — a non-image would poison GetCachedImage/fetchImageBytes.
+	if mediaType == whatsmeow.MediaImage && a.imageCache != nil && isImageMime(mimeType) {
+		if _, err := a.imageCache.SaveImage(messageID, data, mimeType, width, height); err != nil {
+			log.Printf("[DownloadMedia] failed to cache image for %s: %v", messageID, err)
 		}
 	}
 
@@ -276,10 +277,14 @@ func (a *Api) fetchImageBytes(messageID string) (data []byte, mime string, err e
 		return nil, "", fmt.Errorf("image cache is not ready")
 	}
 	if data, mime, err = a.imageCache.ReadImageByMessageID(messageID); err == nil && len(data) > 0 {
-		if !isImageMime(mime) {
-			return nil, "", fmt.Errorf("cached media for %s is not an image", messageID)
+		if isImageMime(mime) {
+			return data, mime, nil
 		}
-		return data, mime, nil
+		// Self-heal (D-AUD-003d): a corrupt/non-image index row must not
+		// permanently break this message. Discard the cached bytes and fall
+		// through to a fresh download; the SaveImage below uses INSERT OR
+		// REPLACE, so a successful re-download overwrites the bad row.
+		log.Printf("[fetchImageBytes] discarding non-image cached MIME %q for %s", mime, messageID)
 	}
 
 	if a.messageStore == nil {
@@ -355,10 +360,16 @@ func (a *Api) GetCachedAvatar(jid string, recache bool) (string, error) {
 	return a.downloadAvatarFromURL(jid, pic.URL)
 }
 
+// maxAvatarBytes caps how much of a profile photo we read into memory. Avatar
+// URLs are remote and untrusted, so an unbounded ReadAll is a memory-exhaustion
+// risk (D-AUD-003g).
+const maxAvatarBytes = 10 << 20 // 10 MiB
+
 // downloadAvatarFromURL fetches an avatar image from URL, caches it, and
 // returns a data URL. Used by both regular and community avatar paths.
 func (a *Api) downloadAvatarFromURL(jid, url string) (string, error) {
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to download avatar: %w", err)
 	}
@@ -372,13 +383,30 @@ func (a *Api) downloadAvatarFromURL(jid, url string) (string, error) {
 		return "", fmt.Errorf("failed to download avatar: status %d", resp.StatusCode)
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxAvatarBytes+1))
 	if err != nil {
 		return "", fmt.Errorf("failed to read avatar data: %w", err)
 	}
+	if len(data) > maxAvatarBytes {
+		return "", fmt.Errorf("failed to download avatar: image exceeds %d bytes", maxAvatarBytes)
+	}
 
-	mimeType := resp.Header.Get("Content-Type")
-	if mimeType == "" {
+	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+	var mimeType string
+	if contentType != "" {
+		// Never embed a raw, unvalidated Content-Type into a data URL or the
+		// image index (D-AUD-003). Reject parameter-bearing types (e.g.
+		// "image/png; charset=utf-8") instead of silently accepting them, and
+		// reject anything that is not a pure image MIME.
+		if strings.Contains(contentType, ";") {
+			return "", fmt.Errorf("failed to download avatar: unsupported Content-Type %q", contentType)
+		}
+		mimeType = strings.ToLower(contentType)
+		if !isImageMime(mimeType) {
+			return "", fmt.Errorf("failed to download avatar: non-image Content-Type %q", contentType)
+		}
+	} else {
+		// No header: infer from magic bytes, defaulting to JPEG.
 		mimeType = "image/jpeg"
 		if len(data) > 3 {
 			switch {
@@ -390,6 +418,11 @@ func (a *Api) downloadAvatarFromURL(jid, url string) (string, error) {
 				mimeType = "image/webp"
 			}
 		}
+	}
+	// Final guard covers the sniffed path too: only pure image MIMEs may be
+	// cached and turned into a data URL.
+	if !isImageMime(mimeType) {
+		return "", fmt.Errorf("failed to download avatar: unsupported image type %q", mimeType)
 	}
 
 	_, err = a.imageCache.SaveAvatar(jid, data, mimeType)
@@ -445,19 +478,12 @@ func thumbnailDownloadExtension(mime string) string {
 	}
 }
 
-// safeDownloadName derives a safe base filename from the stored media name (or
-// the message ID when no name is available). Path components and control chars
-// are stripped so a malicious name cannot escape the Downloads folder.
-func safeDownloadName(messageID, mime, storedName string) string {
-	ext := thumbnailDownloadExtension(mime)
-	if storedName = strings.TrimSpace(storedName); storedName != "" {
-		base := filepath.Base(storedName)
-		if base != "" && base != "." && base != ".." && !strings.Contains(base, string(filepath.Separator)) {
-			return base
-		}
-	}
-	id := filepath.Base(strings.TrimSpace(messageID))
-	id = strings.Map(func(r rune) rune {
+// sanitizeFileNamePart applies the same strict filename sanitizer to every
+// name component (stored media name and message-ID fallback alike, D-AUD-003f)
+// so control characters and reserved/separator characters can never escape the
+// Downloads folder or produce an unusable path on Windows.
+func sanitizeFileNamePart(s string) string {
+	s = strings.Map(func(r rune) rune {
 		if r < 32 || r == 127 || unicode.IsControl(r) {
 			return '_'
 		}
@@ -466,8 +492,22 @@ func safeDownloadName(messageID, mime, storedName string) string {
 			return '_'
 		}
 		return r
-	}, id)
-	id = strings.Trim(id, " .")
+	}, s)
+	return strings.Trim(s, " .")
+}
+
+// safeDownloadName derives a safe base filename from the stored media name (or
+// the message ID when no name is available). Path components and control chars
+// are stripped so a malicious name cannot escape the Downloads folder.
+func safeDownloadName(messageID, mime, storedName string) string {
+	ext := thumbnailDownloadExtension(mime)
+	if storedName = strings.TrimSpace(storedName); storedName != "" {
+		base := sanitizeFileNamePart(filepath.Base(storedName))
+		if base != "" && base != "." && base != ".." {
+			return base
+		}
+	}
+	id := sanitizeFileNamePart(filepath.Base(strings.TrimSpace(messageID)))
 	if id == "" || id == "." || id == ".." {
 		id = "image"
 	}
@@ -475,6 +515,32 @@ func safeDownloadName(messageID, mime, storedName string) string {
 		id += ext
 	}
 	return id
+}
+
+// safeDownloadNameWithExt is the general-media counterpart of safeDownloadName.
+// It applies the same strict sanitizer to the stored media name (or the message
+// ID fallback) and appends the caller-provided extension, so documents, video
+// and audio keep their real extension instead of the thumbnail path's
+// image-only default. Unlike safeDownloadName, it is not tied to the image
+// cache/thumbnail contract and does not change that helper's behavior.
+func safeDownloadNameWithExt(messageID, extension, storedName string) string {
+	name := ""
+	if storedName = strings.TrimSpace(storedName); storedName != "" {
+		base := sanitizeFileNamePart(filepath.Base(storedName))
+		if base != "" && base != "." && base != ".." {
+			name = base
+		}
+	}
+	if name == "" {
+		name = sanitizeFileNamePart(filepath.Base(strings.TrimSpace(messageID)))
+	}
+	if name == "" || name == "." || name == ".." {
+		name = "download"
+	}
+	if extension != "" && !strings.HasSuffix(strings.ToLower(name), strings.ToLower(extension)) {
+		name += extension
+	}
+	return name
 }
 
 // getFileExtension returns file extension for mimeType
@@ -568,8 +634,9 @@ func playBeep() {
 }
 
 // DownloadMediaToFile downloads any media type (document, video, audio, image) to the filesystem.
-// It streams the download to a temp file (never loading it fully into memory),
-// emits progress events, and prompts the user where to save it.
+// It streams the download to a temp file (never loading it fully into memory)
+// and prompts the user where to save it. Progress events are intentionally not
+// emitted: no frontend listener consumes them (D-AUD-003e).
 func (a *Api) DownloadMediaToFile(messageID string) error {
 	if a.messageStore == nil {
 		return fmt.Errorf("message store is not ready")
@@ -588,7 +655,12 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 	mimeType := msg.Media.GetMimetype()
 	homeDir, _ := os.UserHomeDir()
 	downloadsDir := filepath.Join(homeDir, "Downloads")
-	fileName := messageID + getFileExtension(mimeType)
+	// This is the path MessageMenu actually calls. Never feed the raw IPC
+	// message ID into a filesystem path: it may contain separators or control
+	// characters (D-AUD-003f). Use the general-media helper with the broad
+	// extension mapper so documents/video/audio keep their real extension
+	// (the thumbnail path's safeDownloadName always defaults to .jpg).
+	fileName := safeDownloadNameWithExt(messageID, getFileExtension(mimeType), msg.Media.GetFileName())
 
 	// Stream to a temp file first so downloads never balloon memory.
 	tmp, err := os.CreateTemp("", "whats4linux-dl-*")
@@ -600,34 +672,12 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		_ = os.Remove(tmp.Name())
 	}()
 
-	emitProgress := func(done, total int64) {
-		pct := 0
-		if total > 0 {
-			pct = int(float64(done) / float64(total) * 100)
-		}
-		a.app.Event.Emit("media:download_progress", map[string]any{
-			"messageId":   messageID,
-			"downloaded":  done,
-			"total":       total,
-			"percent":     pct,
-			"destination": "file",
-		})
-	}
-
-	total := int64(msg.Media.GetFileLength())
-	if total <= 0 {
-		total = 0
-	}
-	emitProgress(0, total)
-	dlErr := a.waClient.DownloadToFile(a.ctx, msg.Media, &progressFile{File: tmp, total: total, onWrite: emitProgress})
-	if dlErr != nil {
+	// Stream the decrypted payload straight into the temp file. The previous
+	// "media:download_progress" emits were removed (D-AUD-003e): no frontend
+	// listener consumes that event, so it was orphaned IPC traffic with an
+	// inconsistent total. "download:complete" below is kept intact.
+	if dlErr := a.waClient.DownloadToFile(a.ctx, msg.Media, tmp); dlErr != nil {
 		return fmt.Errorf("failed to download media: %w", dlErr)
-	}
-	// The decrypted payload is a few bytes smaller than the ciphertext, so
-	// report the final (decrypted) size as 100%.
-	info, statErr := tmp.Stat()
-	if statErr == nil {
-		emitProgress(info.Size(), info.Size())
 	}
 
 	filePath, err := a.app.Dialog.SaveFile().
@@ -661,23 +711,4 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
 	playBeep()
 	return nil
-}
-
-// progressFile wraps an *os.File so whatsmeow's DownloadToFile can stream into
-// it while reporting write progress to the frontend.
-type progressFile struct {
-	*os.File
-	total   int64
-	onWrite func(done, total int64)
-}
-
-func (p *progressFile) Write(b []byte) (int, error) {
-	n, err := p.File.Write(b)
-	if err == nil {
-		info, serr := p.File.Stat()
-		if serr == nil {
-			p.onWrite(info.Size(), p.total)
-		}
-	}
-	return n, err
 }

@@ -32,6 +32,34 @@ const mediaRequests = new Map<string, Promise<string>>()
 const THUMB_MISS = "__miss__"
 const PRELOAD_BATCH_LIMIT = 8
 
+// A thumbnail miss is usually transient — the full image may simply not have
+// been downloaded yet. Never park it permanently in the LRU: keep a small,
+// short-TTL negative map instead so the thumbnail is retried after the image
+// lands (D-AUD-003h).
+const THUMB_MISS_TTL_MS = 5_000
+const MAX_THUMB_MISS = 128
+const thumbMissUntil = new Map<string, number>()
+
+function isThumbMiss(id: string): boolean {
+  const until = thumbMissUntil.get(id)
+  if (until === undefined) return false
+  if (Date.now() < until) return true
+  thumbMissUntil.delete(id)
+  return false
+}
+
+function markThumbMiss(id: string) {
+  if (!thumbMissUntil.has(id) && thumbMissUntil.size >= MAX_THUMB_MISS) {
+    const oldest = thumbMissUntil.keys().next().value
+    if (oldest !== undefined) thumbMissUntil.delete(oldest)
+  }
+  thumbMissUntil.set(id, Date.now() + THUMB_MISS_TTL_MS)
+}
+
+function clearThumbMiss(id: string) {
+  thumbMissUntil.delete(id)
+}
+
 function loadMediaOnce(key: string, loader: () => Promise<string>): Promise<string> {
   const existing = mediaRequests.get(key)
   if (existing) return existing
@@ -116,7 +144,10 @@ function pumpPreload() {
   void GetCachedImages(batch)
     .then(map => {
       for (const [id, dataUrl] of Object.entries(map)) {
-        if (dataUrl) imagePathCache.set(id, dataUrl)
+        if (dataUrl) {
+          imagePathCache.set(id, dataUrl)
+          clearThumbMiss(id) // full image is now cached; retry its thumbnail if needed
+        }
       }
     })
     .catch(() => {})
@@ -235,6 +266,7 @@ export function MediaContent({
       if (dataUrl) {
         if (type === "image" || type === "sticker" || isGif) {
           imagePathCache.set(message.Info.ID, dataUrl)
+          clearThumbMiss(message.Info.ID)
         }
         if (mountedRef.current) setMediaSrc(dataUrl)
         return dataUrl
@@ -314,7 +346,8 @@ export function MediaContent({
       !mediaSrc &&
       !imageThumbnailSrc &&
       !id.startsWith("temp-") &&
-      !imageThumbCache.has(id)
+      !imageThumbCache.has(id) &&
+      !isThumbMiss(id)
     if (mediaSrc || (!autoLoads && !wantsThumb)) return
     const el = placeholderRef.current
     if (!el) return
@@ -327,19 +360,21 @@ export function MediaContent({
               type === "image" &&
               !id.startsWith("temp-") &&
               !imageThumbCache.has(id) &&
+              !isThumbMiss(id) &&
               !imagePathCache.has(id)
             ) {
               void loadMediaOnce(`thumb:${id}`, async () => {
                 try {
                   const url = await GetImageThumbnail(id)
-                  imageThumbCache.set(id, url || THUMB_MISS)
-                  return url || THUMB_MISS
+                  if (url) imageThumbCache.set(id, url)
+                  else markThumbMiss(id)
+                  return url
                 } catch {
-                  imageThumbCache.set(id, THUMB_MISS)
-                  return THUMB_MISS
+                  markThumbMiss(id)
+                  return ""
                 }
               }).then(url => {
-                if (url && url !== THUMB_MISS && mountedRef.current) setImageThumbnailSrc(url)
+                if (url && mountedRef.current) setImageThumbnailSrc(url)
               })
             }
             if (autoLoads) void handleDownloadRef.current?.()
@@ -470,25 +505,22 @@ export function MediaContent({
         <video src={mediaSrc} controls className="block w-64 h-64 rounded-lg object-cover" />
       )
     if (type === "audio") {
-      const isPTT = messageBody?.ptt
-      const seconds = messageBody?.seconds ?? 0
-      const minutes = Math.floor(seconds / 60)
-      const secs = seconds % 60
-      const durationStr = `${minutes}:${secs.toString().padStart(2, "0")}`
-      if (isPTT) {
+      if (messageBody?.ptt) {
+        // Voice notes must actually play (D-AUD-003b): the old static mic button
+        // and fake progress bar were dead controls. Keep the mic as a decorative
+        // icon and hand playback to the browser's native audio controls.
         return (
-          <div className="flex items-center gap-3 w-75 h-14 rounded-lg bg-gray-200 dark:bg-gray-800 px-4">
-            <button className="shrink-0 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-              </svg>
-            </button>
-            <div className="flex-1 h-1 bg-gray-400 dark:bg-gray-600 rounded-full overflow-hidden">
-              <div className="w-0 h-full bg-[#21c063] rounded-full" />
-            </div>
-            <span className="text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted tabular-nums shrink-0">
-              {durationStr}
-            </span>
+          <div className="flex items-center gap-2 w-75 h-14 rounded-lg bg-gray-200 dark:bg-gray-800 px-3">
+            <svg
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              className="shrink-0 text-gray-600 dark:text-gray-300 fill-current"
+              aria-hidden="true"
+            >
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
+            <audio src={mediaSrc} controls preload="metadata" className="flex-1 min-w-0 h-10" />
           </div>
         )
       }

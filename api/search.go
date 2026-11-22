@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strings"
 
 	"go.mau.fi/whatsmeow/types"
@@ -32,10 +33,13 @@ func (a *Api) SearchMessages(params SearchParams) ([]SearchResult, error) {
 	if params.Query == "" {
 		return nil, nil
 	}
-	limit := params.Limit
-	if limit <= 0 {
-		limit = 50
+	// Reject non-positive limits (negative LIMIT means "unlimited" in SQLite)
+	// and cap the upper bound so a single call cannot force a huge scan
+	// (D-AUD-005f).
+	if params.Limit <= 0 {
+		return nil, fmt.Errorf("limit must be positive")
 	}
+	limit := min(params.Limit, maxPageSize)
 	offset := max(params.Offset, 0)
 
 	results, err := a.messageStore.SearchMessages(params.Query, params.Type, params.SenderJID, limit, offset)
@@ -63,9 +67,13 @@ func (a *Api) SearchMessages(params SearchParams) ([]SearchResult, error) {
 }
 
 func (a *Api) GetSearchSuggestions(query string, limit int) ([]string, error) {
-	if query == "" || limit <= 0 {
+	if query == "" {
 		return nil, nil
 	}
+	if limit <= 0 {
+		return nil, fmt.Errorf("limit must be positive")
+	}
+	limit = min(limit, maxPageSize)
 	jids, err := a.messageStore.SearchSuggestions(query, limit)
 	if err != nil {
 		return nil, err

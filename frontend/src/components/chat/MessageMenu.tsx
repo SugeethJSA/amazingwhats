@@ -240,7 +240,9 @@ export function MessageMenu({
                 <button
                   onClick={async () => {
                     try {
-                      await DownloadMediaToFile(messageBody.directPath!)
+                      // Binding takes the message ID (D-AUD-003c/007c), not the
+                      // directPath — the backend looks the media up by ID.
+                      await DownloadMediaToFile(messageId)
                     } catch (e) {
                       console.error("DownloadMediaToFile failed:", e)
                     }

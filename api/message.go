@@ -107,7 +107,18 @@ func (a *Api) processMessageText(msg *waE2E.Message) string {
 	return htmlText
 }
 
+// maxPageSize is the hard upper bound for any frontend-supplied page/search
+// limit. A negative limit would become "unlimited" in SQLite (huge scan) and
+// also panics the store's `make([]row, 0, limit)` preallocation (D-AUD-005f).
+const maxPageSize = 200
+
 func (a *Api) FetchMessagesPaged(jid string, limit int, beforeTimestamp int64, beforeMessageID string) ([]store.DecodedMessage, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("limit must be positive")
+	}
+	if limit > maxPageSize {
+		limit = maxPageSize
+	}
 	messages, err := a.messageStore.GetDecodedMessagesPaged(jid, beforeTimestamp, beforeMessageID, limit)
 	if err != nil {
 		return nil, err
@@ -119,12 +130,15 @@ func buildQuotedMessage(msg *store.ExtendedMessage) *waE2E.Message {
 	if msg == nil {
 		return nil
 	}
+	// Stored text is rendered HTML (D-AUD-005d); a quoted preview is sent as
+	// plain WhatsApp text, so strip the markup before embedding it.
+	text := markdown.StripHTML(msg.Text)
 	var quotedMessage waE2E.Message
 	if msg.ReplyToMessageID == "" {
-		quotedMessage.Conversation = proto.String(msg.Text)
+		quotedMessage.Conversation = proto.String(text)
 	} else {
 		quotedMessage.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
-			Text: proto.String(msg.Text),
+			Text: proto.String(text),
 		}
 	}
 
@@ -138,7 +152,7 @@ func buildQuotedMessage(msg *store.ExtendedMessage) *waE2E.Message {
 		quotedMessage.ImageMessage = &waE2E.ImageMessage{
 			URL:           proto.String(msg.Media.GetURL()),
 			Mimetype:      proto.String(msg.Media.GetMimetype()),
-			Caption:       proto.String(msg.Text),
+			Caption:       proto.String(text),
 			FileSHA256:    msg.Media.GetFileSHA256(),
 			Width:         proto.Uint32(uint32(width)),
 			Height:        proto.Uint32(uint32(height)),
@@ -149,7 +163,7 @@ func buildQuotedMessage(msg *store.ExtendedMessage) *waE2E.Message {
 		quotedMessage.VideoMessage = &waE2E.VideoMessage{
 			URL:           proto.String(msg.Media.GetURL()),
 			Mimetype:      proto.String(msg.Media.GetMimetype()),
-			Caption:       proto.String(msg.Text),
+			Caption:       proto.String(text),
 			FileSHA256:    msg.Media.GetFileSHA256(),
 			FileEncSHA256: msg.Media.GetFileEncSHA256(),
 			DirectPath:    proto.String(msg.Media.GetDirectPath()),
@@ -166,7 +180,7 @@ func buildQuotedMessage(msg *store.ExtendedMessage) *waE2E.Message {
 		quotedMessage.DocumentMessage = &waE2E.DocumentMessage{
 			URL:           proto.String(msg.Media.GetURL()),
 			Mimetype:      proto.String(msg.Media.GetMimetype()),
-			Caption:       proto.String(msg.Text),
+			Caption:       proto.String(text),
 			FileSHA256:    msg.Media.GetFileSHA256(),
 			FileEncSHA256: msg.Media.GetFileEncSHA256(),
 			DirectPath:    proto.String(msg.Media.GetDirectPath()),
@@ -701,8 +715,10 @@ func (a *Api) ForwardMessage(sourceJID, messageID, targetJID string) error {
 		}
 	}
 
-	_, err = a.waClient.SendMessage(a.ctx, target, msgContent)
-	if err != nil {
+	// Route through the local-echo helper (D-AUD-005b) so the chat we forwarded
+	// into shows the forwarded message immediately via wa:new_message instead
+	// of waiting for the protocol round-trip to echo it back.
+	if _, err = a.sendAndStoreLocal(target, msgContent, messagePreview(msgContent)); err != nil {
 		return fmt.Errorf("failed to send forwarded message: %v", err)
 	}
 	return nil
@@ -784,6 +800,40 @@ func (a *Api) SetMessagePinned(chatJID, senderJID, messageID string, fromMe, pin
 	}
 	a.app.Event.Emit("wa:pinned_update", map[string]any{"chatId": chatJID})
 	return nil
+}
+
+// messagePreview returns a short label for a built message, used as the
+// chat-list / event preview when synthesizing a local echo (ForwardMessage,
+// SendLocation) that did not go through SendMessage's own extraction.
+func messagePreview(msg *waE2E.Message) string {
+	if msg == nil {
+		return "message"
+	}
+	if text := msg.GetConversation(); text != "" {
+		return text
+	}
+	if etm := msg.GetExtendedTextMessage(); etm != nil && etm.GetText() != "" {
+		return etm.GetText()
+	}
+	switch {
+	case msg.GetImageMessage() != nil:
+		return "image"
+	case msg.GetVideoMessage() != nil:
+		if msg.GetVideoMessage().GetGifPlayback() {
+			return "gif"
+		}
+		return "video"
+	case msg.GetAudioMessage() != nil:
+		return "audio"
+	case msg.GetDocumentMessage() != nil:
+		return "document"
+	case msg.GetStickerMessage() != nil:
+		return "sticker"
+	case msg.GetLocationMessage() != nil:
+		return "📍 Location"
+	default:
+		return "message"
+	}
 }
 
 // sendAndStoreLocal sends a prebuilt message and records it locally so the
@@ -879,6 +929,22 @@ func (a *Api) SendShareContact(chatJID, displayName, phone string) (string, erro
 	return a.sendAndStoreLocal(chat, msg, "👤 "+displayName)
 }
 
+// emitRefreshedMessage emits a wa:new_message carrying the current decoded row
+// for messageID so an open chat updates in place after a locally initiated
+// edit, revoke or delete-for-me (D-AUD-005a). It mirrors the incoming path in
+// api.go, which also emits the refreshed decoded message.
+func (a *Api) emitRefreshedMessage(chatJID, messageID string) {
+	msg, err := a.messageStore.GetDecodedMessage(chatJID, messageID)
+	if err != nil || msg == nil {
+		return
+	}
+	a.app.Event.Emit("wa:new_message", map[string]any{
+		"chatId":   chatJID,
+		"message":  msg,
+		"isFromMe": true,
+	})
+}
+
 // EditMessage replaces the text of a previously-sent message. Only text
 // edits are supported; media message captions can't be edited via this API.
 func (a *Api) EditMessage(chatJID, messageID, newText string) (string, error) {
@@ -897,11 +963,15 @@ func (a *Api) EditMessage(chatJID, messageID, newText string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = a.messageStore.UpdateMessageContent(messageID, &waE2E.Message{Conversation: &plainText}, "")
+	// Persist rendered HTML, not an empty string: the store keeps text as HTML
+	// and the decoded-message shape must match the incoming edit path in api.go.
+	editedHTML := a.processMessageText(&waE2E.Message{Conversation: &plainText})
+	err = a.messageStore.UpdateMessageContent(messageID, &waE2E.Message{Conversation: &plainText}, editedHTML)
 	if err != nil {
 		log.Println("EditMessage: failed to persist edit locally:", err)
 	}
 	a.app.Event.Emit("wa:chat_list_refresh")
+	a.emitRefreshedMessage(chat.String(), messageID)
 	return resp.ID, nil
 }
 
@@ -926,6 +996,7 @@ func (a *Api) RevokeMessage(chatJID, messageID string) error {
 		log.Println("RevokeMessage: failed to mark deleted locally:", err)
 	}
 	a.app.Event.Emit("wa:chat_list_refresh")
+	a.emitRefreshedMessage(chat.String(), messageID)
 	return nil
 }
 
@@ -945,18 +1016,22 @@ func (a *Api) SendLocation(chatJID string, latitude, longitude float64, name str
 			Name:             &name,
 		},
 	}
-	resp, err := a.waClient.SendMessage(a.ctx, chat, locMsg)
+	preview := "📍 Location"
+	if name = strings.TrimSpace(name); name != "" {
+		preview = "📍 " + name
+	}
+	// Local echo + wa:new_message (D-AUD-005b) so an open chat shows the pin.
+	msgID, err := a.sendAndStoreLocal(chat, locMsg, preview)
 	if err != nil {
 		return "", err
 	}
-	msgID := resp.ID
 	slog.Info("Sent location message", "source", "messages", "id", msgID)
 	return msgID, nil
 }
 
 // DeleteForMe removes a message from the local database only. The message
 // remains visible to other chat participants.
-func (a *Api) DeleteForMe(_ string, messageID string) error {
+func (a *Api) DeleteForMe(chatJID string, messageID string) error {
 	if a.waClient.Store.ID == nil {
 		return fmt.Errorf("not logged in")
 	}
@@ -965,5 +1040,6 @@ func (a *Api) DeleteForMe(_ string, messageID string) error {
 		return err
 	}
 	a.app.Event.Emit("wa:chat_list_refresh")
+	a.emitRefreshedMessage(chatJID, messageID)
 	return nil
 }

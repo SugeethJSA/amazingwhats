@@ -949,6 +949,21 @@ func (ms *MessageStore) InsertSystemMessage(chatJID, messageID, text string, tim
 	})
 }
 
+// invalidateChatListCacheForMessage drops the per-chat preview cache entry for
+// the chat owning messageID so the next GetChatList recomputes it from the DB.
+// Both edits (D-AUD-005c) and deletes change the cached preview text.
+func (ms *MessageStore) invalidateChatListCacheForMessage(messageID string) {
+	var chatJID string
+	if err := ms.db.QueryRow(`SELECT chat_jid FROM messages WHERE message_id = ?`, messageID).Scan(&chatJID); err != nil {
+		return
+	}
+	jid, err := types.ParseJID(chatJID)
+	if err != nil {
+		return
+	}
+	ms.chatListMap.Delete(jid.User)
+}
+
 // UpdateMessageContent updates an existing message's content
 func (ms *MessageStore) UpdateMessageContent(messageID string, content *waE2E.Message, parsedHTML string) error {
 
@@ -969,7 +984,7 @@ func (ms *MessageStore) UpdateMessageContent(messageID string, content *waE2E.Me
 		text = parsedHTML
 	}
 
-	return ms.runSync(func(tx *sql.Tx) error {
+	err := ms.runSync(func(tx *sql.Tx) error {
 		_, err := tx.Stmt(ms.stmtUpdateMessage).Exec(
 			text,
 			messageID,
@@ -996,6 +1011,11 @@ func (ms *MessageStore) UpdateMessageContent(messageID string, content *waE2E.Me
 		)
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	ms.invalidateChatListCacheForMessage(messageID)
+	return nil
 }
 
 // GetMessageWithMedia returns a message with its raw protobuf content for media download
@@ -2300,12 +2320,17 @@ func (ms *MessageStore) DeleteChatMessages(chatJID string) error {
 // MarkMessageDeleted replaces a revoked message's content with a deleted
 // marker, mirroring WhatsApp's "This message was deleted".
 func (ms *MessageStore) MarkMessageDeleted(messageID string) error {
-	return ms.runSync(func(tx *sql.Tx) error {
+	err := ms.runSync(func(tx *sql.Tx) error {
 		_, err := tx.Exec(
 			`UPDATE messages SET text = ?, has_media = 0 WHERE message_id = ?`,
 			`<i>🚫 This message was deleted</i>`, messageID)
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	ms.invalidateChatListCacheForMessage(messageID)
+	return nil
 }
 
 // MessageSearchResult holds a raw row from the search query.
@@ -2322,10 +2347,17 @@ type MessageSearchResult struct {
 	Forwarded bool
 }
 
+// escapeLike escapes the LIKE metacharacters so user input is matched
+// literally. SearchMessagesSelect and SearchSuggestions both use ESCAPE '\'.
+func escapeLike(s string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(s)
+}
+
 // SearchMessages searches the messages table with optional filters.
 func (ms *MessageStore) SearchMessages(textQuery string, mediaTypeFilter string, senderFilter string, limit, offset int) ([]MessageSearchResult, error) {
 	q := query.SearchMessagesSelect
-	args := []any{textQuery}
+	args := []any{escapeLike(textQuery)}
 
 	if senderFilter != "" {
 		q += " AND m.sender_jid = ?"
@@ -2386,10 +2418,10 @@ func (ms *MessageStore) SearchMessages(textQuery string, mediaTypeFilter string,
 func (ms *MessageStore) SearchSuggestions(query string, limit int) ([]string, error) {
 	rows, err := ms.db.Query(`
 		SELECT chat_jid FROM messages
-		WHERE COALESCE(text, '') LIKE '%' || ? || '%'
+		WHERE COALESCE(text, '') LIKE '%' || ? || '%' ESCAPE '\'
 		GROUP BY chat_jid
 		ORDER BY MAX(timestamp) DESC
-		LIMIT ?`, query, limit)
+		LIMIT ?`, escapeLike(query), limit)
 	if err != nil {
 		return nil, err
 	}
