@@ -36,12 +36,17 @@ func (a *Api) GenerateMessageID() string {
 	return string(a.waClient.GenerateMessageID())
 }
 
-// RemoveEventHandlers removes all registered event handlers.
+// RemoveEventHandlers removes all registered event handlers. The registration
+// flag must be reset with it, otherwise a later Login believes the internal
+// handler is still attached and never re-registers it.
 func (a *Api) RemoveEventHandlers() {
+	a.lifecycleMu.Lock()
+	defer a.lifecycleMu.Unlock()
 	if a.waClient == nil {
 		return
 	}
 	a.waClient.RemoveEventHandlers()
+	a.eventHandlerSet = false
 	slog.Info("All event handlers removed", "source", "auth")
 }
 

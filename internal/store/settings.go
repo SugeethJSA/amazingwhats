@@ -3,6 +3,8 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"maps"
 	"os"
 	"path/filepath"
@@ -29,6 +31,7 @@ func init() {
 type settings struct {
 	mu   sync.Mutex
 	f    *os.File
+	path string
 	data map[string]any
 }
 
@@ -37,14 +40,32 @@ var settingsInstance = &settings{
 }
 
 func LoadSettings() {
-	var err error
-	settingsInstance.f, err = os.OpenFile(filepath.Join(misc.ConfigDir, "app_settings.json"), os.O_RDWR|os.O_CREATE, 0644)
+	path := filepath.Join(misc.ConfigDir, "app_settings.json")
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		panic(err)
 	}
+	// Restrict as well as create with 0600 so older installs are migrated.
+	misc.RestrictFile(path)
 
-	decoder := json.NewDecoder(settingsInstance.f)
-	_ = decoder.Decode(&settingsInstance.data)
+	settingsInstance.f = f
+	settingsInstance.path = path
+
+	decoder := json.NewDecoder(f)
+	if err := decoder.Decode(&settingsInstance.data); err != nil {
+		if errors.Is(err, io.EOF) {
+			// Empty file on first run: nothing to restore.
+			if settingsInstance.data == nil {
+				settingsInstance.data = make(map[string]any)
+			}
+		} else {
+			// A corrupt/truncated file may have partially populated the map
+			// before failing. Log the real error and start from a clean map;
+			// the next save rewrites the file atomically.
+			log.Printf("store: could not decode %s, using defaults: %v", path, err)
+			settingsInstance.data = make(map[string]any)
+		}
+	}
 	notificationsEnabled.Store(notificationsEnabledFrom(settingsInstance.data))
 }
 
@@ -107,27 +128,70 @@ func notificationsEnabledFrom(data map[string]any) bool {
 	return true
 }
 
-// writeLocked persists the current settings map to disk. The caller must hold
-// settingsInstance.mu.
+// writeLocked persists the current settings map atomically: encode to memory,
+// write a sibling temp file, then rename it over the destination. A crash or
+// encode failure can therefore never leave a truncated settings file behind.
+// The caller must hold settingsInstance.mu.
 func (s *settings) writeLocked() error {
-	if s.f == nil {
+	if s.path == "" {
 		return errors.New("settings store is not initialised")
 	}
 
-	// Truncate the file before writing
-	err := s.f.Truncate(0)
+	buf, err := json.Marshal(s.data)
 	if err != nil {
 		return err
 	}
 
-	// Reset the file offset to the beginning
-	_, err = s.f.Seek(0, 0)
+	tmp, err := os.CreateTemp(filepath.Dir(s.path), ".app_settings-*.tmp")
 	if err != nil {
 		return err
 	}
+	tmpName := tmp.Name()
+	if err := tmp.Chmod(0600); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if _, err := tmp.Write(buf); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return err
+	}
 
-	encoder := json.NewEncoder(s.f)
-	return encoder.Encode(s.data)
+	// Close the destination handle first so the replacement also works on
+	// Windows, where renaming over an open file can be refused.
+	if s.f != nil {
+		if err := s.f.Close(); err != nil {
+			_ = os.Remove(tmpName)
+			return err
+		}
+		s.f = nil
+	}
+	if err := os.Rename(tmpName, s.path); err != nil {
+		_ = os.Remove(tmpName)
+		if f, openErr := os.OpenFile(s.path, os.O_RDWR, 0600); openErr == nil {
+			s.f = f
+		}
+		return err
+	}
+	misc.RestrictFile(s.path)
+
+	// Refresh the kept-open handle so it refers to the live (renamed) file.
+	f, err := os.OpenFile(s.path, os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	s.f = f
+	return nil
 }
 
 func CloseSettings() error {

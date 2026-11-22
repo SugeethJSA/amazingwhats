@@ -5,7 +5,7 @@ import QRCode from "qrcode"
 import { ChatListScreen } from "./screens/ChatScreen"
 import { LoginScreen } from "./screens/LoginScreen"
 import { SettingsScreen } from "./screens/SettingsScreen"
-import { initSelf } from "./lib/self"
+import { initSelf, resetSelf } from "./lib/self"
 import { Lightbox } from "./components/Lightbox"
 import { CallOverlay } from "./components/chat/CallOverlay"
 
@@ -46,7 +46,7 @@ function App() {
       if (anchor) {
         e.preventDefault()
         const href = anchor.getAttribute("href")
-        if (href) BrowserOpenURL(href)
+        if (href) BrowserOpenURL(href).catch(err => console.error("Open URL failed:", err))
       }
     }
     document.addEventListener("click", onClick)
@@ -56,11 +56,11 @@ function App() {
   // Keep the backend informed of window focus so it only notifies when the
   // window is in the background.
   useEffect(() => {
-    const onFocus = () => SetWindowFocused(true)
-    const onBlur = () => SetWindowFocused(false)
+    const onFocus = () => SetWindowFocused(true).catch(err => console.error("SetWindowFocused failed:", err))
+    const onBlur = () => SetWindowFocused(false).catch(err => console.error("SetWindowFocused failed:", err))
     window.addEventListener("focus", onFocus)
     window.addEventListener("blur", onBlur)
-    SetWindowFocused(document.hasFocus())
+    SetWindowFocused(document.hasFocus()).catch(err => console.error("SetWindowFocused failed:", err))
     return () => {
       window.removeEventListener("focus", onFocus)
       window.removeEventListener("blur", onBlur)
@@ -68,23 +68,27 @@ function App() {
   }, [])
 
   useEffect(() => {
-    GetCustomCSS().then(css => {
-      if (css) {
-        const style = document.createElement("style")
-        style.id = "custom-css"
-        style.innerHTML = css
-        document.head.appendChild(style)
-      }
-    })
+    GetCustomCSS()
+      .then(css => {
+        if (css) {
+          const style = document.createElement("style")
+          style.id = "custom-css"
+          style.innerHTML = css
+          document.head.appendChild(style)
+        }
+      })
+      .catch(err => console.error("Failed to load custom CSS:", err))
 
-    GetCustomJS().then(js => {
-      if (js) {
-        const script = document.createElement("script")
-        script.id = "custom-js"
-        script.innerHTML = js
-        document.body.appendChild(script)
-      }
-    })
+    GetCustomJS()
+      .then(js => {
+        if (js) {
+          const script = document.createElement("script")
+          script.id = "custom-js"
+          script.innerHTML = js
+          document.body.appendChild(script)
+        }
+      })
+      .catch(err => console.error("Failed to load custom JS:", err))
   }, [])
 
   useWailsEvents()
@@ -137,7 +141,16 @@ function App() {
         const nid = (window as any).__reconnectNotifId
         if (nid !== undefined) removeNotification(nid)
         delete (window as any).__reconnectNotifId
-        addNotification("Disconnected from WhatsApp")
+        const disconnectNid = addNotification("Disconnected from WhatsApp")
+        setTimeout(() => removeNotification(disconnectNid), 6000)
+      } else if (status === "logged_out") {
+        // The backend confirmed logout (or another device logged us out):
+        // drop any reconnect toast and return to the login screen.
+        const nid = (window as any).__reconnectNotifId
+        if (nid !== undefined) removeNotification(nid)
+        delete (window as any).__reconnectNotifId
+        resetSelf()
+        useUIStore.getState().setScreen("login")
       }
     })
 
@@ -154,11 +167,23 @@ function App() {
       setTimeout(() => removeNotification(nid), 6000)
     })
 
+    // Identity changes are auto-trusted for WhatsApp-Web parity, but must be
+    // visible: use the same toast path as other backend security errors.
+    const unsubIdentity = EventsOn("wa:identity_change", (_msg: string) => {
+      // Do not render the raw payload: it contains a contact JID.
+      const nid = addNotification(
+        "A contact's security code changed. Verify it in WhatsApp on your phone."
+      )
+      setTimeout(() => removeNotification(nid), 8000)
+    })
+
     // Register all status listeners before starting login. Existing sessions
     // can complete quickly enough to otherwise lose the "logged_in" event.
     if (!loginStartedRef.current) {
       loginStartedRef.current = true
-      void Login().catch(err => setStatus(`error: ${String(err)}`))
+      // Never render a raw backend error: it can contain proxy URLs with credentials
+      // or filesystem paths. Details stay in the backend logs only.
+      void Login().catch(() => setStatus("error: Unable to sign in. Please try again."))
     }
 
     const unsubHistory = EventsOn(
@@ -180,6 +205,7 @@ function App() {
       unsubStatus()
       unsubDownload()
       unsubError()
+      unsubIdentity()
       unsubHistory()
     }
   }, [addNotification, removeNotification])

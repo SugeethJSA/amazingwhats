@@ -2,6 +2,7 @@ package settings
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -17,14 +18,25 @@ var s _settings
 
 func init() {
 	defer s.setupEnvVars()
-	b, err := os.ReadFile(
-		filepath.Join(misc.ConfigDir, "settings.json"),
-	)
+
+	// Migrate config files written by older versions with permissive modes.
+	for _, name := range []string{"settings.json", "custom.css", "custom.js"} {
+		misc.RestrictFile(filepath.Join(misc.ConfigDir, name))
+	}
+
+	path := filepath.Join(misc.ConfigDir, "settings.json")
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
-	// fail silently
-	_ = json.Unmarshal(b, &s)
+	// Unmarshal into a temporary value so a malformed file cannot leave the
+	// global settings partially overwritten.
+	var loaded _settings
+	if err := json.Unmarshal(b, &loaded); err != nil {
+		log.Printf("settings: malformed %s, ignoring: %v", path, err)
+		return
+	}
+	s = loaded
 }
 
 func (c *_settings) GetDebug() bool {
@@ -52,11 +64,12 @@ func GetCustomCSS() string {
 }
 
 func SetCustomCSS(css string) error {
-	return os.WriteFile(
-		filepath.Join(misc.ConfigDir, "custom.css"),
-		[]byte(css),
-		0644,
-	)
+	path := filepath.Join(misc.ConfigDir, "custom.css")
+	if err := os.WriteFile(path, []byte(css), 0600); err != nil {
+		return err
+	}
+	misc.RestrictFile(path) // migrate an existing permissive file
+	return nil
 }
 
 func GetCustomJS() string {
@@ -70,9 +83,10 @@ func GetCustomJS() string {
 }
 
 func SetCustomJS(js string) error {
-	return os.WriteFile(
-		filepath.Join(misc.ConfigDir, "custom.js"),
-		[]byte(js),
-		0644,
-	)
+	path := filepath.Join(misc.ConfigDir, "custom.js")
+	if err := os.WriteFile(path, []byte(js), 0600); err != nil {
+		return err
+	}
+	misc.RestrictFile(path) // migrate an existing permissive file
+	return nil
 }

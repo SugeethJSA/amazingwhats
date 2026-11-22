@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -191,6 +192,16 @@ func (a *Api) resyncAppState() {
 // Stops when the app shuts down (isShuttingDown returns true) or after
 // maxAttempts failed tries.
 func (a *Api) reconnectLoop() {
+	// After a logout the device store is deleted (Store.ID == nil). Never
+	// start (or keep) a reconnect loop against deleted credentials.
+	a.lifecycleMu.Lock()
+	clientAtStart := a.waClient
+	loggedOut := clientAtStart == nil || clientAtStart.Store.ID == nil
+	a.lifecycleMu.Unlock()
+	if loggedOut {
+		return
+	}
+
 	a.app.Event.Emit("wa:status", "reconnecting")
 	backoff := 2 * time.Second
 	maxBackoff := 30 * time.Second
@@ -206,7 +217,7 @@ func (a *Api) reconnectLoop() {
 		slog.Info(fmt.Sprintf("Attempt %d/8...", i+1), "source", "reconnect")
 		a.loginMu.Lock()
 		client := a.waClient
-		if client == nil {
+		if client == nil || client.Store.ID == nil {
 			a.loginMu.Unlock()
 			return
 		}
@@ -320,6 +331,11 @@ func (a *Api) startConnectionHealthCheck() {
 		a.lifecycleMu.Unlock()
 		return
 	}
+	// A stale Connected event must not restart monitoring after logout.
+	if a.waClient == nil || a.waClient.Store.ID == nil {
+		a.lifecycleMu.Unlock()
+		return
+	}
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.healthCheckCtx = cancel
 	a.lifecycleMu.Unlock()
@@ -381,6 +397,19 @@ func (a *Api) stopConnectionHealthCheck() {
 	if cancel != nil {
 		cancel()
 		a.healthCheckWg.Wait()
+	}
+}
+
+// clearLoginState cancels and clears an in-flight login context so no QR
+// waiter can outlive a logout. The caller may hold loginMu; only lifecycleMu
+// is taken here, so it is safe to call from Logout and from event handling.
+func (a *Api) clearLoginState() {
+	a.lifecycleMu.Lock()
+	cancel := a.loginCancel
+	a.loginCancel = nil
+	a.lifecycleMu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
@@ -504,6 +533,9 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		a.failStartup(fmt.Errorf("upgrade WhatsApp session database: %w", err))
 		return nil
 	}
+	// The session DB holds long-lived WhatsApp credentials. Restrict it once
+	// the file exists, tightening older installs on every start as well.
+	misc.RestrictFile(filepath.Join(misc.ConfigDir, "session.wa"))
 	a.waClient, err = wa.NewClient(ctx, container)
 	if err != nil {
 		a.failStartup(fmt.Errorf("create WhatsApp client: %w", err))
@@ -804,8 +836,9 @@ func (a *Api) mainEventHandler(evt any) {
 		}
 	case *events.Receipt:
 		a.app.Event.Emit("wa:message_receipt", map[string]any{
-			"chatId": v.Chat.String(),
-			"status": v.Type.GoString(),
+			"chatId":     v.Chat.String(),
+			"status":     v.Type.GoString(),
+			"messageIDs": v.MessageIDs,
 		})
 	case *events.Contact:
 		action := v.Action
@@ -824,7 +857,14 @@ func (a *Api) mainEventHandler(evt any) {
 			"media":  string(v.Media),
 		})
 	case *events.IdentityChange:
-		slog.Info(fmt.Sprintf("Identity change for %s", v.JID), "source", "security")
+		// AutoTrustIdentity stays enabled for WhatsApp-Web parity, but the
+		// change must never be silent: surface a dedicated, user-visible
+		// security warning (frontend shows it through the toast path).
+		slog.Info(fmt.Sprintf("Identity change for %s (implicit=%t)", v.JID, v.Implicit), "source", "security")
+		a.app.Event.Emit("wa:identity_change", fmt.Sprintf(
+			"Security warning: identity verification failed for %s — their encryption key changed. If unexpected, verify this contact out of band.",
+			v.JID.String(),
+		))
 	case *events.Presence:
 		a.app.Event.Emit("wa:presence", map[string]any{
 			"jid":         v.From.String(),
@@ -866,7 +906,12 @@ func (a *Api) mainEventHandler(evt any) {
 
 	case *events.LoggedOut:
 		slog.Warn("Logged out from another device", "source", "connection")
-		a.app.Event.Emit("wa:logged_out")
+		// Same teardown as an explicit Logout(): no health checks, no pending
+		// login, no reconnect against a session that no longer exists.
+		a.stopConnectionHealthCheck()
+		a.clearLoginState()
+		a.app.Event.Emit("wa:logged_out")           // legacy listeners
+		a.app.Event.Emit("wa:status", "logged_out") // handled status for the UI
 
 	case *events.ConnectFailure:
 		slog.Error(fmt.Sprintf("Connection attempt failed: %s", v.Reason), "source", "connection")
