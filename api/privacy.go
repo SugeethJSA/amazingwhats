@@ -1,14 +1,39 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"log/slog"
+	"strings"
 	"time"
 
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
+
+// redactJID returns a log-safe, non-reversible representation of a JID: a
+// short hash of the full identifier plus its (non-personal) server/domain.
+// This keeps diagnostics correlatable without exposing phone numbers or LIDs.
+func redactJID(jid string) string {
+	if jid == "" {
+		return "<empty>"
+	}
+	server := ""
+	if i := strings.LastIndexByte(jid, '@'); i >= 0 {
+		server = jid[i+1:]
+	}
+	sum := sha256.Sum256([]byte(jid))
+	digest := hex.EncodeToString(sum[:])
+	if len(digest) > 8 {
+		digest = digest[:8]
+	}
+	if server == "" {
+		return digest
+	}
+	return digest + "@" + server
+}
 
 type PrivacySettingsResponse struct {
 	GroupAdd     string `json:"group_add"`
@@ -109,7 +134,7 @@ func (a *Api) BlockContact(jidStr string) error {
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprintf("Blocked %s", jid), "source", "contacts")
+	slog.Info("Blocked contact", "source", "contacts", "jid", redactJID(jid.String()))
 	return nil
 }
 
@@ -127,7 +152,7 @@ func (a *Api) UnblockContact(jidStr string) error {
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprintf("Unblocked %s", jid), "source", "contacts")
+	slog.Info("Unblocked contact", "source", "contacts", "jid", redactJID(jid.String()))
 	return nil
 }
 
@@ -146,7 +171,7 @@ func (a *Api) SetDisappearingTimer(chatJID string, timerSeconds int64) error {
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprintf("Set disappearing timer for %s to %ds", chatJID, timerSeconds), "source", "chats")
+	slog.Info("Set disappearing timer", "source", "chats", "jid", redactJID(chatJID), "timer_seconds", timerSeconds)
 	return nil
 }
 
@@ -205,6 +230,6 @@ func (a *Api) TryFetchPrivacySettings(ignoreCache bool) (PrivacySettingsResponse
 
 // handleBlocklistEvent processes a blocklist mutation from app state sync.
 func (a *Api) handleBlocklistEvent(evt *events.Blocklist) {
-	log.Printf("Blocklist changed: %+v", evt)
+	log.Printf("[Privacy] Blocklist changed: %d changes, action=\"%s\"", len(evt.Changes), evt.Action)
 	a.app.Event.Emit("wa:chat_list_refresh")
 }

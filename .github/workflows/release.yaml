@@ -150,6 +150,9 @@ jobs:
           mkdir -p packaging/AppImage/AppDir/usr/bin
           mv bin/whats4linux packaging/AppImage/AppDir/usr/bin/whats4linux
           chmod +x packaging/AppImage/AppDir/usr/bin/*
+          # Ship the AGPL-3.0 license text inside the AppDir as required by the license.
+          mkdir -p packaging/AppImage/AppDir/usr/share/licenses/whats4linux
+          cp LICENSE packaging/AppImage/AppDir/usr/share/licenses/whats4linux/LICENSE
           cd packaging/AppImage/AppDir
           for f in .DirIcon whats4linux.desktop whats4linux.png; do
             if [ -L "$f" ]; then cp -L "$f" "$f.tmp" && mv "$f.tmp" "$f"; fi
@@ -161,6 +164,9 @@ jobs:
       - name: Zip macOS bundle
         if: matrix.os == 'macos-latest'
         run: |
+          # Include the AGPL-3.0 license text inside the .app bundle.
+          mkdir -p bin/whats4linux.app/Contents/Resources
+          cp LICENSE bin/whats4linux.app/Contents/Resources/LICENSE
           cd bin
           ditto -c -k --sequesterRsrc --keepParent \
             whats4linux.app \

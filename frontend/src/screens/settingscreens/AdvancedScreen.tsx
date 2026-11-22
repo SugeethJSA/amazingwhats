@@ -217,8 +217,9 @@ const AdvancedScreen = () => {
               try {
                 await SetProxy(proxyURL)
                 setProxyResult("Proxy set!")
-              } catch (err) {
-                setProxyResult(String(err))
+              } catch {
+                // Do not surface the raw error string: proxy URLs can embed credentials.
+                setProxyResult("Failed to set proxy. Check the URL and try again.")
               } finally {
                 setProxyBusy(false)
               }
@@ -254,7 +255,7 @@ const AdvancedScreen = () => {
                 await FetchStickerPack(stickerPackID.trim())
                 setStickerResult("Fetched pack successfully")
               } catch (err) {
-                setStickerResult(String(err))
+                setStickerResult("Failed to fetch sticker pack. Check the ID and try again.")
               } finally {
                 setStickerBusy(false)
               }

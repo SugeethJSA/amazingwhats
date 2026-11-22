@@ -502,8 +502,6 @@ func (a *Api) SendMessage(chatJID string, content MessageContent) (string, error
 		return "", fmt.Errorf("unsupported message type: %s", content.Type)
 	}
 
-	log.Printf("SendMessage Content: %+v\n", msgContent)
-
 	resp, err := a.waClient.SendMessage(a.ctx, parsedJID, msgContent)
 	if err != nil {
 		log.Println("SendMessage error:", err)
@@ -952,7 +950,7 @@ func (a *Api) SendLocation(chatJID string, latitude, longitude float64, name str
 		return "", err
 	}
 	msgID := resp.ID
-	slog.Info(fmt.Sprintf("Sent location to %s (%.4f, %.4f) id=%s", chatJID, latitude, longitude, msgID), "source", "messages")
+	slog.Info("Sent location message", "source", "messages", "id", msgID)
 	return msgID, nil
 }
 

@@ -21,7 +21,7 @@ func (a *Api) SetStatusMessage(text string) error {
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprintf("Set status message to %q", text), "source", "profile")
+	slog.Info("Status message updated", "source", "profile", "text_len", len(text))
 	return nil
 }
 

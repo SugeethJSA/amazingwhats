@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           The app hit an unexpected error and could not continue rendering.
         </p>
         <pre className="max-w-full overflow-auto rounded bg-gray-100 dark:bg-dark-tertiary px-4 py-2 text-xs text-red-600 dark:text-red-400">
-          {error.message}
+          An unexpected error occurred. Details have been logged.
         </pre>
         <div className="flex gap-3">
           <button

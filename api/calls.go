@@ -91,7 +91,7 @@ func (a *Api) initMeowcaller() {
 
 	// Handle incoming calls
 	a.callClient.OnIncomingCall(func(call *meowcaller.Call) {
-		log.Printf("[Calls] Incoming call from %s (CallID: %s)", call.Peer().String(), call.ID())
+		log.Printf("[Calls] Incoming call from %s (CallID: %s)", redactJID(call.Peer().String()), call.ID())
 		now := time.Now()
 		_, isGroup := call.GroupState()
 		callsMu.Lock()
@@ -182,7 +182,7 @@ func (a *Api) MakeCall(targetJID string) error {
 	ctx := context.Background()
 	call, err := a.callClient.Call(ctx, targetJID)
 	if err != nil {
-		log.Printf("[Calls] Failed to initiate call to %s: %v", targetJID, err)
+		log.Printf("[Calls] Failed to initiate call to %s: %v", redactJID(targetJID), err)
 		return fmt.Errorf("failed to make call: %v", err)
 	}
 
@@ -198,7 +198,7 @@ func (a *Api) MakeGroupCall(groupJID string) error {
 	ctx := context.Background()
 	call, err := a.callClient.GroupCallByID(ctx, groupJID)
 	if err != nil {
-		log.Printf("[Calls] Failed to initiate group call to %s: %v", groupJID, err)
+		log.Printf("[Calls] Failed to initiate group call to %s: %v", redactJID(groupJID), err)
 		return fmt.Errorf("failed to make group call: %v", err)
 	}
 
@@ -208,7 +208,7 @@ func (a *Api) MakeGroupCall(groupJID string) error {
 // trackOutgoingCall registers an outbound call with meowcaller's callbacks and
 // wires the audio bridge, shared by MakeCall and MakeGroupCall.
 func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string, isGroup bool) error {
-	log.Printf("[Calls] Outbound call placed to %s (CallID: %s)", peerJID, call.ID())
+	log.Printf("[Calls] Outbound call placed to %s (CallID: %s)", redactJID(peerJID), call.ID())
 	now := time.Now()
 	callsMu.Lock()
 	activeCalls[call.ID()] = &ActiveCall{
@@ -294,10 +294,10 @@ func (a *Api) AddCallParticipant(callID, targetJID string) error {
 		return fmt.Errorf("call %s not found", callID)
 	}
 	if err := ac.Call.AddParticipant(context.Background(), targetJID); err != nil {
-		log.Printf("[Calls] Failed to add %s to call %s: %v", targetJID, callID, err)
+		log.Printf("[Calls] Failed to add %s to call %s: %v", redactJID(targetJID), callID, err)
 		return fmt.Errorf("failed to add participant: %v", err)
 	}
-	log.Printf("[Calls] Invited %s to call %s", targetJID, callID)
+	log.Printf("[Calls] Invited %s to call %s", redactJID(targetJID), callID)
 	if a.ctx != nil {
 		a.app.Event.Emit("call:participant_added", map[string]any{
 			"callID":    callID,
