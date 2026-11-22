@@ -1,0 +1,635 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T10:19:48Z",
+  "title": "Design System: Whats4Linux",
+  "extensions": {
+    "colorMeta": {
+      "signal-green": {
+        "role": "primary",
+        "displayName": "Signal Green",
+        "canonical": "#21c063",
+        "tonalRamp": [
+          "#062312",
+          "#0d4926",
+          "#14773d",
+          "#1b9d51",
+          "#21c063",
+          "#4dcd82",
+          "#85dca9",
+          "#bcecd0"
+        ]
+      },
+      "signal-green-deep": {
+        "role": "primary",
+        "displayName": "Signal Green Deep",
+        "canonical": "#1b9a58",
+        "tonalRamp": [
+          "#051c10",
+          "#0a3b21",
+          "#115f37",
+          "#167e48",
+          "#1b9a58",
+          "#49ae79",
+          "#82c7a3",
+          "#bbe1cd"
+        ]
+      },
+      "signal-green-hover": {
+        "role": "primary",
+        "displayName": "Signal Green Hover",
+        "canonical": "#1ea952",
+        "tonalRamp": [
+          "#051e0f",
+          "#0b401f",
+          "#136933",
+          "#198b43",
+          "#1ea952",
+          "#4bba75",
+          "#83d0a0",
+          "#bce5cb"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#000000",
+          "#000000",
+          "#000000",
+          "#000000",
+          "#000000",
+          "#333333",
+          "#737373",
+          "#b3b3b3"
+        ]
+      },
+      "charcoal": {
+        "role": "neutral",
+        "displayName": "Charcoal",
+        "canonical": "#121212",
+        "tonalRamp": [
+          "#030303",
+          "#070707",
+          "#0b0b0b",
+          "#0f0f0f",
+          "#121212",
+          "#414141",
+          "#7d7d7d",
+          "#b8b8b8"
+        ]
+      },
+      "slate": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#1a1a1a",
+        "tonalRamp": [
+          "#050505",
+          "#0a0a0a",
+          "#101010",
+          "#151515",
+          "#1a1a1a",
+          "#484848",
+          "#818181",
+          "#bababa"
+        ]
+      },
+      "lift": {
+        "role": "neutral",
+        "displayName": "Lift",
+        "canonical": "#242424",
+        "tonalRamp": [
+          "#060606",
+          "#0e0e0e",
+          "#161616",
+          "#1e1e1e",
+          "#242424",
+          "#505050",
+          "#878787",
+          "#bdbdbd"
+        ]
+      },
+      "ink-text": {
+        "role": "neutral",
+        "displayName": "Ink Text",
+        "canonical": "#f0f2f5",
+        "tonalRamp": [
+          "#2b2c2c",
+          "#5b5c5d",
+          "#959698",
+          "#c5c6c9",
+          "#f0f2f5",
+          "#f3f5f7",
+          "#f7f8fa",
+          "#fbfbfc"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#8696a0",
+        "tonalRamp": [
+          "#181b1d",
+          "#33393d",
+          "#535d63",
+          "#6e7b83",
+          "#8696a0",
+          "#9eabb3",
+          "#bcc5cb",
+          "#dbe0e3"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#2e2e2e",
+          "#616161",
+          "#9e9e9e",
+          "#d1d1d1",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "paper-secondary": {
+        "role": "neutral",
+        "displayName": "Paper Secondary",
+        "canonical": "#f0f2f5",
+        "tonalRamp": [
+          "#2b2c2c",
+          "#5b5c5d",
+          "#959698",
+          "#c5c6c9",
+          "#f0f2f5",
+          "#f3f5f7",
+          "#f7f8fa",
+          "#fbfbfc"
+        ]
+      },
+      "paper-tertiary": {
+        "role": "neutral",
+        "displayName": "Paper Tertiary",
+        "canonical": "#e9edef",
+        "tonalRamp": [
+          "#2a2b2b",
+          "#595a5b",
+          "#909394",
+          "#bfc2c4",
+          "#e9edef",
+          "#edf1f2",
+          "#f3f5f6",
+          "#f8fafa"
+        ]
+      },
+      "paper-primary": {
+        "role": "secondary",
+        "displayName": "Paper Teal",
+        "canonical": "#00a884",
+        "tonalRamp": [
+          "#001e18",
+          "#004032",
+          "#006852",
+          "#008a6c",
+          "#00a884",
+          "#33b99d",
+          "#73cfbb",
+          "#b3e5da"
+        ]
+      },
+      "paper-text": {
+        "role": "neutral",
+        "displayName": "Paper Text",
+        "canonical": "#111b21",
+        "tonalRamp": [
+          "#030506",
+          "#060a0d",
+          "#0b1114",
+          "#0e161b",
+          "#111b21",
+          "#41494d",
+          "#7c8285",
+          "#b8bbbc"
+        ]
+      },
+      "paper-muted": {
+        "role": "neutral",
+        "displayName": "Paper Muted",
+        "canonical": "#667781",
+        "tonalRamp": [
+          "#121517",
+          "#272d31",
+          "#3f4a50",
+          "#54626a",
+          "#667781",
+          "#85929a",
+          "#abb4ba",
+          "#d1d6d9"
+        ]
+      },
+      "sent-bubble": {
+        "role": "neutral",
+        "displayName": "Sent Bubble",
+        "canonical": "#d9fdd3",
+        "tonalRamp": [
+          "#272e26",
+          "#526050",
+          "#879d83",
+          "#b2cfad",
+          "#d9fdd3",
+          "#e1fddc",
+          "#eafee7",
+          "#f4fef2"
+        ]
+      },
+      "sent-bubble-dark": {
+        "role": "neutral",
+        "displayName": "Sent Bubble Dark",
+        "canonical": "#0b3d2b",
+        "tonalRamp": [
+          "#020b08",
+          "#041710",
+          "#07261b",
+          "#093223",
+          "#0b3d2b",
+          "#3c6455",
+          "#79948a",
+          "#b6c5bf"
+        ]
+      },
+      "received-bubble": {
+        "role": "neutral",
+        "displayName": "Received Bubble",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#2e2e2e",
+          "#616161",
+          "#9e9e9e",
+          "#d1d1d1",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "received-bubble-dark": {
+        "role": "neutral",
+        "displayName": "Received Bubble Dark",
+        "canonical": "#121212",
+        "tonalRamp": [
+          "#030303",
+          "#070707",
+          "#0b0b0b",
+          "#0f0f0f",
+          "#121212",
+          "#414141",
+          "#7d7d7d",
+          "#b8b8b8"
+        ]
+      },
+      "chat-wallpaper": {
+        "role": "neutral",
+        "displayName": "Chat Wallpaper",
+        "canonical": "#efeae2",
+        "tonalRamp": [
+          "#2b2a29",
+          "#5b5956",
+          "#94918c",
+          "#c4c0b9",
+          "#efeae2",
+          "#f2eee8",
+          "#f6f3ef",
+          "#faf9f6"
+        ]
+      },
+      "action-ink": {
+        "role": "neutral",
+        "displayName": "Action Ink",
+        "canonical": "#0a1014",
+        "tonalRamp": [
+          "#020304",
+          "#040608",
+          "#060a0c",
+          "#080d10",
+          "#0a1014",
+          "#3b4043",
+          "#787c7e",
+          "#b6b7b9"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Danger",
+        "canonical": "#ef4444",
+        "tonalRamp": [
+          "#2b0c0c",
+          "#5b1a1a",
+          "#942a2a",
+          "#c43838",
+          "#ef4444",
+          "#f26969",
+          "#f69898",
+          "#fac7c7"
+        ]
+      },
+      "link-blue": {
+        "role": "tertiary",
+        "displayName": "Link Blue",
+        "canonical": "#53bdeb",
+        "tonalRamp": [
+          "#0f222a",
+          "#204859",
+          "#337592",
+          "#449bc1",
+          "#53bdeb",
+          "#75caef",
+          "#a0dbf4",
+          "#cbebf9"
+        ]
+      },
+      "signal-glow": {
+        "role": "primary",
+        "displayName": "Signal Glow",
+        "canonical": "rgba(33, 192, 99, 0.35)",
+        "tonalRamp": [
+          "rgba(33, 192, 99, 0.12)",
+          "rgba(33, 192, 99, 0.2)",
+          "rgba(33, 192, 99, 0.3)",
+          "rgba(33, 192, 99, 0.45)",
+          "rgba(33, 192, 99, 0.35)",
+          "rgba(33, 192, 99, 0.5)",
+          "rgba(33, 192, 99, 0.65)",
+          "rgba(33, 192, 99, 0.8)"
+        ]
+      },
+      "signal-muted": {
+        "role": "primary",
+        "displayName": "Signal Muted",
+        "canonical": "rgba(33, 192, 99, 0.12)",
+        "tonalRamp": [
+          "rgba(33, 192, 99, 0.12)",
+          "rgba(33, 192, 99, 0.2)",
+          "rgba(33, 192, 99, 0.3)",
+          "rgba(33, 192, 99, 0.45)",
+          "rgba(33, 192, 99, 0.12)",
+          "rgba(33, 192, 99, 0.5)",
+          "rgba(33, 192, 99, 0.65)",
+          "rgba(33, 192, 99, 0.8)"
+        ]
+      },
+      "hairline-dark": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(255, 255, 255, 0.08)",
+        "tonalRamp": [
+          "rgba(255, 255, 255, 0.12)",
+          "rgba(255, 255, 255, 0.2)",
+          "rgba(255, 255, 255, 0.3)",
+          "rgba(255, 255, 255, 0.45)",
+          "rgba(255, 255, 255, 0.08)",
+          "rgba(255, 255, 255, 0.5)",
+          "rgba(255, 255, 255, 0.65)",
+          "rgba(255, 255, 255, 0.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body",
+        "purpose": "Messages, rows, and all default content at 15px/1.5."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata, buttons, toasts, and secondary copy at 13px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Settings headers and dialog titles at 18px, tight tracking."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Login and onboarding headings at 24px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "resting-card",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.04)",
+        "purpose": "Almost-invisible lift under settings cards."
+      },
+      {
+        "name": "bubble",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.08)",
+        "purpose": "Keeps a message bubble just above the wallpaper."
+      },
+      {
+        "name": "toast",
+        "value": "0 8px 24px rgba(0, 0, 0, 0.35)",
+        "purpose": "Transient feedback only."
+      },
+      {
+        "name": "menu-dialog",
+        "value": "0 10px 30px rgba(0, 0, 0, 0.15)",
+        "purpose": "Floating menus, dropdowns, and the login card."
+      }
+    ],
+    "motion": [
+      {
+        "name": "bubble-pop",
+        "value": "180ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "purpose": "New message arrival."
+      },
+      {
+        "name": "slide-up",
+        "value": "220ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Toasts and status banners."
+      },
+      {
+        "name": "slide-in-right",
+        "value": "220ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Panels entering from the right."
+      },
+      {
+        "name": "menu-open",
+        "value": "160ms ease",
+        "purpose": "Dropdown and context-menu entrance."
+      },
+      {
+        "name": "toggle-slide",
+        "value": "600ms elastic.out(1, 0.5)",
+        "purpose": "The system's one deliberate spring."
+      },
+      {
+        "name": "state-fade",
+        "value": "300ms ease",
+        "purpose": "Colour and track transitions."
+      },
+      {
+        "name": "shimmer",
+        "value": "1400ms ease-in-out infinite",
+        "purpose": "Skeleton loading."
+      },
+      {
+        "name": "presence-pulse",
+        "value": "2500ms ease-in-out infinite",
+        "purpose": "Presence dot and unread glow."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The green call to action for pairing, saving, and sending.",
+      "html": "<button class=\"ds-btn-primary\">SAVE CHANGES</button>",
+      "css": ".ds-btn-primary { background: var(--color-signal-green, #21c063); color: var(--color-action-ink, #0a1014); padding: 8px 16px; border: 0; border-radius: 12px; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; transition: background 150ms ease, transform 150ms ease; } .ds-btn-primary:hover { background: var(--color-signal-green-hover, #1ea952); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-signal-green, #21c063); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Neutral Button",
+      "kind": "button",
+      "refersTo": "button-neutral",
+      "description": "Quiet secondary action beside a primary action.",
+      "html": "<button class=\"ds-btn-neutral\">CANCEL</button>",
+      "css": ".ds-btn-neutral { background: rgba(0, 0, 0, 0.05); color: #111b21; padding: 8px 16px; border: 0; border-radius: 12px; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; transition: background 150ms ease; } .ds-btn-neutral:hover { background: rgba(0, 0, 0, 0.09); } .ds-btn-neutral:focus-visible { outline: 2px solid #21c063; outline-offset: 2px; } .ds-btn-neutral:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive confirmation, always labelled explicitly.",
+      "html": "<button class=\"ds-btn-danger\">LOG OUT</button>",
+      "css": ".ds-btn-danger { background: #ef4444; color: #ffffff; padding: 8px 16px; border: 0; border-radius: 12px; font: 600 14px Inter, system-ui, sans-serif; cursor: pointer; transition: background 150ms ease; } .ds-btn-danger:hover { background: #dc2626; } .ds-btn-danger:focus-visible { outline: 2px solid #ef4444; outline-offset: 2px; } .ds-btn-danger:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Settings Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Grouped settings rows with hairline dividers.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-row\"><span class=\"ds-card-title\">Message notifications</span><span class=\"ds-card-meta\">On</span></div><div class=\"ds-card-row\"><span class=\"ds-card-title\">Privacy</span><span class=\"ds-card-meta\">Manage</span></div></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid rgba(0, 0, 0, 0.06); border-radius: 16px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); overflow: hidden; font-family: Inter, system-ui, sans-serif; } .ds-card-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(0, 0, 0, 0.04); transition: background 150ms ease; } .ds-card-row:last-child { border-bottom: 0; } .ds-card-row:hover { background: rgba(0, 0, 0, 0.03); } .ds-card-title { color: #111b21; font-size: 15px; font-weight: 500; } .ds-card-meta { color: #667781; font-size: 13px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A labelled field whose focus ring is the accent, not a colour change.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">DISPLAY NAME</span><input class=\"ds-input\" placeholder=\"Your name\" /></label>",
+      "css": ".ds-field { display: block; font-family: Inter, system-ui, sans-serif; } .ds-field-label { display: block; margin-bottom: 6px; color: #667781; font-size: 12px; font-weight: 600; letter-spacing: 0.025em; text-transform: uppercase; } .ds-input { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 12px; background: #ffffff; color: #111b21; font: 400 14px Inter, system-ui, sans-serif; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input::placeholder { color: rgba(102, 119, 129, 0.7); } .ds-input:hover { border-color: rgba(0, 0, 0, 0.16); } .ds-input:focus-visible { border-color: #21c063; box-shadow: 0 0 0 2px rgba(33, 192, 99, 0.2); }"
+    },
+    {
+      "name": "Chat Bubble — Sent",
+      "kind": "custom",
+      "refersTo": "chat-bubble-sent",
+      "description": "The outgoing message: tonal fill, no border, restrained metadata.",
+      "html": "<div class=\"ds-bubble-sent\"><span class=\"ds-bubble-text\">On my way — see you in ten.</span><span class=\"ds-bubble-meta\">12:41 ✓✓</span></div>",
+      "css": ".ds-bubble-sent { display: inline-flex; flex-direction: column; gap: 2px; max-width: 85%; padding: 6px 12px 8px; border-radius: 16px; background: #d9fdd3; color: #111b21; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); font-family: Inter, system-ui, sans-serif; animation: ds-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both; } @keyframes ds-pop { from { opacity: 0; transform: scale(0.88) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } } .ds-bubble-text { font-size: 14px; line-height: 1.5; } .ds-bubble-meta { align-self: flex-end; font-size: 11px; opacity: 0.55; }"
+    },
+    {
+      "name": "Chat Bubble — Received",
+      "kind": "custom",
+      "refersTo": "chat-bubble-received",
+      "description": "The incoming message: white on light, charcoal on dark, same geometry.",
+      "html": "<div class=\"ds-bubble-received\"><span class=\"ds-bubble-text\">Sounds good — I will be there.</span><span class=\"ds-bubble-meta\">12:42</span></div>",
+      "css": ".ds-bubble-received { display: inline-flex; flex-direction: column; gap: 2px; max-width: 85%; padding: 6px 12px 8px; border-radius: 16px; background: #ffffff; color: #111b21; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); font-family: Inter, system-ui, sans-serif; animation: ds-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both; } @keyframes ds-pop { from { opacity: 0; transform: scale(0.88) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } } .ds-bubble-received:hover { background: #f0f2f5; } .ds-bubble-text { font-size: 14px; line-height: 1.5; } .ds-bubble-meta { align-self: flex-end; font-size: 11px; opacity: 0.55; }"
+    },
+    {
+      "name": "Toggle",
+      "kind": "custom",
+      "refersTo": "toggle",
+      "description": "The one spring in the system: a 20px knob on a 48px green track.",
+      "html": "<button class=\"ds-toggle\" aria-pressed=\"true\"><span class=\"ds-toggle-knob\"></span></button>",
+      "css": ".ds-toggle { position: relative; box-sizing: border-box; width: 48px; height: 28px; padding: 4px; border: 0; border-radius: 9999px; background: #21c063; cursor: pointer; transition: background 300ms ease; } .ds-toggle-knob { display: block; width: 20px; height: 20px; border-radius: 9999px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transform: translateX(20px); transition: transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1); } .ds-toggle[aria-pressed=\"false\"] { background: #4a5565; } .ds-toggle[aria-pressed=\"false\"] .ds-toggle-knob { transform: translateX(0); } .ds-toggle:focus-visible { outline: 2px solid #21c063; outline-offset: 2px; }"
+    },
+    {
+      "name": "Chat Row",
+      "kind": "nav",
+      "refersTo": "chat-row",
+      "description": "A dense conversation row; selection is a 3px green edge, not a fill.",
+      "html": "<div class=\"ds-chat-row ds-chat-row-selected\"><span class=\"ds-avatar\">A</span><span class=\"ds-chat-copy\"><span class=\"ds-chat-name\">Ada Lovelace</span><span class=\"ds-chat-preview\">See you at the usual place</span></span><span class=\"ds-unread\">2</span></div>",
+      "css": ".ds-chat-row { display: flex; align-items: center; gap: 12px; box-sizing: border-box; padding: 12px; border-radius: 12px; background: transparent; font-family: Inter, system-ui, sans-serif; transition: background 150ms ease; cursor: pointer; } .ds-chat-row:hover { background: rgba(0, 0, 0, 0.03); } .ds-chat-row-selected { border-left: 3px solid #21c063; padding-left: 9px; background: rgba(33, 192, 99, 0.04); } .ds-avatar { display: flex; width: 48px; height: 48px; flex: none; align-items: center; justify-content: center; border-radius: 9999px; background: #e9edef; color: #111b21; font-weight: 600; } .ds-chat-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; } .ds-chat-name { color: #111b21; font-size: 15px; font-weight: 600; } .ds-chat-preview { overflow: hidden; color: #667781; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; } .ds-unread { display: flex; min-width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 9999px; background: #21c063; color: #0a1014; font-size: 12px; font-weight: 600; animation: ds-glow 2500ms ease-in-out infinite; } @keyframes ds-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(33, 192, 99, 0.4); } 50% { box-shadow: 0 0 8px 2px rgba(33, 192, 99, 0.2); } }"
+    },
+    {
+      "name": "Success Toast",
+      "kind": "custom",
+      "refersTo": "toast-success",
+      "description": "Transient confirmation with a coloured left rail and heavier shadow.",
+      "html": "<div class=\"ds-toast-success\">Settings saved</div>",
+      "css": ".ds-toast-success { box-sizing: border-box; min-width: 220px; max-width: 360px; padding: 10px 16px; border-left: 3px solid #21c063; border-radius: 12px; background: #0d2118; color: #d9fdd3; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); font: 500 13px Inter, system-ui, sans-serif; animation: ds-slide 220ms cubic-bezier(0.16, 1, 0.3, 1) both; } @keyframes ds-slide { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Signal",
+    "overview": "Green is information, not decoration. The interface is built from deep neutral surfaces and dense, readable rows, with Signal Green reserved for the moments that mean something: someone is online, a message is unread, a chat is selected, an action is available. When the green appears, it has a job. When it does not, the system falls back to carbon-grey tonal steps and hairline separators rather than reaching for ornament.\n\nThe mood is calm, utilitarian, and quietly confident. This is a long-running desktop tool, so density and legibility outrank flourish: a 15px body, tight 8–16px rhythm, generous use of 12–16px radii to soften an otherwise rectangular workspace, and motion that resolves almost before you notice it. Skeuomorphism, playful confetti, and marketing-page flourish are explicit visual rejections; the product’s performance and privacy story is carried by restraint, not by spectacle.\n\nLight and dark are peers, not an afterthought. Every surface, text, and bubble token has a dark counterpart, and the two canvases share the same geometry and motion. A legacy runtime customiser (theme.config.ts + applyThemeColors) can override individual colour keys at runtime; the values in the frontmatter are the declared @theme baseline.",
+    "keyCharacteristics": [
+      "Signal-led: one accent, used only for live, selected, or actionable states.",
+      "Dense but breathable: 15px body, 8–16px rhythm, 12–16px radii.",
+      "Dual-canvas: every token has a light and dark expression.",
+      "Flat at rest: tonal steps and hairline borders do the structural work.",
+      "Restrained motion: state changes finish within a few hundred milliseconds."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rule",
+        "body": "Signal Green appears only where something is live, selected, or actionable. Decoration never gets the green.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Canvas Rule",
+        "body": "No new colour enters the system without its dark-mode counterpart. A token with one expression is an incomplete token.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single-Voice Rule",
+        "body": "One family, one weight ladder. A second font appears only inside code spans; never for headings, never for emphasis.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Layer Rule",
+        "body": "Surfaces are flat at rest. If a shadow is doing structural work on a permanent surface, use a tonal step or a hairline border instead.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Restrained Motion Rule",
+        "body": "State changes resolve within 300ms — menus 160ms, slides and toasts 220ms, bubbles 180ms. The toggle’s 600ms elastic slide is the deliberate exception, not a precedent.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Signal Green to live, selected, or actionable states, per The Signal Rule.",
+      "Do pair every new token with a light and dark expression, per The Two-Canvas Rule.",
+      "Do keep body copy at 15px/1.5 and let 13px and 11px carry only metadata.",
+      "Do use alpha hairlines (8% white in dark mode) for permanent separators.",
+      "Do keep conversation bubbles within 85% width, tightening to 65% at `lg`.",
+      "Do extend the `@theme` block in `style.css` when adding a token, then check `theme.config.ts` for a runtime override of the same key."
+    ],
+    "donts": [
+      "Don’t use the accent as section decoration, background wash, or large fill.",
+      "Don’t add resting shadows to cards, rows, or panels; see The Quiet Layer Rule.",
+      "Don’t introduce a second typeface outside inline code; see The Single-Voice Rule.",
+      "Don’t let a new colour ship with only one theme’s value.",
+      "Don’t exceed the established motion budget; the toggle’s spring is the sole exception.",
+      "Don’t set one-off colours in components when a token belongs in `@theme`."
+    ]
+  }
+}
