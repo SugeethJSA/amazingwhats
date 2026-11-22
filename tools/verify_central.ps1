@@ -93,7 +93,7 @@ try {
 
     if ($Wails3) {
         $wails = Join-Path $cliBin 'wails3.exe'
-        $null = Invoke-Step -Name 'wails3-bindings' -Exe $wails -Arguments @('generate', 'bindings')
+        $null = Invoke-Step -Name 'wails3-bindings' -Exe $wails -Arguments @('generate', 'bindings', '-ts')
         $null = Invoke-Step -Name 'wails3-doctor' -Exe $wails -Arguments @('doctor') -Optional
     }
 
