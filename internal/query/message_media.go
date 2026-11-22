@@ -23,10 +23,11 @@ const (
 	);
 	`
 
-	// AddGifPlaybackColumn / AddThumbnailColumn / AddPTAColumns / AddFileLengthColumn
-	// migrate existing message_media tables that predate those columns. SQLite has no
-	// ADD COLUMN IF NOT EXISTS, so the caller ignores the "duplicate column"
-	// error on subsequent runs.
+	// The Add*Column statements migrate existing message_media tables that
+	// predate those columns. SQLite has no ADD COLUMN IF NOT EXISTS, so the
+	// caller ignores the "duplicate column" error on subsequent runs. Each
+	// column MUST be its own statement: a single multi-ALTER Exec aborts at the
+	// first duplicate-column error and skips the remaining ALTERs.
 	AddGifPlaybackColumn = `
 	ALTER TABLE message_media ADD COLUMN gif_playback INTEGER DEFAULT 0;
 	`
@@ -35,9 +36,15 @@ const (
 	ALTER TABLE message_media ADD COLUMN thumbnail BLOB;
 	`
 
-	AddPTAColumns = `
+	AddPTTColumn = `
 	ALTER TABLE message_media ADD COLUMN ptt INTEGER DEFAULT 0;
+	`
+
+	AddSecondsColumn = `
 	ALTER TABLE message_media ADD COLUMN seconds INTEGER DEFAULT 0;
+	`
+
+	AddWaveformColumn = `
 	ALTER TABLE message_media ADD COLUMN waveform BLOB;
 	`
 
@@ -84,14 +91,22 @@ const (
 	SELECT thumbnail FROM message_media WHERE message_id = ?;
 	`
 
+	// UpdateMessageMediaByMessageID refreshes the media fields carried by a
+	// message edit. PTT metadata (ptt / seconds / waveform) is intentionally not
+	// part of the SET list: the store's edit path binds only these 11 values,
+	// and including three extra placeholders made every edit fail with an
+	// argument-count mismatch (rolling back the accompanying text edit).
 	UpdateMessageMediaByMessageID = `
 	UPDATE message_media
-	SET type = ?, url = ?, mimetype = ?, direct_path = ?, media_key = ?, file_sha256 = ?, file_enc_sha256 = ?, width = ?, height = ?, file_name = ?, ptt = ?, seconds = ?, waveform = ?
+	SET type = ?, url = ?, mimetype = ?, direct_path = ?, media_key = ?, file_sha256 = ?, file_enc_sha256 = ?, width = ?, height = ?, file_name = ?
 	WHERE message_id = ?;
 	`
 
+	// file_length is COALESCEd to 0 because a re-sync that omits the field is
+	// bound as SQL NULL (see the InsertMessageMedia upsert) so it cannot erase a
+	// cached size; callers scan this column into a plain int64.
 	SelectMessageMediaByMessageID = `
-	SELECT type, url, mimetype, direct_path, media_key, file_sha256, file_enc_sha256, width, height, file_name, file_length
+	SELECT type, url, mimetype, direct_path, media_key, file_sha256, file_enc_sha256, width, height, file_name, COALESCE(file_length, 0)
 	FROM message_media
 	WHERE message_id = ?;
 	`

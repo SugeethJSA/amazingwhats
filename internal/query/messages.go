@@ -23,10 +23,28 @@ const (
 		CREATE INDEX IF NOT EXISTS idx_messages_chat_cursor ON messages(chat_jid, timestamp DESC, message_id DESC);
 	`
 
+	// InsertMessage upserts a message in place rather than using REPLACE. REPLACE
+	// deletes the old row before inserting the new one, which fires the ON DELETE
+	// CASCADE on child tables (reactions, and any other FK that references
+	// messages) and silently loses reactions on a history re-sync. DO UPDATE
+	// keeps the same row identity and refreshes every column from the incoming
+	// row, preserving the old REPLACE semantics for the message itself while
+	// leaving dependent rows intact.
 	InsertMessage = `
-	INSERT OR REPLACE INTO messages 
+	INSERT INTO messages
 	(message_id, chat_jid, sender_jid, timestamp, is_from_me, text, has_media, reply_to_message_id, edited, forwarded, type)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(message_id) DO UPDATE SET
+		chat_jid = excluded.chat_jid,
+		sender_jid = excluded.sender_jid,
+		timestamp = excluded.timestamp,
+		is_from_me = excluded.is_from_me,
+		text = excluded.text,
+		has_media = excluded.has_media,
+		reply_to_message_id = excluded.reply_to_message_id,
+		edited = excluded.edited,
+		forwarded = excluded.forwarded,
+		type = excluded.type;
 	`
 
 	UpdateMessage = `

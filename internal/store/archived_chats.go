@@ -2,6 +2,8 @@ package store
 
 import (
 	"database/sql"
+	"errors"
+	"log"
 
 	"github.com/lugvitc/whats4linux/internal/query"
 )
@@ -13,10 +15,11 @@ import (
 func (ms *MessageStore) IsChatArchived(chatJID string) bool {
 	var present int
 	if err := ms.db.QueryRow(query.SelectArchivedChat, chatJID).Scan(&present); err != nil {
-		if err != sql.ErrNoRows {
-			// Keep this silent: notification decisions must not spam logs on a
-			// transient read failure, and the safe default is to notify.
-			return false
+		// A missing row means "not archived" and is expected. Any other error
+		// is a real DB failure worth logging. Both cases keep the safe default
+		// of not suppressing notifications.
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("store: failed to read archived state for %q: %v", chatJID, err)
 		}
 		return false
 	}

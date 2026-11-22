@@ -181,19 +181,20 @@ func NewMessageStore() (*MessageStore, error) {
 		if err != nil {
 			return err
 		}
-		// Migrate pre-existing tables: add gif_playback / thumbnail if missing.
-		// Ignore the "duplicate column name" error once the column exists.
-		if _, aerr := tx.Exec(query.AddGifPlaybackColumn); aerr != nil && !strings.Contains(aerr.Error(), "duplicate column") {
-			return aerr
-		}
-		if _, aerr := tx.Exec(query.AddThumbnailColumn); aerr != nil && !strings.Contains(aerr.Error(), "duplicate column") {
-			return aerr
-		}
-		if _, aerr := tx.Exec(query.AddPTAColumns); aerr != nil && !strings.Contains(aerr.Error(), "duplicate column") {
-			return aerr
-		}
-		if _, aerr := tx.Exec(query.AddFileLengthColumn); aerr != nil && !strings.Contains(aerr.Error(), "duplicate column") {
-			return aerr
+		// Migrate pre-existing tables. Each column is added by its own Exec with
+		// its own duplicate-column check: bundling several ALTERs into one Exec
+		// aborts at the first "duplicate column name" error and skips the rest.
+		for _, mig := range []string{
+			query.AddGifPlaybackColumn,
+			query.AddThumbnailColumn,
+			query.AddPTTColumn,
+			query.AddSecondsColumn,
+			query.AddWaveformColumn,
+			query.AddFileLengthColumn,
+		} {
+			if _, aerr := tx.Exec(mig); aerr != nil && !strings.Contains(aerr.Error(), "duplicate column") {
+				return aerr
+			}
 		}
 		_, err = tx.Exec(query.CreatePinnedMessagesTable)
 		if err != nil {
@@ -385,7 +386,11 @@ func (ms *MessageStore) Close() error {
 	return errors.Join(closeErr, ms.db.Close())
 }
 
-// openDB opens a connection to messages.db
+// openDB opens a connection to messages.db. foreign_keys, busy_timeout and
+// synchronous are set per-connection through the DSN (see
+// misc.GetSQLiteAddress); journal_mode is a database-level setting, so it only
+// needs to be applied once here. The extra PRAGMAs below are kept as a
+// belt-and-suspenders measure for the first connection.
 func openDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", misc.GetSQLiteAddress("messages.db"))
 	if err != nil {
@@ -780,14 +785,34 @@ func (ms *MessageStore) InsertMessage(info *types.MessageInfo, msg *waE2E.Messag
 
 	text, fileName, replyToMessageID, forwarded, emc, mediaType, width, height = extractMessageContent(msg)
 
-	// gifPlayback marks a video that should loop like a GIF. GetVideoMessage is
-	// nil-safe and returns false for non-video messages.
-	gifPlayback := msg.GetVideoMessage().GetGifPlayback()
-
-	// PTA (Push-to-Audio / voice note) fields
-	ptt := msg.GetAudioMessage().GetPTT()
-	seconds := msg.GetAudioMessage().GetSeconds()
+	// Optional media metadata must be bound as SQL NULL when the underlying
+	// protobuf field is absent. A Go zero value (false/0) would be bound as a
+	// real 0/false, and the COALESCE clauses in InsertMessageMedia would then
+	// overwrite metadata already cached for the row during a re-sync.
+	var (
+		gifPlayback sql.NullBool
+		ptt         sql.NullBool
+		seconds     sql.NullInt64
+		fileLength  sql.NullInt64
+	)
+	// gifPlayback marks a video that should loop like a GIF.
+	if v := msg.GetVideoMessage(); v != nil && v.GifPlayback != nil {
+		gifPlayback = sql.NullBool{Bool: v.GetGifPlayback(), Valid: true}
+	}
+	// PTA (Push-to-Audio / voice note) fields.
+	if a := msg.GetAudioMessage(); a != nil {
+		if a.PTT != nil {
+			ptt = sql.NullBool{Bool: a.GetPTT(), Valid: true}
+		}
+		if a.Seconds != nil {
+			seconds = sql.NullInt64{Int64: int64(a.GetSeconds()), Valid: true}
+		}
+	}
+	// A nil waveform slice binds as SQL NULL, which COALESCE preserves.
 	waveform := msg.GetAudioMessage().GetWaveform()
+	if fl, ok := getFileLength(msg); ok {
+		fileLength = sql.NullInt64{Int64: fl, Valid: true}
+	}
 
 	// Embedded preview thumbnail (WhatsApp ships a small JPEG in the message) so
 	// videos show a preview + play button in the list without downloading them.
@@ -872,13 +897,13 @@ func (ms *MessageStore) InsertMessage(info *types.MessageInfo, msg *waE2E.Messag
 			ptt,
 			seconds,
 			waveform,
-			getFileLength(msg),
+			fileLength,
 		)
 		if err != nil {
 			return err
 		}
 		// Also cache PTT data in-memory for immediate use by the frontend.
-		ms.CachePTT(info.ID, ptt, seconds, waveform)
+		ms.CachePTT(info.ID, ptt.Bool, uint32(seconds.Int64), waveform)
 		return nil
 	})
 	if err != nil {
@@ -1448,30 +1473,35 @@ func extractMessageContent(msg *waE2E.Message) (text, fileName, replyToMessageID
 }
 
 // getFileLength returns the decrypted size WhatsApp reports for a media
-// message, or 0 when unknown/not a media message. It is used to display
-// accurate download progress.
-func getFileLength(msg *waE2E.Message) int64 {
-	toInt64 := func(v uint64) int64 {
+// message and whether the field was actually present. The boolean lets the
+// caller bind an absent value as SQL NULL (so a re-sync cannot overwrite a
+// cached file_length with 0); it is used to display accurate download progress.
+func getFileLength(msg *waE2E.Message) (int64, bool) {
+	toInt64 := func(v uint64) (int64, bool) {
 		if v > math.MaxInt64 {
-			return 0
+			return 0, false
 		}
-		return int64(v)
+		return int64(v), true
 	}
+	var fileLength *uint64
 	switch {
 	case msg.GetImageMessage() != nil:
-		return toInt64(msg.GetImageMessage().GetFileLength())
+		fileLength = msg.GetImageMessage().FileLength
 	case msg.GetVideoMessage() != nil:
-		return toInt64(msg.GetVideoMessage().GetFileLength())
+		fileLength = msg.GetVideoMessage().FileLength
 	case msg.GetDocumentMessage() != nil:
-		return toInt64(msg.GetDocumentMessage().GetFileLength())
+		fileLength = msg.GetDocumentMessage().FileLength
 	case msg.GetAudioMessage() != nil:
-		return toInt64(msg.GetAudioMessage().GetFileLength())
+		fileLength = msg.GetAudioMessage().FileLength
 	case msg.GetPtvMessage() != nil:
-		return toInt64(msg.GetPtvMessage().GetFileLength())
+		fileLength = msg.GetPtvMessage().FileLength
 	case msg.GetStickerMessage() != nil:
-		return toInt64(msg.GetStickerMessage().GetFileLength())
+		fileLength = msg.GetStickerMessage().FileLength
 	}
-	return 0
+	if fileLength == nil {
+		return 0, false
+	}
+	return toInt64(*fileLength)
 }
 
 type decodedPageRow struct {
@@ -2171,23 +2201,27 @@ func (ms *MessageStore) GetPinnedMessages(chatJID string) ([]PinnedMessage, erro
 // ApplyMessagePin records a locally-sent pin/unpin so the UI reflects it
 // immediately (incoming pin events are handled by ProcessMessageEvent).
 func (ms *MessageStore) ApplyMessagePin(chatJID, senderJID, messageID string, pin bool, expiry int64) error {
-	if pin {
-		_, err := ms.db.Exec(query.InsertPinnedMessages,
-			messageID, chatJID, senderJID, time.Now().Unix(), expiry)
+	return ms.runSync(func(tx *sql.Tx) error {
+		if pin {
+			_, err := tx.Exec(query.InsertPinnedMessages,
+				messageID, chatJID, senderJID, time.Now().Unix(), expiry)
+			return err
+		}
+		_, err := tx.Exec(query.DeletePinnedMessageByMessageId, messageID)
 		return err
-	}
-	_, err := ms.db.Exec(query.DeletePinnedMessageByMessageId, messageID)
-	return err
+	})
 }
 
 // SetChatPinned stores whether a chat is pinned in the chat list.
 func (ms *MessageStore) SetChatPinned(chatJID string, pinned bool, ts int64) error {
-	if pinned {
-		_, err := ms.db.Exec(query.UpsertPinnedChat, chatJID, ts)
+	return ms.runSync(func(tx *sql.Tx) error {
+		if pinned {
+			_, err := tx.Exec(query.UpsertPinnedChat, chatJID, ts)
+			return err
+		}
+		_, err := tx.Exec(query.DeletePinnedChat, chatJID)
 		return err
-	}
-	_, err := ms.db.Exec(query.DeletePinnedChat, chatJID)
-	return err
+	})
 }
 
 // GetPinnedChats returns chat JID -> pinned-at for every pinned chat.
@@ -2210,12 +2244,14 @@ func (ms *MessageStore) GetPinnedChats() map[string]int64 {
 
 // SetChatArchived stores whether a chat is archived.
 func (ms *MessageStore) SetChatArchived(chatJID string, archived bool, ts int64) error {
-	if archived {
-		_, err := ms.db.Exec(query.UpsertArchivedChat, chatJID, ts)
+	return ms.runSync(func(tx *sql.Tx) error {
+		if archived {
+			_, err := tx.Exec(query.UpsertArchivedChat, chatJID, ts)
+			return err
+		}
+		_, err := tx.Exec(query.DeleteArchivedChat, chatJID)
 		return err
-	}
-	_, err := ms.db.Exec(query.DeleteArchivedChat, chatJID)
-	return err
+	})
 }
 
 // GetArchivedChats returns chat JID -> archived-at for every archived chat.
@@ -2236,23 +2272,40 @@ func (ms *MessageStore) GetArchivedChats() map[string]int64 {
 	return archived
 }
 
-// DeleteChatMessages removes all messages for a chat JID from the database.
+// DeleteChatMessages removes all messages for a chat JID and every dependent
+// row in ONE atomic transaction. There is no chat_list table in messages.db
+// (the chat list is derived from messages), so no such DELETE is attempted.
+// Child tables have no reliable FK cascade from messages, so they are removed
+// explicitly, scoped to the chat's message IDs where they key on message_id.
+// The API layer emits wa:chat_list_refresh only after this returns nil.
 func (ms *MessageStore) DeleteChatMessages(chatJID string) error {
-	_, err := ms.db.Exec(`DELETE FROM messages WHERE chat_jid = ?`, chatJID)
-	if err != nil {
+	return ms.runSync(func(tx *sql.Tx) error {
+		for _, stmt := range []string{
+			`DELETE FROM message_media WHERE message_id IN (SELECT message_id FROM messages WHERE chat_jid = ?)`,
+			`DELETE FROM reactions WHERE message_id IN (SELECT message_id FROM messages WHERE chat_jid = ?)`,
+			`DELETE FROM pinned_messages WHERE chat_jid = ?`,
+			`DELETE FROM polls WHERE chat_jid = ?`,
+			`DELETE FROM poll_votes WHERE chat_jid = ?`,
+			`DELETE FROM link_previews WHERE message_id IN (SELECT message_id FROM messages WHERE chat_jid = ?)`,
+		} {
+			if _, err := tx.Exec(stmt, chatJID); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(`DELETE FROM messages WHERE chat_jid = ?`, chatJID)
 		return err
-	}
-	_, err = ms.db.Exec(`DELETE FROM chat_list WHERE jid = ?`, chatJID)
-	return err
+	})
 }
 
 // MarkMessageDeleted replaces a revoked message's content with a deleted
 // marker, mirroring WhatsApp's "This message was deleted".
 func (ms *MessageStore) MarkMessageDeleted(messageID string) error {
-	_, err := ms.db.Exec(
-		`UPDATE messages SET text = ?, has_media = 0 WHERE message_id = ?`,
-		`<i>🚫 This message was deleted</i>`, messageID)
-	return err
+	return ms.runSync(func(tx *sql.Tx) error {
+		_, err := tx.Exec(
+			`UPDATE messages SET text = ?, has_media = 0 WHERE message_id = ?`,
+			`<i>🚫 This message was deleted</i>`, messageID)
+		return err
+	})
 }
 
 // MessageSearchResult holds a raw row from the search query.

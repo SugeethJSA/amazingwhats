@@ -235,9 +235,11 @@ type upstreamVoteBackupRow struct {
 }
 
 // maybeBackfillPollTables restores data from upstream-shaped poll tables that
-// the startup migration moved aside, then drops the backups. It is a no-op on
-// fresh or already-fork-shaped databases (including retries after a failed
-// backfill, where the backups are still present).
+// the startup migration moved aside. Backups are dropped ONLY when every row
+// was restored; if any row had to be skipped (missing messages row or poll
+// metadata, unknown option name), the backups are retained so the skipped data
+// is not irreversibly lost and a later retry can pick it up. It is a no-op on
+// fresh or already-fork-shaped databases.
 func (ms *MessageStore) maybeBackfillPollTables() error {
 	pollsBackup, err := tableExists(ms.db, pollsBackupTable)
 	if err != nil {
@@ -293,6 +295,8 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 		}
 	}
 
+	var pollsRestored, pollsSkipped, votesRestored, votesSkipped int
+
 	for _, row := range polls {
 		chatJID, found, err := messageChatJID(ms.db, row.messageID)
 		if err != nil {
@@ -300,6 +304,7 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 		}
 		if !found {
 			log.Printf("poll schema upgrade: skipping poll %q: no messages row for message_id", row.messageID)
+			pollsSkipped++
 			continue
 		}
 		var options []string
@@ -309,6 +314,7 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 		if err := ms.SavePollMetadata(chatJID, row.messageID, row.name, options); err != nil {
 			return fmt.Errorf("backfill poll metadata for %q: %w", row.messageID, err)
 		}
+		pollsRestored++
 	}
 
 	for _, row := range votes {
@@ -318,6 +324,7 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 		}
 		if !found {
 			log.Printf("poll schema upgrade: skipping vote for %q: no messages row for poll_message_id", row.pollMessageID)
+			votesSkipped++
 			continue
 		}
 		_, options, found, err := ms.GetPollMetadata(chatJID, row.pollMessageID)
@@ -326,6 +333,7 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 		}
 		if !found {
 			log.Printf("poll schema upgrade: skipping vote for %q: no restored poll options", row.pollMessageID)
+			votesSkipped++
 			continue
 		}
 		var selected []string
@@ -348,11 +356,25 @@ func (ms *MessageStore) maybeBackfillPollTables() error {
 			indices = append(indices, idx)
 		}
 		if !valid {
+			votesSkipped++
 			continue
 		}
 		if err := ms.UpsertPollVote(chatJID, row.pollMessageID, row.senderJID, indices); err != nil {
 			return fmt.Errorf("backfill poll vote for %q: %w", row.pollMessageID, err)
 		}
+		votesRestored++
+	}
+
+	log.Printf("poll schema upgrade: restored %d polls / %d votes; skipped %d polls / %d votes",
+		pollsRestored, votesRestored, pollsSkipped, votesSkipped)
+
+	// Never destroy the source data while rows remain unrecoverable. The
+	// backfill is idempotent (INSERT OR REPLACE), so a later startup retries
+	// the skipped rows against the retained backups.
+	if pollsSkipped > 0 || votesSkipped > 0 {
+		log.Printf("poll schema upgrade: retaining %s and %s because rows were skipped",
+			pollsBackupTable, votesBackupTable)
+		return nil
 	}
 
 	return ms.runSync(func(tx *sql.Tx) error {

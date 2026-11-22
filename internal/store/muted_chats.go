@@ -2,6 +2,8 @@ package store
 
 import (
 	"database/sql"
+	"errors"
+	"log"
 	"time"
 
 	"github.com/lugvitc/whats4linux/internal/query"
@@ -27,8 +29,12 @@ func (ms *MessageStore) SetChatMuted(chatJID string, mutedUntil int64) error {
 func (ms *MessageStore) IsChatMuted(chatJID string) bool {
 	var mutedUntil int64
 	if err := ms.db.QueryRow(query.SelectMutedUntilByChatJID, chatJID).Scan(&mutedUntil); err != nil {
-		// sql.ErrNoRows (not muted) or a query failure; either way don't
-		// suppress notifications on error.
+		// A missing row means "not muted" and is expected. Any other error is
+		// a real DB failure worth surfacing. In both cases keep the safe
+		// default of not suppressing notifications.
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("store: failed to read mute state for %q: %v", chatJID, err)
+		}
 		return false
 	}
 	return mutedUntil == -1 || mutedUntil > time.Now().Unix()
