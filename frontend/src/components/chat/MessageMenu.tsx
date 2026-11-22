@@ -10,7 +10,7 @@ import {
   ForwardIcon,
   StarIcon,
 } from "../../assets/svgs/message_menu_icons"
-import { ToggleMessageLabel, DeleteMedia, DownloadMediaToFile } from "../../../wailsjs/go/api/Api"
+import { ToggleMessageLabel, DeleteMedia, DownloadMediaToFile } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 interface MessageMenuProps {
   messageId: string

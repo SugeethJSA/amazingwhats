@@ -1,4 +1,4 @@
-import { GetMyJID } from "../../wailsjs/go/api/Api"
+import { GetMyJID } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 let myUser = ""
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { FetchMessagesPaged, GetCachedImage, DownloadMedia } from "../../../wailsjs/go/api/Api"
-import { store } from "../../../wailsjs/go/models"
+import { FetchMessagesPaged, GetCachedImage, DownloadMedia } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as store from "../../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
 import { useContactStore } from "../../store/useContactStore"
 import { sanitizeHtml } from "../../lib/utils"
 

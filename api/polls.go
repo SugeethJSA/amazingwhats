@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/lugvitc/whats4linux/internal/store"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/util/random"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waCommon"
@@ -173,7 +172,7 @@ func (a *Api) SendPollVote(chatJID, pollMessageID string, selectedOptions []stri
 	}
 
 	slog.Info(fmt.Sprintf("Voted in poll %s in %s (%d options selected)", pollMessageID, chatJID, len(selectedOptions)), "source", "messages")
-	runtime.EventsEmit(a.ctx, "wa:poll_vote_submitted", map[string]any{
+	a.app.Event.Emit("wa:poll_vote_submitted", map[string]any{
 		"chatId":    chatJID,
 		"messageID": pollMessageID,
 		"options":   selectedOptions,
@@ -394,7 +393,7 @@ func (a *Api) refreshPollCard(chatJID, pollMessageID string) {
 		return
 	}
 
-	runtime.EventsEmit(a.ctx, "wa:poll_vote_update", map[string]any{
+	a.app.Event.Emit("wa:poll_vote_update", map[string]any{
 		"chatId":    chatJID,
 		"messageID": pollMessageID,
 	})
@@ -404,7 +403,7 @@ func (a *Api) refreshPollCard(chatJID, pollMessageID string) {
 		if perr != nil {
 			pollTS = time.Now()
 		}
-		runtime.EventsEmit(a.ctx, "wa:new_message", map[string]any{
+		a.app.Event.Emit("wa:new_message", map[string]any{
 			"chatId":      chatJID,
 			"message":     dm,
 			"messageText": html,
@@ -413,5 +412,5 @@ func (a *Api) refreshPollCard(chatJID, pollMessageID string) {
 			"pollUpdate":  true,
 		})
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 }

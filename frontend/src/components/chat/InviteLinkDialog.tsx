@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { AcceptGroupInviteLink } from "../../../wailsjs/go/api/Api"
+import { AcceptGroupInviteLink } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 interface InviteLinkDialogProps {
   onClose: () => void

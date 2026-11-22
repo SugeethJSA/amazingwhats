@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { DEFAULT_EASES } from "../theme.config"
-import { SaveSettings } from "../../wailsjs/go/api/Api"
+import { SaveSettings } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useAppSettingsStore } from "./useAppSettingsStore"
 
 export type EaseGroup = keyof typeof DEFAULT_EASES

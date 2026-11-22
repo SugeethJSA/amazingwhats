@@ -7,8 +7,8 @@ import {
   type RefObject,
 } from "react"
 import { createPortal } from "react-dom"
-import { store } from "../../../wailsjs/go/models"
-import { GetCachedAvatar } from "../../../wailsjs/go/api/Api"
+import * as store from "../../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
+import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useContactStore } from "../../store/useContactStore"
 import { isMe } from "../../lib/self"
 import { formatPhone, phoneFromJID } from "../../lib/utils"

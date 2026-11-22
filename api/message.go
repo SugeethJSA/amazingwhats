@@ -12,7 +12,6 @@ import (
 	"github.com/lugvitc/whats4linux/internal/markdown"
 	"github.com/lugvitc/whats4linux/internal/store"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waCommon"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -572,7 +571,7 @@ func (a *Api) SendMessage(chatJID string, content MessageContent) (string, error
 		}
 	}
 
-	runtime.EventsEmit(a.ctx, "wa:new_message", map[string]any{
+	a.app.Event.Emit("wa:new_message", map[string]any{
 		"chatId":       parsedJID.String(),
 		"message":      msg,
 		"clientTempId": content.ClientTempID,
@@ -785,7 +784,7 @@ func (a *Api) SetMessagePinned(chatJID, senderJID, messageID string, fromMe, pin
 	if err := a.messageStore.ApplyMessagePin(chatJID, sender, messageID, pin, PinExpirySeconds); err != nil {
 		log.Println("SetMessagePinned: failed to persist:", err)
 	}
-	runtime.EventsEmit(a.ctx, "wa:pinned_update", map[string]any{"chatId": chatJID})
+	a.app.Event.Emit("wa:pinned_update", map[string]any{"chatId": chatJID})
 	return nil
 }
 
@@ -816,7 +815,7 @@ func (a *Api) sendAndStoreLocal(chat types.JID, msgContent *waE2E.Message, previ
 			msg = decodedMsg
 		}
 	}
-	runtime.EventsEmit(a.ctx, "wa:new_message", map[string]any{
+	a.app.Event.Emit("wa:new_message", map[string]any{
 		"chatId":      chat.String(),
 		"message":     msg,
 		"messageText": preview,
@@ -904,7 +903,7 @@ func (a *Api) EditMessage(chatJID, messageID, newText string) (string, error) {
 	if err != nil {
 		log.Println("EditMessage: failed to persist edit locally:", err)
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return resp.ID, nil
 }
 
@@ -928,7 +927,7 @@ func (a *Api) RevokeMessage(chatJID, messageID string) error {
 	if err != nil {
 		log.Println("RevokeMessage: failed to mark deleted locally:", err)
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 
@@ -967,6 +966,6 @@ func (a *Api) DeleteForMe(_ string, messageID string) error {
 	if err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }

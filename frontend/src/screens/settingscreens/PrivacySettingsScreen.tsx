@@ -5,7 +5,7 @@ import {
   GetStatusPrivacy,
   SetStatusPrivacy,
   SetDisappearingTimerDefault,
-} from "../../../wailsjs/go/api/Api"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { RowList, SettingRow, SelectMenu, SettingsCard } from "../../components/settings/ui-kit"
 
 interface Setting {

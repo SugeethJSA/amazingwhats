@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { PairPhone } from "../../wailsjs/go/api/Api"
+import { PairPhone } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 export function LoginScreen({
   canvasRef,

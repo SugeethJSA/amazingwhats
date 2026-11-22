@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { EventsOn } from "../../wailsjs/runtime/runtime"
+import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore } from "../store/useMessageStore"
 import { useUIStore } from "../store/useUIStore"
 import { useChatStore } from "../store/useChatStore"

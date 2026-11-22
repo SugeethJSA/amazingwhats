@@ -7,8 +7,6 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // PickedFile is a file selected through the native picker, delivered as
@@ -27,9 +25,9 @@ func (a *Api) PickAttachmentFile() (*PickedFile, error) {
 	if a.ctx == nil {
 		return nil, errors.New("app not ready")
 	}
-	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select a file",
-	})
+	path, err := a.app.Dialog.OpenFile().
+		SetTitle("Select a file").
+		PromptForSingleSelection()
 	if err != nil {
 		return nil, fmt.Errorf("open file dialog: %w", err)
 	}

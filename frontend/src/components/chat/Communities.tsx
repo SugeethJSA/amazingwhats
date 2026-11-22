@@ -7,8 +7,8 @@ import {
   GetCachedAvatar,
   CreateCommunity,
   CreateCommunitySubGroup,
-} from "../../../wailsjs/go/api/Api"
-import { api } from "../../../wailsjs/go/models"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { GoBackIcon } from "../../assets/svgs/header_icons"
 import { getAvatarColor, AVATAR_ICON_COLOR } from "../../lib/utils"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"

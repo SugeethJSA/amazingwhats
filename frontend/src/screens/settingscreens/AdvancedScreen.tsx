@@ -7,7 +7,7 @@ import {
   Reinitialize,
   SetProxy,
   FetchStickerPack,
-} from "../../../wailsjs/go/api/Api"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 import ComponentColorSelector from "../../components/settings/ComponentColorSelector"
 import EaseVisualizer from "../../components/settings/ComponentEaseSelector"

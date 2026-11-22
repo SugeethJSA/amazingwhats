@@ -9,7 +9,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var UDSPath = os.TempDir() + "/whats4linux.sock"
@@ -22,6 +22,8 @@ type CommandHandler func(cmd string) (reply string, handled bool)
 type UnixSocket struct {
 	mu       sync.Mutex
 	ctx      context.Context
+	app      *application.App
+	window   *application.WebviewWindow
 	conn     net.Conn
 	listener net.Listener
 	handler  CommandHandler
@@ -32,6 +34,16 @@ func NewUnixSocket(ctx context.Context) (*UnixSocket, error) {
 	return &UnixSocket{
 		ctx: ctx,
 	}, nil
+}
+
+// SetTargets injects the Wails v3 objects used by the built-in show/hide/quit
+// commands. v2 used context-bound runtime functions; v3 operates on the owning
+// objects. Call before ListenAndServe.
+func (s *UnixSocket) SetTargets(app *application.App, window *application.WebviewWindow) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.app = app
+	s.window = window
 }
 
 // SetCommandHandler registers a handler for app-specific commands (e.g. the
@@ -108,15 +120,25 @@ func (s *UnixSocket) handleConn(conn net.Conn) {
 			continue
 		}
 
+		s.mu.Lock()
+		app, window := s.app, s.window
+		s.mu.Unlock()
+
 		switch msg {
 		case "show":
-			runtime.WindowUnminimise(s.ctx)
-			runtime.Show(s.ctx)
+			if window != nil {
+				window.UnMinimise()
+				window.Show()
+			}
 		case "hide":
-			runtime.Hide(s.ctx)
+			if window != nil {
+				window.Hide()
+			}
 		case "quit":
 			log.Println("Quit signal received from systray")
-			runtime.Quit(s.ctx)
+			if app != nil {
+				app.Quit()
+			}
 		default:
 			if handler != nil {
 				if reply, handled := handler(msg); handled {

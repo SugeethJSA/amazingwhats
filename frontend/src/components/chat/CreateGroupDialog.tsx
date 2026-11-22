@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { CreateGroup, FetchContacts } from "../../../wailsjs/go/api/Api"
-import { api } from "../../../wailsjs/go/models"
+import { CreateGroup, FetchContacts } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 
 export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
   const [contacts, setContacts] = useState<api.Contact[]>([])

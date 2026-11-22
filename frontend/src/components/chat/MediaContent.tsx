@@ -5,7 +5,7 @@ import {
   DownloadMedia,
   GetVideoThumbnail,
   GetImageThumbnail,
-} from "../../../wailsjs/go/api/Api"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useUIStore } from "../../store"
 import type { Message, MediaMessageContent } from "../../store/types"
 import { LRUCache } from "../../lib/lruCache"

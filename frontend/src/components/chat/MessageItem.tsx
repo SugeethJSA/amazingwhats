@@ -11,7 +11,7 @@ import {
   SetMessagePinned,
   AcceptGroupInviteLink,
   StarMessage,
-} from "../../../wailsjs/go/api/Api"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { MediaContent } from "./MediaContent"
 import { QuotedMessage } from "./QuotedMessage"
 import { ReactionBubble, ReactionDetails } from "./Reactions"
@@ -30,7 +30,7 @@ import {
 import { useContactStore } from "../../store/useContactStore"
 import { useMessageStore } from "../../store"
 import type { Message } from "../../store/types"
-import type { PollVotesResult } from "../../../wailsjs/go/models"
+import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { isMe } from "../../lib/self"
 import { formatPhone, phoneFromJID, htmlToPlainText, sanitizeHtml } from "../../lib/utils"
 import { LRUCache } from "../../lib/lruCache"

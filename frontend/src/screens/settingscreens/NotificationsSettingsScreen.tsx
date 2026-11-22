@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { RowList, SwitchRow } from "../../components/settings/ui-kit"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
-import { GetNotificationsEnabled, SetNotificationsEnabled } from "../../../wailsjs/go/api/Api"
-import { EventsOn } from "../../../wailsjs/runtime/runtime"
+import { GetNotificationsEnabled, SetNotificationsEnabled } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { EventsOn } from "../../lib/wailsRuntime"
 import type { ReactNode } from "react"
 
 const BellIcon = () => (

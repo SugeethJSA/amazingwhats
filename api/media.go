@@ -18,7 +18,6 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/lugvitc/whats4linux/internal/store"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -538,12 +537,13 @@ func (a *Api) DownloadImageToFile(messageID string) error {
 
 	// Check if file exists and prompt for new path
 	if _, err := os.Stat(filePath); err == nil {
-		if filePath, err = runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-			DefaultDirectory: downloadsDir,
-			DefaultFilename:  fileName,
-			Title:            "File already exists. Save as...",
-			Filters:          []runtime.FileFilter{{DisplayName: "Image Files", Pattern: "*" + getFileExtension(mimeType)}},
-		}); err != nil || filePath == "" {
+		filePath, err = a.app.Dialog.SaveFile().
+			SetDirectory(downloadsDir).
+			SetFilename(fileName).
+			SetMessage("File already exists. Save as...").
+			AddFilter("Image Files", "*"+getFileExtension(mimeType)).
+			PromptForSingleSelection()
+		if err != nil || filePath == "" {
 			return err
 		}
 	}
@@ -552,7 +552,7 @@ func (a *Api) DownloadImageToFile(messageID string) error {
 		return err
 	}
 
-	runtime.EventsEmit(a.ctx, "download:complete", filePath)
+	a.app.Event.Emit("download:complete", filePath)
 	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
 	playBeep()
 	return nil
@@ -605,7 +605,7 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		if total > 0 {
 			pct = int(float64(done) / float64(total) * 100)
 		}
-		runtime.EventsEmit(a.ctx, "media:download_progress", map[string]any{
+		a.app.Event.Emit("media:download_progress", map[string]any{
 			"messageId":   messageID,
 			"downloaded":  done,
 			"total":       total,
@@ -630,12 +630,12 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		emitProgress(info.Size(), info.Size())
 	}
 
-	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		DefaultDirectory: downloadsDir,
-		DefaultFilename:  fileName,
-		Title:            "Save file",
-		Filters:          []runtime.FileFilter{{DisplayName: "All Files", Pattern: "*"}},
-	})
+	filePath, err := a.app.Dialog.SaveFile().
+		SetDirectory(downloadsDir).
+		SetFilename(fileName).
+		SetMessage("Save file").
+		AddFilter("All Files", "*").
+		PromptForSingleSelection()
 	if err != nil {
 		return err
 	}
@@ -657,7 +657,7 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		return fmt.Errorf("failed to write destination file: %w", err)
 	}
 
-	runtime.EventsEmit(a.ctx, "download:complete", filePath)
+	a.app.Event.Emit("download:complete", filePath)
 	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
 	playBeep()
 	return nil

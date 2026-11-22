@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -68,7 +67,7 @@ func (a *Api) updateJoinRequests(groupJID string, requesterJIDs []string, action
 		return err
 	}
 	slog.Info(fmt.Sprintf("%s %d join requests in %s", action, len(jids), groupJID), "source", "groups")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 
@@ -167,7 +166,7 @@ func (a *Api) LinkGroupToCommunity(parentJID, childJID string) error {
 		return err
 	}
 	slog.Info(fmt.Sprintf("Linked group %s to community %s", childJID, parentJID), "source", "communities")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 
@@ -188,7 +187,7 @@ func (a *Api) UnlinkGroupFromCommunity(parentJID, childJID string) error {
 		return err
 	}
 	slog.Info(fmt.Sprintf("Unlinked group %s from community %s", childJID, parentJID), "source", "communities")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 

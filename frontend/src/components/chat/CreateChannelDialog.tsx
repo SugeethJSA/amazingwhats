@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CreateNewsletter } from "../../../wailsjs/go/api/Api"
+import { CreateNewsletter } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 interface CreateChannelDialogProps {
   onClose: () => void

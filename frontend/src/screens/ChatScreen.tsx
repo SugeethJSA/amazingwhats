@@ -18,9 +18,9 @@ import {
   BlockContact,
   UnblockContact,
   GetBlockList,
-} from "../../wailsjs/go/api/Api"
-import { api } from "../../wailsjs/go/models"
-import { EventsOn } from "../../wailsjs/runtime/runtime"
+} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as api from "../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+import { EventsOn } from "../lib/wailsRuntime"
 import { ChatDetail } from "./ChatDetail"
 import {
   useChatStore,

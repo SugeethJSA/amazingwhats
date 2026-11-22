@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import clsx from "clsx"
-import { SearchMessages, GetSearchSuggestions } from "../../wailsjs/go/api/Api"
+import { SearchMessages, GetSearchSuggestions } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useMessageStore } from "../store"
 import { GoBackIcon } from "../assets/svgs/header_icons"
 

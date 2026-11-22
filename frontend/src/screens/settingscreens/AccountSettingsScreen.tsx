@@ -6,7 +6,7 @@ import {
   SetPushName,
   ResolveContactQRLink,
   ResolveBusinessMessageLink,
-} from "../../../wailsjs/go/api/Api"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import type { ReactNode } from "react"
 import {
   SettingsCard,

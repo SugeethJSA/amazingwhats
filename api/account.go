@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/types"
@@ -128,7 +127,7 @@ func (a *Api) ToggleChatLabel(jidStr, labelID string, labeled bool) error {
 		return err
 	}
 	slog.Info(fmt.Sprintf("Label %s on %s: %v", labelID, jidStr, labeled), "source", "chats")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 
@@ -140,7 +139,7 @@ func (a *Api) EditLabel(labelID, name string, color int32, deleted bool) error {
 		return err
 	}
 	slog.Info(fmt.Sprintf("Label %s edited", labelID), "source", "chats")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 
@@ -167,6 +166,6 @@ func (a *Api) SetPushName(name string) error {
 		return err
 	}
 	slog.Info(fmt.Sprintf("Set push name to %q", name), "source", "profile")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }

@@ -11,9 +11,9 @@ import {
   MakeCall,
   MakeGroupCall,
   StarMessage,
-} from "../../wailsjs/go/api/Api"
-import { store } from "../../wailsjs/go/models"
-import { EventsOn } from "../../wailsjs/runtime/runtime"
+} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as store from "../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
+import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
 import { useContactStore } from "../store/useContactStore"
 import { MessageList, type MessageListHandle } from "../components/chat/MessageList"

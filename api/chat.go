@@ -8,7 +8,6 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/nyaruka/phonenumbers"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -57,7 +56,7 @@ func (a *Api) ToggleChatPin(jidStr string, pinned bool) error {
 	if err := a.messageStore.SetChatPinned(jidStr, pinned, time.Now().Unix()); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	if err := a.waClient.SendAppState(a.ctx, appstate.BuildPin(jid, pinned)); err != nil {
 		log.Println("ToggleChatPin: app state sync failed (kept local):", err)
 		a.startBackground(a.resyncAppState)
@@ -76,7 +75,7 @@ func (a *Api) ToggleChatArchive(jidStr string, archived bool) error {
 	if err := a.messageStore.SetChatArchived(jidStr, archived, time.Now().Unix()); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	if err := a.waClient.SendAppState(a.ctx, appstate.BuildArchive(jid, archived, time.Time{}, nil)); err != nil {
 		log.Println("ToggleChatArchive: app state sync failed (kept local):", err)
 		a.startBackground(a.resyncAppState)
@@ -235,7 +234,7 @@ func (a *Api) ClearChat(jidStr string) error {
 	if err := a.messageStore.DeleteChatMessages(jidStr); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return nil
 }
 

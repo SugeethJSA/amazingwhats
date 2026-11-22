@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../wailsjs/go/api/Api"
-import { EventsOn, BrowserOpenURL } from "../wailsjs/runtime/runtime"
+import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import QRCode from "qrcode"
 import { ChatListScreen } from "./screens/ChatScreen"
 import { LoginScreen } from "./screens/LoginScreen"

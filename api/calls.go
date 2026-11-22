@@ -11,7 +11,6 @@ import (
 
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
@@ -80,7 +79,7 @@ func (a *Api) initMeowcaller() {
 		}
 		callsMu.Unlock()
 		if ac != nil && a.ctx != nil {
-			runtime.EventsEmit(a.ctx, "call:incoming", map[string]any{
+			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":   offer.CallID,
 				"peerJID":  offer.From.String(),
 				"isVideo":  ac.IsVideo,
@@ -112,7 +111,7 @@ func (a *Api) initMeowcaller() {
 		// Group calls emit call:incoming from the CallOffer handler above,
 		// once the group JID is known. 1:1 calls emit here.
 		if a.ctx != nil && !ac.IsGroup {
-			runtime.EventsEmit(a.ctx, "call:incoming", map[string]any{
+			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":  call.ID(),
 				"peerJID": call.Peer().String(),
 				"isVideo": call.IsVideo(),
@@ -131,7 +130,7 @@ func (a *Api) initMeowcaller() {
 			callsMu.Unlock()
 
 			if a.ctx != nil {
-				runtime.EventsEmit(a.ctx, "call:ended", map[string]any{
+				a.app.Event.Emit("call:ended", map[string]any{
 					"callID": call.ID(),
 					"reason": reason,
 				})
@@ -246,7 +245,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 		}
 		callsMu.Unlock()
 		if a.ctx != nil {
-			runtime.EventsEmit(a.ctx, "call:accepted", map[string]any{
+			a.app.Event.Emit("call:accepted", map[string]any{
 				"callID": call.ID(),
 			})
 		}
@@ -265,7 +264,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 		}
 		callsMu.Unlock()
 		if a.ctx != nil {
-			runtime.EventsEmit(a.ctx, "call:ended", map[string]any{
+			a.app.Event.Emit("call:ended", map[string]any{
 				"callID": call.ID(),
 				"reason": reason,
 			})
@@ -273,7 +272,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 	})
 
 	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, "call:outgoing", map[string]any{
+		a.app.Event.Emit("call:outgoing", map[string]any{
 			"callID":   call.ID(),
 			"peerJID":  peerJID,
 			"isVideo":  false,
@@ -300,7 +299,7 @@ func (a *Api) AddCallParticipant(callID, targetJID string) error {
 	}
 	log.Printf("[Calls] Invited %s to call %s", targetJID, callID)
 	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, "call:participant_added", map[string]any{
+		a.app.Event.Emit("call:participant_added", map[string]any{
 			"callID":    callID,
 			"targetJID": targetJID,
 		})
@@ -391,7 +390,7 @@ func (a *Api) insertCallLog(ac *ActiveCall) {
 	if err := a.messageStore.InsertSystemMessage(chatJID, msgID, text, ac.StartTime.Unix()); err != nil {
 		slog.Warn(fmt.Sprintf("Failed to store call log: %v", err), "source", "calls")
 	}
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 }
 
 // GetCallStats returns diagnostic information about an active call.

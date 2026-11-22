@@ -8,7 +8,7 @@ import {
   SettingsCard,
 } from "../../components/settings/ui-kit"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
-import { EditLabel } from "../../../wailsjs/go/api/Api"
+import { EditLabel } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 const LABEL_COLORS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 

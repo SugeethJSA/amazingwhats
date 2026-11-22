@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { SendPollVote } from "../../../wailsjs/go/api/Api"
+import { SendPollVote } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 interface PollVoteDialogProps {
   chatId: string

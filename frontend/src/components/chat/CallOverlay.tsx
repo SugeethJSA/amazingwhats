@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react"
-import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime"
+import { EventsOn } from "../../lib/wailsRuntime"
 import {
   AcceptCall,
   RejectCall,
@@ -8,9 +8,9 @@ import {
   GetProfile,
   GetGroupInfo,
   AddCallParticipant,
-} from "../../../wailsjs/go/api/Api"
-import { GetCachedAvatar } from "../../../wailsjs/go/api/Api"
-import type { api } from "../../../wailsjs/go/models"
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import type * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { useChatStore } from "../../store/useChatStore"
 import { formatPhone, phoneFromJID } from "../../lib/utils"
 import { createPortal } from "react-dom"
@@ -160,16 +160,16 @@ export function CallOverlay() {
       setCallDuration(0)
     }
 
-    EventsOn("call:incoming", onIncoming)
-    EventsOn("call:outgoing", onOutgoing)
-    EventsOn("call:accepted", onAccepted)
-    EventsOn("call:ended", onEnded)
+    const offIncoming = EventsOn("call:incoming", onIncoming)
+    const offOutgoing = EventsOn("call:outgoing", onOutgoing)
+    const offAccepted = EventsOn("call:accepted", onAccepted)
+    const offEnded = EventsOn("call:ended", onEnded)
 
     return () => {
-      EventsOff("call:incoming")
-      EventsOff("call:outgoing")
-      EventsOff("call:accepted")
-      EventsOff("call:ended")
+      offIncoming()
+      offOutgoing()
+      offAccepted()
+      offEnded()
     }
   }, [])
 

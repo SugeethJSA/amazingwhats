@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -207,5 +206,5 @@ func (a *Api) TryFetchPrivacySettings(ignoreCache bool) (PrivacySettingsResponse
 // handleBlocklistEvent processes a blocklist mutation from app state sync.
 func (a *Api) handleBlocklistEvent(evt *events.Blocklist) {
 	log.Printf("Blocklist changed: %+v", evt)
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 }

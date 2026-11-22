@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 )
 
@@ -34,7 +33,7 @@ func (a *Api) PairPhone(phone string) (string, error) {
 		return "", fmt.Errorf("pairing failed: %w", err)
 	}
 	slog.Info(fmt.Sprintf("PairPhone code generated for %s", phone), "source", "auth")
-	runtime.EventsEmit(a.ctx, "wa:status", code)
+	a.app.Event.Emit("wa:status", code)
 	return code, nil
 }
 
@@ -49,6 +48,6 @@ func (a *Api) Logout() error {
 		slog.Error(fmt.Sprintf("Logout request failed: %v", err), "source", "auth")
 	}
 	slog.Info("Logged out successfully", "source", "auth")
-	runtime.EventsEmit(a.ctx, "wa:status", "logged_out")
+	a.app.Event.Emit("wa:status", "logged_out")
 	return nil
 }

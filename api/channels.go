@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -70,7 +69,7 @@ func (a *Api) CreateNewsletter(name, description string) (string, error) {
 		return "", err
 	}
 	slog.Info(fmt.Sprintf("Created newsletter %s (%s)", name, meta.ID), "source", "channels")
-	runtime.EventsEmit(a.ctx, "wa:chat_list_refresh")
+	a.app.Event.Emit("wa:chat_list_refresh")
 	return meta.ID.String(), nil
 }
 

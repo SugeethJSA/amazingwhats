@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { FetchContacts, SendShareContact, SearchContacts } from "../../../wailsjs/go/api/Api"
-import { api } from "../../../wailsjs/go/models"
+import { FetchContacts, SendShareContact, SearchContacts } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 
 export function ContactShareDialog({ chatId, onClose }: { chatId: string; onClose: () => void }) {
   const [contacts, setContacts] = useState<api.Contact[]>([])

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Logout } from "../../../wailsjs/go/api/Api"
+import { Logout } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { ActionButton, SettingsCard } from "../../components/settings/ui-kit"
 
 const LogOut = () => {

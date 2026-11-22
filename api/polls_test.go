@@ -267,8 +267,8 @@ func TestPollVoteSelfJID(t *testing.T) {
 }
 
 // The full SendPollVote path cannot be unit-tested here: refreshPollCard calls
-// runtime.EventsEmit, and Wails' runtime needs a context populated by the app
-// with its internal frontend.Events implementation. This test instead verifies
+// a.app.Event.Emit, and Wails v3 needs a real *application.App injected into
+// the service. This test instead verifies
 // the exact store keys used for the pre-store and the send-failure rollback.
 func TestPollVotePreStoreAndRollbackKeys(t *testing.T) {
 	oldConfigDir := misc.ConfigDir
@@ -376,13 +376,10 @@ func TestSendPollVoteRejectsEmptySelection(t *testing.T) {
 // Seam missing for a full SendPollVote send/rollback test:
 //   - Api.waClient is a concrete *whatsmeow.Client and Api.messageStore is a
 //     concrete *store.MessageStore, so neither can be swapped for a fake.
-//   - refreshPollCard calls runtime.EventsEmit(a.ctx, ...) unconditionally on
-//     both the pre-store and the rollback path. Wails v2's getEvents(ctx)
-//     log.Fatalf's unless ctx.Value("events") is an implementation of
-//     github.com/wailsapp/wails/v2/internal/frontend.Events, which is an
-//     internal package this module cannot import (its Notify method also
-//     references the internal Frontend type). There is no exported seam to
-//     inject a no-op event sink, so a test process cannot reach SendMessage
-//     without being terminated by log.Fatalf.
+//   - refreshPollCard calls a.app.Event.Emit(...) unconditionally on both the
+//     pre-store and the rollback path. Wails v3 emits through the injected
+//     *application.App, and there is no exported seam to inject a no-op event
+//     sink into a bare test Api, so a test process cannot reach SendMessage
+//     without constructing a full application.
 // The store-key and empty-selection tests above are the strongest feasible
 // coverage without changing files outside this D-ID's scope.
