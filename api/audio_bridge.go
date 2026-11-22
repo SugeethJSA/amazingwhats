@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/gen2brain/malgo"
@@ -27,7 +28,11 @@ type LiveAudioBridge struct {
 	playbackBuf []float32
 	playbackMu  sync.Mutex
 
-	isClosed bool
+	// isClosed is read by ReadFrame/WriteFrame (under captureMu/playbackMu
+	// respectively) and written by Close. An atomic.Bool avoids the data race
+	// that existed when Close mutated it under captureMu while WriteFrame
+	// read it under playbackMu. (D-AUD-004f)
+	isClosed atomic.Bool
 	phase    float64 // for synthetic comfort noise
 
 	logCounter int
@@ -155,7 +160,7 @@ func (b *LiveAudioBridge) ReadFrame() ([]float32, error) {
 	b.captureMu.Lock()
 	defer b.captureMu.Unlock()
 
-	if b.isClosed {
+	if b.isClosed.Load() {
 		return nil, fmt.Errorf("audio bridge closed")
 	}
 
@@ -163,7 +168,7 @@ func (b *LiveAudioBridge) ReadFrame() ([]float32, error) {
 	// full frame. The Cond is signalled from the malgo data callback every time
 	// new samples arrive (roughly every 10ms on Windows), so this loop typically
 	// returns within 60ms at most.
-	for len(b.captureBuf) < frameSamples && !b.isClosed {
+	for len(b.captureBuf) < frameSamples && !b.isClosed.Load() {
 		b.captureCond.Wait()
 	}
 
@@ -201,7 +206,7 @@ func (b *LiveAudioBridge) WriteFrame(frame []float32) error {
 	b.playbackMu.Lock()
 	defer b.playbackMu.Unlock()
 
-	if b.isClosed {
+	if b.isClosed.Load() {
 		return fmt.Errorf("audio bridge closed")
 	}
 
@@ -216,14 +221,16 @@ func (b *LiveAudioBridge) WriteFrame(frame []float32) error {
 	return nil
 }
 
-// Close gracefully releases OS audio hardware
+// Close gracefully releases OS audio hardware. Idempotent: the atomic CAS
+// ensures the device/context are released exactly once even under concurrent
+// callers. (D-AUD-004f)
 func (b *LiveAudioBridge) Close() error {
-	b.captureMu.Lock()
-	if b.isClosed {
-		b.captureMu.Unlock()
+	if !b.isClosed.CompareAndSwap(false, true) {
 		return nil
 	}
-	b.isClosed = true
+	// Hold captureMu while broadcasting so a ReadFrame that checked the flag
+	// before it was set cannot miss the wake-up (it releases captureMu in Wait).
+	b.captureMu.Lock()
 	b.captureCond.Broadcast() // Wake up any pending ReadFrame calls
 	b.captureMu.Unlock()
 

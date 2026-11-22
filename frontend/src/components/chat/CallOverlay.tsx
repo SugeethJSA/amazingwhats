@@ -52,14 +52,25 @@ export function CallOverlay() {
   // compare against it before calling setActiveCall so a slow lookup for a call
   // that already ended cannot bring back a ghost overlay.
   const activeCallIDRef = useRef<string | null>(null)
+  // Per-call set of participant JIDs we have already counted, so a repeated
+  // call:participant_added event cannot inflate the roster count (D-AUD-004h).
+  const countedParticipantsRef = useRef<Map<string, Set<string>>>(new Map())
   const chatsById = useChatStore(s => s.chatsById)
 
   const clearCall = useCallback((callID?: string) => {
     // When an id is given, only clear that exact call. No id = explicit clear.
     if (callID && activeCallIDRef.current !== callID) return
+    const cleared = activeCallIDRef.current
     activeCallIDRef.current = null
+    if (cleared) countedParticipantsRef.current.delete(cleared)
     setActiveCall(null)
     setCallDuration(0)
+    // Reset all call-scoped UI state so a later call cannot inherit this
+    // call's stats panel or add-participant picker. (critic: MINOR)
+    setShowStats(false)
+    setStats(null)
+    setShowAddParticipant(false)
+    setAddSearch("")
   }, [])
 
   const onDragStart = useCallback(
@@ -136,7 +147,14 @@ export function CallOverlay() {
       if (!callID) return
       const isGroup = !!data.isGroup
       const groupJID = data.groupJID || ""
-      // Claim the call synchronously so a newer call supersedes this one.
+      // Keep exactly one visible, controllable call. Blindly overwriting the
+      // ref on a second call orphaned the first one: its later call:ended was
+      // ignored and its buttons acted on the wrong call. Ignore concurrent
+      // call events while one is active instead. (D-AUD-004e)
+      if (activeCallIDRef.current && activeCallIDRef.current !== callID) {
+        console.log("[VoIP] Ignoring concurrent call while one is active:", callID)
+        return
+      }
       activeCallIDRef.current = callID
       resolveContact({ peerJID: data.peerJID, isGroup, groupJID }, (name, avatar, participants) => {
         // The profile/avatar/name awaits above can outlive the call. Never
@@ -182,12 +200,32 @@ export function CallOverlay() {
     }
 
     const onParticipantAdded = (data: { callID?: string; targetJID?: string }) => {
-      if (!data?.callID) return
-      setActiveCall(prev =>
-        prev && prev.callID === data.callID
-          ? { ...prev, participants: prev.participants + 1 }
-          : prev,
-      )
+      if (!data?.callID || !data.targetJID) return
+      if (data.callID !== activeCallIDRef.current) return
+      // Only count a JID once per call, then use the backend's authoritative
+      // roster size from CallStats rather than a blind participants + 1.
+      // (D-AUD-004h)
+      let counted = countedParticipantsRef.current.get(data.callID)
+      if (!counted) {
+        counted = new Set<string>()
+        countedParticipantsRef.current.set(data.callID, counted)
+      }
+      if (counted.has(data.targetJID)) return
+      counted.add(data.targetJID)
+      void GetCallStats(data.callID)
+        .then(s => {
+          if (activeCallIDRef.current !== data.callID) return
+          const authoritative = s?.participants ?? 0
+          setActiveCall(prev =>
+            prev && prev.callID === data.callID
+              ? {
+                  ...prev,
+                  participants: authoritative > 0 ? authoritative : prev.participants,
+                }
+              : prev,
+          )
+        })
+        .catch(err => console.error("GetCallStats failed:", err))
     }
 
     const offIncoming = EventsOn("call:incoming", onIncoming)

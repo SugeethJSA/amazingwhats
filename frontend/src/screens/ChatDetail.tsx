@@ -816,12 +816,21 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           onBack={onBack}
           onInfoClick={() => setChatInfoOpen(!chatInfoOpen)}
           onCallClick={() => {
-            if (chatId) {
-              if (chatId.endsWith("@g.us")) {
-                MakeGroupCall(chatId)
-              } else {
-                MakeCall(chatId)
-              }
+            if (!chatId) return
+            // Outbound call bindings are promises: swallow no error. Surface a
+            // static, user-visible toast through the existing notification
+            // path (never render raw backend text, which can contain JIDs).
+            // (D-AUD-004i)
+            const showCallError = (err: unknown) => {
+              console.error("Failed to start call:", err)
+              const { addNotification, removeNotification } = useUIStore.getState()
+              const nid = addNotification("Could not start the call. Please try again.")
+              setTimeout(() => removeNotification(nid), 6000)
+            }
+            if (chatId.endsWith("@g.us")) {
+              MakeGroupCall(chatId).catch(showCallError)
+            } else {
+              MakeCall(chatId).catch(showCallError)
             }
           }}
           isTyping={typingIndicators[chatId]?.isTyping ?? false}

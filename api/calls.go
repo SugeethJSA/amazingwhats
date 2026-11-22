@@ -48,6 +48,12 @@ type ActiveCall struct {
 var (
 	callsMu     sync.Mutex
 	activeCalls = make(map[string]*ActiveCall)
+	// callOfferHandlerID is the whatsmeow handler registered in initMeowcaller
+	// to patch the group JID onto active calls. whatsmeow's AddEventHandler
+	// returns a uint32 ID (first ID is 1), so 0 is a safe "not registered"
+	// sentinel. Kept at package scope because the Api struct is defined in
+	// api.go, outside this remediation's file scope. Guarded by callsMu.
+	callOfferHandlerID uint32
 )
 
 // initMeowcaller initializes the WhatsApp VoIP extension library
@@ -66,28 +72,47 @@ func (a *Api) initMeowcaller() {
 	// fired OnIncomingCall, so we patch the group JID onto the active call and
 	// emit the incoming event here (the OnIncomingCall callback defers group
 	// emits until the group JID is known).
-	a.waClient.AddEventHandler(func(evt any) {
+	offerHandlerID := a.waClient.AddEventHandler(func(evt any) {
 		offer, ok := evt.(*events.CallOffer)
 		if !ok || offer.GroupJID.IsEmpty() {
 			return
 		}
 		callsMu.Lock()
 		ac := activeCalls[offer.CallID]
+		var peerJID, groupJID string
+		var isVideo bool
 		if ac != nil {
 			ac.GroupJID = offer.GroupJID.String()
 			ac.IsGroup = true
+			// Use one canonical JID for a group's peer: ActiveCall.PeerJID was
+			// seeded from the library's call.Peer() (the call creator), which is
+			// also what outbound group calls use. Fall back to the inviter only
+			// if that seed was empty, and emit that same value below.
+			// (D-AUD-004j)
+			if ac.PeerJID == "" {
+				ac.PeerJID = offer.From.String()
+			}
+			peerJID = ac.PeerJID
+			isVideo = ac.IsVideo
+			groupJID = ac.GroupJID
 		}
 		callsMu.Unlock()
 		if ac != nil && a.ctx != nil {
 			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":   offer.CallID,
-				"peerJID":  offer.From.String(),
-				"isVideo":  ac.IsVideo,
+				"peerJID":  peerJID,
+				"isVideo":  isVideo,
 				"isGroup":  true,
-				"groupJID": ac.GroupJID,
+				"groupJID": groupJID,
 			})
 		}
 	})
+	// Remember the handler so cleanup can actually unregister it. Nil-ing
+	// callClient alone would leave this closure firing on waClient after
+	// shutdown. (critic: MAJOR D-AUD-004a)
+	callsMu.Lock()
+	callOfferHandlerID = offerHandlerID
+	callsMu.Unlock()
 
 	// Handle incoming calls
 	a.callClient.OnIncomingCall(func(call *meowcaller.Call) {
@@ -108,26 +133,25 @@ func (a *Api) initMeowcaller() {
 		activeCalls[call.ID()] = ac
 		callsMu.Unlock()
 
-		// Group calls emit call:incoming from the CallOffer handler above,
-		// once the group JID is known. 1:1 calls emit here.
-		if a.ctx != nil && !ac.IsGroup {
-			a.app.Event.Emit("call:incoming", map[string]any{
-				"callID":  call.ID(),
-				"peerJID": call.Peer().String(),
-				"isVideo": call.IsVideo(),
-				"isGroup": false,
-			})
-		}
-
+		// Register OnEnd immediately after insertion, before any bridge is
+		// opened or the incoming event is emitted, so a terminal event racing
+		// setup is never missed. (D-AUD-004d)
 		call.OnEnd(func(reason string) {
 			log.Printf("[Calls] Call %s ended: %s", call.ID(), reason)
 			callsMu.Lock()
-			ac := activeCalls[call.ID()]
-			if ac != nil {
-				a.insertCallLog(ac)
+			ended := activeCalls[call.ID()]
+			if ended != nil {
 				delete(activeCalls, call.ID())
 			}
 			callsMu.Unlock()
+			if ended != nil {
+				// Close is idempotent; safe even when no bridge was attached.
+				// (D-AUD-004g)
+				if ended.Bridge != nil {
+					_ = ended.Bridge.Close()
+				}
+				a.insertCallLog(ended)
+			}
 
 			if a.ctx != nil {
 				a.app.Event.Emit("call:ended", map[string]any{
@@ -136,6 +160,19 @@ func (a *Api) initMeowcaller() {
 				})
 			}
 		})
+
+		// Group calls emit call:incoming from the CallOffer handler above,
+		// once the group JID is known. 1:1 calls emit here, after OnEnd is
+		// installed. Use the snapshotted isGroup value rather than reading the
+		// shared ActiveCall outside callsMu. (D-AUD-004d, D-AUD-004f)
+		if a.ctx != nil && !isGroup {
+			a.app.Event.Emit("call:incoming", map[string]any{
+				"callID":  call.ID(),
+				"peerJID": call.Peer().String(),
+				"isVideo": call.IsVideo(),
+				"isGroup": false,
+			})
+		}
 	})
 }
 
@@ -148,25 +185,43 @@ func (a *Api) AcceptCall(callID string) error {
 		return fmt.Errorf("call %s not found", callID)
 	}
 
-	if err := callData.Call.Answer(); err != nil {
-		log.Printf("[Calls] Failed to answer call %s: %v", callID, err)
-	}
-	callData.AnswerTime = time.Now()
-
-	// For Phase 2: Attach Live OS Audio Bridge
+	// Bring the OS audio bridge up before answering so a bridge/device failure
+	// leaves the call untouched (still ringing) rather than creating a live,
+	// unanswered call with no audio path. (D-AUD-004b)
 	bridge, err := NewLiveAudioBridge()
 	if err != nil {
 		log.Printf("[Calls] Failed to initialize live audio bridge: %v", err)
-		return fmt.Errorf("audio bridge init failed: %v", err)
+		return fmt.Errorf("audio bridge init failed: %w", err)
 	}
-
 	if err := bridge.Start(); err != nil {
 		log.Printf("[Calls] Failed to start audio bridge: %v", err)
-		bridge.Close()
-		return fmt.Errorf("audio bridge start failed: %v", err)
+		_ = bridge.Close()
+		return fmt.Errorf("audio bridge start failed: %w", err)
 	}
 
-	callData.Bridge = bridge
+	// Never swallow Answer(): a failed answer must not mark the call answered
+	// or leave a running bridge attached to a dead call. (D-AUD-004b)
+	if err := callData.Call.Answer(); err != nil {
+		log.Printf("[Calls] Failed to answer call %s: %v", callID, err)
+		_ = bridge.Close()
+		return fmt.Errorf("answer call: %w", err)
+	}
+
+	// Guard AnswerTime and Bridge writes with callsMu; these are read by
+	// GetCallStats and cleared by OnEnd/EndCall. (D-AUD-004f)
+	callsMu.Lock()
+	ac, stillActive := activeCalls[callID]
+	if stillActive {
+		ac.AnswerTime = time.Now()
+		ac.Bridge = bridge
+	}
+	callsMu.Unlock()
+	if !stillActive {
+		// The call ended while Answer() was in flight; do not attach the bridge.
+		_ = bridge.Close()
+		return fmt.Errorf("call %s ended while answering", callID)
+	}
+
 	callData.Call.Play(bridge)
 	callData.Call.Receive(bridge)
 
@@ -222,20 +277,31 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 	}
 	callsMu.Unlock()
 
-	bridge, err := NewLiveAudioBridge()
-	if err != nil {
-		log.Printf("[Calls] Failed to initialize live audio bridge for outbound call: %v", err)
-	} else if err := bridge.Start(); err == nil {
+	// Install terminal/accept handlers before opening the audio bridge so no
+	// end event can be missed during (or race with) bridge setup. (D-AUD-004d)
+	call.OnEnd(func(reason string) {
+		log.Printf("[Calls] Outbound call %s ended: %s", call.ID(), reason)
 		callsMu.Lock()
-		if ac, ok := activeCalls[call.ID()]; ok {
-			ac.Bridge = bridge
+		ended := activeCalls[call.ID()]
+		if ended != nil {
+			delete(activeCalls, call.ID())
 		}
 		callsMu.Unlock()
-		call.Play(bridge)
-		call.Receive(bridge)
-	} else {
-		bridge.Close()
-	}
+		if ended != nil {
+			// Close is idempotent, so this is safe even if setup never attached
+			// a bridge. (D-AUD-004g)
+			if ended.Bridge != nil {
+				_ = ended.Bridge.Close()
+			}
+			a.insertCallLog(ended)
+		}
+		if a.ctx != nil {
+			a.app.Event.Emit("call:ended", map[string]any{
+				"callID": call.ID(),
+				"reason": reason,
+			})
+		}
+	})
 
 	call.OnPeerAccept(func() {
 		log.Printf("[Calls] Outbound call %s accepted by peer", call.ID())
@@ -251,26 +317,49 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 		}
 	})
 
-	call.OnEnd(func(reason string) {
-		log.Printf("[Calls] Outbound call %s ended: %s", call.ID(), reason)
+	// Bridge setup happens after the handlers are installed. A call with no
+	// working audio path is unusable, so a bridge failure tears the call down
+	// and returns an error through MakeCall/MakeGroupCall to the UI toast,
+	// instead of reporting a phantom success. (critic: MINOR D-AUD-004)
+	abort := func() {
 		callsMu.Lock()
-		ac := activeCalls[call.ID()]
-		if ac != nil {
-			if ac.Bridge != nil {
-				_ = ac.Bridge.Close()
-			}
-			a.insertCallLog(ac)
-			delete(activeCalls, call.ID())
-		}
+		delete(activeCalls, call.ID())
 		callsMu.Unlock()
-		if a.ctx != nil {
-			a.app.Event.Emit("call:ended", map[string]any{
-				"callID": call.ID(),
-				"reason": reason,
-			})
+		if err := call.Hangup(); err != nil {
+			log.Printf("[Calls] Failed to hangup outbound call %s after audio failure: %v", call.ID(), err)
 		}
-	})
+	}
 
+	bridge, err := NewLiveAudioBridge()
+	if err != nil {
+		log.Printf("[Calls] Failed to initialize live audio bridge for outbound call: %v", err)
+		abort()
+		return fmt.Errorf("audio bridge init failed: %w", err)
+	}
+	if err := bridge.Start(); err != nil {
+		log.Printf("[Calls] Failed to start audio bridge for outbound call: %v", err)
+		_ = bridge.Close() // Close is idempotent and releases a partial device.
+		abort()
+		return fmt.Errorf("audio bridge start failed: %w", err)
+	}
+
+	callsMu.Lock()
+	ac, ok := activeCalls[call.ID()]
+	if ok {
+		ac.Bridge = bridge
+	}
+	callsMu.Unlock()
+	if !ok {
+		// The call ended during bridge setup; don't attach to a dead call.
+		_ = bridge.Close()
+	} else {
+		call.Play(bridge)
+		call.Receive(bridge)
+	}
+
+	// Emit only after the handlers are in place, so the frontend can never
+	// observe a call it cannot control (end/accept callbacks already exist).
+	// (D-AUD-004d)
 	if a.ctx != nil {
 		a.app.Event.Emit("call:outgoing", map[string]any{
 			"callID":   call.ID(),
@@ -293,6 +382,8 @@ func (a *Api) AddCallParticipant(callID, targetJID string) error {
 	if !ok {
 		return fmt.Errorf("call %s not found", callID)
 	}
+	// ac.Call is assigned once at insertion and never mutated, so it is safe to
+	// use outside callsMu. (D-AUD-004f)
 	if err := ac.Call.AddParticipant(context.Background(), targetJID); err != nil {
 		log.Printf("[Calls] Failed to add %s to call %s: %v", redactJID(targetJID), callID, err)
 		return fmt.Errorf("failed to add participant: %v", err)
@@ -317,6 +408,8 @@ func (a *Api) RejectCall(callID string) error {
 	}
 	delete(activeCalls, callID)
 	callsMu.Unlock()
+	// Removed from the map under the lock, so no other goroutine can mutate
+	// callData here. (D-AUD-004f)
 	a.insertCallLog(callData)
 	if callData.Bridge != nil {
 		_ = callData.Bridge.Close()
@@ -330,20 +423,44 @@ func (a *Api) RejectCall(callID string) error {
 // cleanupMeowcaller tears down the VoIP client and any active calls so no
 // stale callbacks fire after shutdown and no audio resources leak.
 func (a *Api) cleanupMeowcaller() {
+	// Snapshot and remove every entry while holding callsMu, then tear the
+	// calls down after releasing it. OnEnd callbacks take the same mutex, so
+	// calling Hangup under the lock deadlocks shutdown whenever a call is
+	// active. Removing the entries first also stops those callbacks from
+	// firing during teardown. (D-AUD-004a)
 	callsMu.Lock()
+	snapshot := make([]*ActiveCall, 0, len(activeCalls))
 	for id, ac := range activeCalls {
-		if ac.Bridge != nil {
-			_ = ac.Bridge.Close()
-		}
-		if ac.Call != nil {
-			_ = ac.Call.Hangup()
-		}
+		snapshot = append(snapshot, ac)
 		delete(activeCalls, id)
 	}
 	callsMu.Unlock()
 
-	// The meowcaller client registers a whatsmeow event handler; removing it
-	// here prevents callbacks from firing after the app has shut down.
+	for _, ac := range snapshot {
+		if ac.Bridge != nil {
+			_ = ac.Bridge.Close()
+		}
+		if ac.Call != nil {
+			if err := ac.Call.Hangup(); err != nil {
+				log.Printf("[Calls] Failed to hangup call %s during cleanup: %v", ac.Call.ID(), err)
+			}
+		}
+	}
+
+	// Unregister the CallOffer handler registered in initMeowcaller. Dropping
+	// the a.callClient reference does NOT remove a whatsmeow handler — without
+	// this, the closure stays live on waClient and can still mutate the map and
+	// Emit call:incoming after shutdown. (critic: MAJOR D-AUD-004a)
+	callsMu.Lock()
+	handlerID := callOfferHandlerID
+	callOfferHandlerID = 0
+	callsMu.Unlock()
+	if a.waClient != nil && handlerID != 0 {
+		a.waClient.RemoveEventHandler(handlerID)
+	}
+
+	// Drop the local meowcaller reference only after unregistering our own
+	// handler above; this does not unregister meowcaller's internal handlers.
 	if a.callClient != nil {
 		a.callClient = nil
 	}
@@ -352,6 +469,8 @@ func (a *Api) cleanupMeowcaller() {
 // insertCallLog stores a call history entry as a system message in the chat so
 // the frontend can display it as a call log entry. The format uses a [call]
 // prefix so the UI can distinguish it from group system messages.
+// Callers invoke this only after removing the ActiveCall from activeCalls, so
+// its fields are no longer subject to concurrent writes. (D-AUD-004f)
 func (a *Api) insertCallLog(ac *ActiveCall) {
 	mediaType := "voice"
 	if ac.IsVideo {
@@ -395,14 +514,21 @@ func (a *Api) insertCallLog(ac *ActiveCall) {
 
 // GetCallStats returns diagnostic information about an active call.
 func (a *Api) GetCallStats(callID string) (*CallStats, error) {
+	// Snapshot every ActiveCall field under callsMu; the meowcaller Call
+	// accessors below are internally synchronized. (D-AUD-004f)
 	callsMu.Lock()
 	callData, ok := activeCalls[callID]
-	callsMu.Unlock()
 	if !ok {
+		callsMu.Unlock()
 		return nil, fmt.Errorf("call %s not found", callID)
 	}
-
 	call := callData.Call
+	bridgeActive := callData.Bridge != nil
+	answerTime := callData.AnswerTime
+	isGroup := callData.IsGroup
+	groupJID := callData.GroupJID
+	callsMu.Unlock()
+
 	state := call.State()
 	phase := ""
 	switch state {
@@ -422,17 +548,21 @@ func (a *Api) GetCallStats(callID string) (*CallStats, error) {
 		phase = "unknown"
 	}
 
-	// Group call roster size, if this is a group call
+	// Group call roster size, if this is a group call. GroupState() is the
+	// library's authoritative roster snapshot. (D-AUD-004h)
 	var participantCount int
 	if gs, ok := call.GroupState(); ok {
 		participantCount = len(gs.Participants)
 	}
 
-	// Rough call duration: if active, measure from bridge start; else 0
+	// Derive duration from AnswerTime once the call is active; 0 while ringing
+	// or before an answer was recorded. (D-AUD-004c)
 	var dur int64
-	if state == meowcaller.CallPhaseActive && callData.Bridge != nil {
-		// No start time tracked yet — use 0 as fallback; frontend has its own timer.
-		dur = 0
+	if state == meowcaller.CallPhaseActive && !answerTime.IsZero() {
+		dur = int64(time.Since(answerTime).Seconds())
+		if dur < 0 {
+			dur = 0
+		}
 	}
 
 	return &CallStats{
@@ -446,10 +576,10 @@ func (a *Api) GetCallStats(callID string) (*CallStats, error) {
 		SampleRate:       16000,
 		FrameSize:        960,
 		RelayEnabled:     true,
-		BridgeActive:     callData.Bridge != nil,
+		BridgeActive:     bridgeActive,
 		Duration:         dur,
-		IsGroup:          callData.IsGroup,
-		GroupJID:         callData.GroupJID,
+		IsGroup:          isGroup,
+		GroupJID:         groupJID,
 		Participants:     participantCount,
 	}, nil
 }
@@ -464,6 +594,7 @@ func (a *Api) EndCall(callID string) error {
 	}
 	delete(activeCalls, callID)
 	callsMu.Unlock()
+	// Removed from the map under the lock; safe to read outside it. (D-AUD-004f)
 	a.insertCallLog(callData)
 	if callData.Bridge != nil {
 		_ = callData.Bridge.Close()
