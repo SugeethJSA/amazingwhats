@@ -43,6 +43,10 @@ const (
 	VALUES (?, ?, ?, ?)
 	`
 
+	DeletePollVote = `
+	DELETE FROM poll_votes WHERE chat_jid = ? AND poll_message_id = ? AND voter_jid = ?
+	`
+
 	SelectPollVotes = `
 	SELECT voter_jid, option_indices_json
 	FROM poll_votes

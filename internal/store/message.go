@@ -219,6 +219,30 @@ func NewMessageStore() (*MessageStore, error) {
 		if err != nil {
 			return err
 		}
+		// The fork poll schema is authoritative. A database created by upstream
+		// has incompatible polls/poll_votes tables, against which the fork's
+		// CREATE TABLE IF NOT EXISTS would silently no-op. Detect and move such
+		// tables aside BEFORE the fork CREATEs; the data is backfilled from the
+		// backups after this transaction commits (backfill uses store methods
+		// that start their own write transactions).
+		pollsUpstream, votesUpstream, err := pollTablesHaveUpstreamShape(tx)
+		if err != nil {
+			return err
+		}
+		if pollsUpstream {
+			if _, err := tx.Exec(`ALTER TABLE polls RENAME TO ` + pollsBackupTable); err != nil {
+				return err
+			}
+		}
+		if votesUpstream {
+			if _, err := tx.Exec(`ALTER TABLE poll_votes RENAME TO ` + votesBackupTable); err != nil {
+				return err
+			}
+			// The fork index must be created fresh on the new fork table.
+			if _, err := tx.Exec(`DROP INDEX IF EXISTS idx_poll_votes_poll`); err != nil {
+				return err
+			}
+		}
 		_, err = tx.Exec(query.CreatePollsTable)
 		if err != nil {
 			return err
@@ -243,6 +267,20 @@ func NewMessageStore() (*MessageStore, error) {
 	})
 
 	if err != nil {
+		_ = ms.Close()
+		return nil, err
+	}
+
+	// Restore any upstream-shaped poll data the init transaction moved aside,
+	// then drop the backups. This is a no-op on fresh/fork-shaped databases.
+	if err := ms.maybeBackfillPollTables(); err != nil {
+		_ = ms.Close()
+		return nil, err
+	}
+
+	// Fail fast if the authoritative fork schema is not actually installed:
+	// continuing with an upstream-shaped table would corrupt future votes.
+	if err := assertPollSchemaShape(ms.db); err != nil {
 		_ = ms.Close()
 		return nil, err
 	}

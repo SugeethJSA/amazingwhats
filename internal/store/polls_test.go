@@ -1,10 +1,152 @@
 package store
 
 import (
+	"database/sql"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/lugvitc/whats4linux/internal/misc"
+	"github.com/lugvitc/whats4linux/internal/query"
 )
+
+func TestPollSchemaIsForkShape(t *testing.T) {
+	ms := newTestMessageStore(t)
+
+	cols, pk, err := pollTableShape(ms.db, pragmaPollsTableInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"chat_jid", "message_id", "question", "options_json"}; !reflect.DeepEqual(cols, want) {
+		t.Errorf("polls columns = %v, want %v", cols, want)
+	}
+	if want := []int{1, 2}; !reflect.DeepEqual(pk, want) {
+		t.Errorf("polls PK positions = %v, want %v", pk, want)
+	}
+
+	cols, pk, err = pollTableShape(ms.db, pragmaVotesTableInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"chat_jid", "poll_message_id", "voter_jid", "option_indices_json"}; !reflect.DeepEqual(cols, want) {
+		t.Errorf("poll_votes columns = %v, want %v", cols, want)
+	}
+	if want := []int{1, 2, 3}; !reflect.DeepEqual(pk, want) {
+		t.Errorf("poll_votes PK positions = %v, want %v", pk, want)
+	}
+
+	var indexes int
+	if err := ms.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?`, idxPollVotesPoll).Scan(&indexes); err != nil {
+		t.Fatal(err)
+	}
+	if indexes != 1 {
+		t.Errorf("idx_poll_votes_poll count = %d, want 1", indexes)
+	}
+	// Exactly one CREATE TABLE definition per poll table: no upstream DDL
+	// should have produced a second/competing schema object.
+	for _, table := range []string{"polls", "poll_votes"} {
+		var creates int
+		if err := ms.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&creates); err != nil {
+			t.Fatal(err)
+		}
+		if creates != 1 {
+			t.Errorf("%s CREATE definitions = %d, want 1", table, creates)
+		}
+	}
+	if err := assertPollSchemaShape(ms.db); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPollSchemaUpgradeFromUpstreamShape(t *testing.T) {
+	oldConfigDir := misc.ConfigDir
+	misc.ConfigDir = t.TempDir()
+	t.Cleanup(func() { misc.ConfigDir = oldConfigDir })
+
+	const (
+		chat      = "g1@s.whatsapp.net"
+		messageID = "poll-upstream-1"
+		voter     = "alice@s.whatsapp.net"
+	)
+
+	// Pre-create a DB with the incompatible upstream poll schema and a
+	// messages row so the startup migration has something to resolve.
+	db, err := sql.Open("sqlite3", misc.GetSQLiteAddress("messages.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(query.CreateMessagesTable); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(query.InsertMessage, messageID, chat, voter, int64(100), false, messageID, false, "", false, false, 0); err != nil {
+		t.Fatal(err)
+	}
+	for _, ddl := range []string{
+		`CREATE TABLE polls (
+			message_id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			options_json TEXT NOT NULL,
+			selectable_count INTEGER NOT NULL DEFAULT 0,
+			FOREIGN KEY (message_id) REFERENCES messages(message_id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE poll_votes (
+			poll_message_id TEXT NOT NULL,
+			sender_jid TEXT NOT NULL,
+			options_json TEXT NOT NULL,
+			updated_at INTEGER NOT NULL,
+			PRIMARY KEY (poll_message_id, sender_jid),
+			FOREIGN KEY (poll_message_id) REFERENCES messages(message_id) ON DELETE CASCADE
+		)`,
+	} {
+		if _, err := db.Exec(ddl); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO polls (message_id, name, options_json, selectable_count) VALUES (?, ?, ?, ?)`,
+		messageID, "Lunch?", `["Pizza","Sushi"]`, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO poll_votes (poll_message_id, sender_jid, options_json, updated_at) VALUES (?, ?, ?, ?)`,
+		messageID, voter, `["Sushi"]`, int64(123)); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	ms, err := NewMessageStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ms.Close() })
+
+	if err := assertPollSchemaShape(ms.db); err != nil {
+		t.Fatalf("DB did not converge on fork schema: %v", err)
+	}
+	question, options, found, err := ms.GetPollMetadata(chat, messageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found || question != "Lunch?" || !reflect.DeepEqual(options, []string{"Pizza", "Sushi"}) {
+		t.Errorf("poll metadata not preserved: found=%v question=%q options=%v", found, question, options)
+	}
+	votes, err := ms.GetPollVotes(chat, messageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []int{1}; !reflect.DeepEqual(votes[voter], want) {
+		t.Errorf("vote option names not remapped to indices: got %v, want %v", votes[voter], want)
+	}
+	for _, backup := range []string{pollsBackupTable, votesBackupTable} {
+		exists, err := tableExists(ms.db, backup)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			t.Errorf("backup table %s still exists after upgrade", backup)
+		}
+	}
+}
 
 func TestSaveAndGetPollMetadata(t *testing.T) {
 	ms := newTestMessageStore(t)
