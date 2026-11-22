@@ -664,11 +664,12 @@ func (a *Api) mainEventHandler(evt any) {
 
 		// Raise a desktop notification for genuine incoming messages (not our
 		// own, not reactions, not channel/broadcast posts) while backgrounded.
-		// Respects the global notification switch and per-chat mutes
-		// (including mutes synced from the phone).
+		// Respects the global notification switch, per-chat mutes
+		// (including mutes synced from the phone) and archived chats.
 		isFeed := v.Info.Chat.Server == types.NewsletterServer || v.Info.Chat.Server == types.BroadcastServer
 		if messageID != "" && !v.Info.IsFromMe && !isFeed && v.Message.GetReactionMessage() == nil && !a.windowFocused.Load() &&
-			store.GetNotificationsEnabled() && !a.messageStore.IsChatMuted(v.Info.Chat.String()) {
+			store.GetNotificationsEnabled() && !a.messageStore.IsChatMuted(v.Info.Chat.String()) &&
+			!a.messageStore.IsChatArchived(v.Info.Chat.String()) {
 			a.startBackground(func() { a.notifyIncoming(v, parsedHTML) })
 		}
 
