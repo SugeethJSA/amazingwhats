@@ -774,6 +774,9 @@ func (a *Api) mainEventHandler(evt any) {
 		a.app.Event.Emit("wa:newsletter_update", map[string]any{
 			"jid": v.JID.String(),
 		})
+		// The live-update event carries no channel name or metadata, so ask
+		// the frontend to reload the chat list instead of fabricating fields.
+		a.app.Event.Emit("wa:chat_list_refresh")
 
 	case *events.Mute:
 		// Emitted for mutes set on other devices (e.g. the phone), including

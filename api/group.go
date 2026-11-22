@@ -30,6 +30,10 @@ type Group struct {
 type GroupParticipant struct {
 	Contact Contact `json:"contact"`
 	IsAdmin bool    `json:"is_admin"`
+	// ActionJID is the participant's primary JID as reported by whatsmeow
+	// (often an LID). Group promote/demote/remove actions must use this exact
+	// identifier; Contact.JID stays the PN-canonical form for display/lookup.
+	ActionJID string `json:"action_jid,omitempty"`
 }
 
 func (a *Api) FetchGroups() ([]wa.Group, error) {
@@ -86,9 +90,13 @@ func (a *Api) GetGroupInfo(jidStr string) (Group, error) {
 		return Group{}, err
 	}
 
+	// buildContact uses the PN-canonical JID only for the contact-name lookup
+	// and phone-number display. The participant's original (primary) JID is
+	// carried separately in GroupParticipant.ActionJID for group actions, so
+	// a LID is never silently replaced by its PN.
 	buildContact := func(jid types.JID) Contact {
-		jid = canonicalUserJID(a.ctx, a.waClient, jid)
-		c, found := allContacts[jid]
+		displayJID := canonicalUserJID(a.ctx, a.waClient, jid)
+		c, found := allContacts[displayJID]
 		fullName, firstName, pushName, businessName := "", "", "", ""
 		if found {
 			fullName = c.FullName
@@ -99,12 +107,12 @@ func (a *Api) GetGroupInfo(jidStr string) (Group, error) {
 		// Unnamed participants (and LIDs with no PN mapping) still get a
 		// phone-formatted row so the group panel always has something to show.
 		phno := ""
-		if num, perr := phonenumbers.Parse("+"+jid.User, ""); perr == nil {
+		if num, perr := phonenumbers.Parse("+"+displayJID.User, ""); perr == nil {
 			phno = phonenumbers.Format(num, phonenumbers.INTERNATIONAL)
 		}
 		return Contact{
 			Phno:       phno,
-			JID:        jid.String(),
+			JID:        displayJID.String(),
 			FullName:   fullName,
 			Short:      firstName,
 			PushName:   pushName,
@@ -115,8 +123,9 @@ func (a *Api) GetGroupInfo(jidStr string) (Group, error) {
 	participants := make([]GroupParticipant, 0, len(GroupInfo.Participants))
 	for _, p := range GroupInfo.Participants {
 		participants = append(participants, GroupParticipant{
-			Contact: buildContact(p.JID),
-			IsAdmin: p.IsAdmin,
+			Contact:   buildContact(p.JID),
+			IsAdmin:   p.IsAdmin,
+			ActionJID: p.JID.String(),
 		})
 	}
 	parentJID := ""
@@ -183,6 +192,9 @@ func (a *Api) updateParticipants(groupJID string, participantJIDs []string, acti
 	if err != nil {
 		return err
 	}
+	// Use the participant JIDs verbatim. Do NOT canonicalize them to PN here:
+	// the UI passes back GroupParticipant.action_jid (the primary JID, which
+	// may be an LID), and whatsmeow needs that exact identifier for the action.
 	jids := make([]types.JID, len(participantJIDs))
 	for i, p := range participantJIDs {
 		jids[i], err = types.ParseJID(p)

@@ -105,10 +105,17 @@ export function useWailsEvents() {
     const unsubNewsletterUpdate = EventsOn(
       "wa:newsletter_update",
       (data: { jid?: string; channelId?: string; name?: string }) => {
-        // NewsletterLiveUpdate emits { jid }; older payloads used { channelId }.
+        // NewsletterLiveUpdate emits only { jid }; older payloads used
+        // { channelId }. There is no name in the event, so don't gate on it.
+        // If a name is supplied, apply it locally and re-sort. The backend
+        // pairs this event with wa:chat_list_refresh so authoritative metadata
+        // (including the name) is refreshed too.
         const channelId = data?.jid || data?.channelId
-        if (!channelId || !data?.name) return
-        useChatStore.getState().updateSingleChat(channelId, { name: data.name })
+        if (!channelId) return
+        if (data?.name) {
+          useChatStore.getState().updateSingleChat(channelId, { name: data.name })
+        }
+        useChatStore.getState().resortChats()
       },
     )
 

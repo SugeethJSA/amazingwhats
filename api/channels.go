@@ -14,6 +14,9 @@ type NewsletterInfo struct {
 	Description string `json:"description,omitempty"`
 	Picture     string `json:"picture,omitempty"`
 	Subscriber  bool   `json:"subscriber"`
+	// Muted comes from the server-provided viewer metadata ("on"/"off"), so
+	// the UI never has to guess a channel's mute state.
+	Muted bool `json:"muted"`
 }
 
 type NewsletterMessageItem struct {
@@ -44,6 +47,7 @@ func (a *Api) GetNewsletterInfo(jidStr string) (*NewsletterInfo, error) {
 	}
 	if meta.ViewerMeta != nil {
 		info.Subscriber = meta.ViewerMeta.Role == types.NewsletterRoleSubscriber
+		info.Muted = meta.ViewerMeta.Mute == types.NewsletterMuteOn
 	}
 	if meta.ThreadMeta.Description.Text != "" {
 		info.Description = meta.ThreadMeta.Description.Text
@@ -154,6 +158,7 @@ func (a *Api) GetSubscribedNewsletters() ([]NewsletterInfo, error) {
 		}
 		if meta.ViewerMeta != nil {
 			info.Subscriber = meta.ViewerMeta.Role == types.NewsletterRoleSubscriber
+			info.Muted = meta.ViewerMeta.Mute == types.NewsletterMuteOn
 		}
 		if meta.ThreadMeta.Description.Text != "" {
 			info.Description = meta.ThreadMeta.Description.Text
@@ -241,6 +246,7 @@ func (a *Api) GetNewsletterByInvite(inviteCode string) (*NewsletterInfo, error) 
 	}
 	if meta.ViewerMeta != nil {
 		info.Subscriber = meta.ViewerMeta.Role == types.NewsletterRoleSubscriber
+		info.Muted = meta.ViewerMeta.Mute == types.NewsletterMuteOn
 	}
 	if meta.ThreadMeta.Description.Text != "" {
 		info.Description = meta.ThreadMeta.Description.Text

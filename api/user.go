@@ -8,13 +8,14 @@ import (
 	"go.mau.fi/whatsmeow/types"
 )
 
-// GetMyJID returns the logged-in user's phone-number part, used to identify
-// which reactions are our own (for toggling them off).
+// GetMyJID returns the logged-in user's full JID. Callers normalize it with
+// userPart() before comparing it to other JIDs (the account ID is a PN JID,
+// while group participants may be addressed by LID).
 func (a *Api) GetMyJID() string {
 	if a.waClient.Store.ID == nil {
 		return ""
 	}
-	return a.waClient.Store.ID.User
+	return a.waClient.Store.ID.String()
 }
 
 func (a *Api) GetProfile(jidStr string) (Contact, error) {

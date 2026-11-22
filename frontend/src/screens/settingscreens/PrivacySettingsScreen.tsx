@@ -4,9 +4,8 @@ import {
   SetPrivacySetting,
   GetStatusPrivacy,
   SetStatusPrivacy,
-  SetDisappearingTimerDefault,
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import { RowList, SettingRow, SelectMenu, SettingsCard } from "../../components/settings/ui-kit"
+import { RowList, SettingRow, SelectMenu } from "../../components/settings/ui-kit"
 
 interface Setting {
   key: string
@@ -25,7 +24,6 @@ const SETTINGS: Setting[] = [
       { value: "contacts", label: "My contacts" },
       { value: "contact_blacklist", label: "My contacts except…" },
       { value: "none", label: "Nobody" },
-      { value: "match_last_seen", label: "Same as last seen" },
     ],
   },
   {
@@ -74,31 +72,22 @@ const SETTINGS: Setting[] = [
     key: "online",
     label: "Online status",
     description: "Who can see when you are online.",
+    // whatsmeow: valid values are only "all" and "match_last_seen".
     options: [
       { value: "all", label: "Everyone" },
-      { value: "contacts", label: "My contacts" },
-      { value: "contact_blacklist", label: "My contacts except…" },
-      { value: "none", label: "Match last seen" },
+      { value: "match_last_seen", label: "Same as last seen" },
     ],
   },
   {
     key: "calladd",
     label: "Calls",
     description: "Who can call you.",
+    // whatsmeow: valid values are only "all" and "known".
     options: [
       { value: "all", label: "Everyone" },
-      { value: "contacts", label: "My contacts" },
-      { value: "contact_blacklist", label: "My contacts except…" },
-      { value: "none", label: "Nobody" },
+      { value: "known", label: "Known contacts" },
     ],
   },
-]
-
-const TIMER_OPTIONS = [
-  { value: "0", label: "Off" },
-  { value: "86400", label: "24 hours" },
-  { value: "604800", label: "7 days" },
-  { value: "7776000", label: "90 days" },
 ]
 
 const PrivacySettingsScreen = () => {
@@ -107,8 +96,6 @@ const PrivacySettingsScreen = () => {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [statusBlacklist, setStatusBlacklist] = useState<string[]>([])
-  const [defaultTimer, setDefaultTimer] = useState(0)
-  const [timerBusy, setTimerBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -135,7 +122,9 @@ const PrivacySettingsScreen = () => {
       .then(entries => {
         if (cancelled) return
         for (const e of entries) {
-          if (e.type === "contact_blacklist") {
+          // StatusPrivacy.Type is "contacts" | "blacklist" | "whitelist"
+          // (whatsmeow), not the "contact_blacklist" privacy-setting value.
+          if (e.type === "blacklist") {
             setStatusBlacklist(e.jids || [])
           }
         }
@@ -165,17 +154,9 @@ const PrivacySettingsScreen = () => {
     }
   }
 
-  const handleDefaultTimer = async (seconds: number) => {
-    setTimerBusy(true)
-    try {
-      await SetDisappearingTimerDefault(seconds)
-      setDefaultTimer(seconds)
-    } catch (e) {
-      console.error("Failed to set default disappearing timer:", e)
-    } finally {
-      setTimerBusy(false)
-    }
-  }
+  // No default disappearing-timer control: whatsmeow exposes a setter but no
+  // getter for the account-level timer, so its current value cannot be read
+  // back. Rendering a picker seeded with 0 would always claim "Off".
 
   return (
     <div className="flex flex-col gap-6">
@@ -193,24 +174,6 @@ const PrivacySettingsScreen = () => {
         <div className="rounded-xl bg-red-500/10 px-3.5 py-2.5 text-[13px] font-medium text-red-600 dark:text-red-400">
           {error}
         </div>
-      )}
-
-      {/* Default disappearing timer */}
-      {!loading && (
-        <SettingsCard>
-          <SettingRow
-            title="Default disappearing timer"
-            description="Sets the default timer for new chats."
-            control={
-              <SelectMenu
-                value={String(defaultTimer)}
-                options={TIMER_OPTIONS}
-                onChange={v => handleDefaultTimer(Number(v))}
-                disabled={timerBusy}
-              />
-            }
-          />
-        </SettingsCard>
       )}
 
       {!loading && (

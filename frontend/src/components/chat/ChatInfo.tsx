@@ -48,6 +48,7 @@ import {
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { EventsOn } from "../../lib/wailsRuntime"
+import { userPart } from "../../lib/self"
 import { GoBackIcon } from "../../assets/svgs/header_icons"
 import ToggleButton from "../settings/ToggleButton"
 import { useMuteStore } from "../../store/useMuteStore"
@@ -121,8 +122,9 @@ export function ChatInfo({
   const [newsletterInfo, setNewsletterInfo] = useState<{
     name?: string
     description?: string
-    subscriber_count?: number
+    muted?: boolean
   } | null>(null)
+  // Seeded from the server-provided ViewerMeta.Mute value, never fabricated.
   const [newsletterMuted, setNewsletterMuted] = useState(false)
   const MAX_VISIBLE = 10
 
@@ -201,7 +203,9 @@ export function ChatInfo({
       .then(info => {
         if (cancelled) return
         setNewsletterInfo(info)
-        setNewsletterMuted(false)
+        // The generated bindings may not yet expose the new `muted` field;
+        // read it defensively and fall back to unmuted only when it is absent.
+        setNewsletterMuted(!!(info as any)?.muted)
       })
       .catch(() => {})
     return () => {
@@ -307,13 +311,17 @@ export function ChatInfo({
 
   useEffect(() => {
     GetMyJID()
-      .then(setMyJid)
+      // GetMyJID returns only the phone part; keep whatever the backend gives
+      // us and compare user parts on both sides below.
+      .then(jid => setMyJid(userPart(jid)))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
     if (!myJid || !groupInfo) return
-    const me = groupInfo.group_participants?.find(p => p.contact.jid === myJid)
+    const me = groupInfo.group_participants?.find(
+      p => userPart(p.contact.jid) === userPart(myJid),
+    )
     setIsAdmin(me?.is_admin ?? false)
   }, [myJid, groupInfo])
 
@@ -729,41 +737,45 @@ export function ChatInfo({
                 </div>
               </button>
 
-              {/* Disappearing messages */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowDisappearPicker(!showDisappearPicker)}
-                  className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <DisappearingMessagesIcon />
-                    <div className="flex-1 text-left">
-                      <p className="text-gray-900 dark:text-gray-100">Disappearing messages</p>
-                      <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
-                        {DISAPPEAR_LABEL[disappearTimer] || "Off"}
-                      </p>
+              {/* Disappearing messages. GetDisappearingTimer only reads group
+                  metadata; for 1:1 chats it always returns 0, so a picker would
+                  misleadingly show "Off" regardless of the real setting. */}
+              {(chatType === "group" || disappearTimer > 0) && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowDisappearPicker(!showDisappearPicker)}
+                    className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <DisappearingMessagesIcon />
+                      <div className="flex-1 text-left">
+                        <p className="text-gray-900 dark:text-gray-100">Disappearing messages</p>
+                        <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                          {DISAPPEAR_LABEL[disappearTimer] || "Off"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-                {showDisappearPicker && (
-                  <div className="mx-4 mb-2 flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-dark-border bg-white p-2 shadow-lg dark:border-white/10 dark:bg-dark-secondary">
-                    {DISAPPEAR_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleDisappearChange(opt.value)}
-                        disabled={actionBusy}
-                        className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50 ${
-                          disappearTimer === opt.value
-                            ? "font-medium text-[#21c063]"
-                            : "text-light-text dark:text-dark-text"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  </button>
+                  {showDisappearPicker && (
+                    <div className="mx-4 mb-2 flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-dark-border bg-white p-2 shadow-lg dark:border-white/10 dark:bg-dark-secondary">
+                      {DISAPPEAR_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleDisappearChange(opt.value)}
+                          disabled={actionBusy}
+                          className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50 ${
+                            disappearTimer === opt.value
+                              ? "font-medium text-[#21c063]"
+                              : "text-light-text dark:text-dark-text"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Clear chat */}
@@ -794,7 +806,11 @@ export function ChatInfo({
                 </span>
 
                 <div className="max-h-96 overflow-y-auto">
-                  {visibleParticipants.map((participant: any) => (
+                  {visibleParticipants.map((participant: any) => {
+                    // Group actions must address the primary JID (often an
+                    // LID); contact.jid is the PN-canonical display identity.
+                    const actionJid = participant.action_jid || participant.contact.jid
+                    return (
                     <div
                       key={participant.contact.jid}
                       className="flex items-center gap-3 p-3 rounded-xl m-2 hover:bg-gray-100 dark:hover:bg-dark-tertiary"
@@ -826,14 +842,14 @@ export function ChatInfo({
                         </span>
                       )}
 
-                      {isAdmin && participant.contact.jid !== myJid && (
+                      {isAdmin && userPart(participant.contact.jid) !== userPart(myJid) && (
                         <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                           {participant.is_admin ? (
                             <button
                               onClick={async () => {
-                                setParticipantBusy(participant.contact.jid)
+                                setParticipantBusy(actionJid)
                                 try {
-                                  await DemoteGroupParticipants(chatId, [participant.contact.jid])
+                                  await DemoteGroupParticipants(chatId, [actionJid])
                                   loadInfo()
                                 } catch (e) {
                                   console.error("Failed to demote:", e)
@@ -841,7 +857,7 @@ export function ChatInfo({
                                   setParticipantBusy(null)
                                 }
                               }}
-                              disabled={participantBusy === participant.contact.jid}
+                              disabled={participantBusy === actionJid}
                               className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 disabled:opacity-50"
                             >
                               Demote
@@ -850,11 +866,9 @@ export function ChatInfo({
                             <>
                               <button
                                 onClick={async () => {
-                                  setParticipantBusy(participant.contact.jid)
+                                  setParticipantBusy(actionJid)
                                   try {
-                                    await PromoteGroupParticipants(chatId, [
-                                      participant.contact.jid,
-                                    ])
+                                    await PromoteGroupParticipants(chatId, [actionJid])
                                     loadInfo()
                                   } catch (e) {
                                     console.error("Failed to promote:", e)
@@ -862,7 +876,7 @@ export function ChatInfo({
                                     setParticipantBusy(null)
                                   }
                                 }}
-                                disabled={participantBusy === participant.contact.jid}
+                                disabled={participantBusy === actionJid}
                                 className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 disabled:opacity-50"
                               >
                                 Promote
@@ -875,9 +889,9 @@ export function ChatInfo({
                                     )
                                   )
                                     return
-                                  setParticipantBusy(participant.contact.jid)
+                                  setParticipantBusy(actionJid)
                                   try {
-                                    await RemoveGroupParticipants(chatId, [participant.contact.jid])
+                                    await RemoveGroupParticipants(chatId, [actionJid])
                                     loadInfo()
                                   } catch (e) {
                                     console.error("Failed to remove:", e)
@@ -885,7 +899,7 @@ export function ChatInfo({
                                     setParticipantBusy(null)
                                   }
                                 }}
-                                disabled={participantBusy === participant.contact.jid}
+                                disabled={participantBusy === actionJid}
                                 className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50"
                               >
                                 Remove
@@ -895,7 +909,8 @@ export function ChatInfo({
                         </div>
                       )}
                     </div>
-                  ))}
+                    )
+                  })}
 
                   {hasMore && !showAllParticipants && (
                     <button
@@ -999,11 +1014,6 @@ export function ChatInfo({
                   {newsletterInfo.description && (
                     <p className="text-gray-900 dark:text-gray-100 text-sm">
                       {newsletterInfo.description}
-                    </p>
-                  )}
-                  {newsletterInfo.subscriber_count !== undefined && (
-                    <p className="text-sm text-gray-500 dark:text-dark-muted">
-                      {newsletterInfo.subscriber_count} subscribers
                     </p>
                   )}
                   <button

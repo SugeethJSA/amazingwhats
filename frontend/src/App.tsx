@@ -154,8 +154,14 @@ function App() {
       }
     })
 
-    const unsubDownload = EventsOn("download:complete", (fileName: string) => {
-      const notificationId = addNotification(`Downloaded: ${fileName}`)
+    const unsubDownload = EventsOn("download:complete", (filePath: string) => {
+      // The backend emits an absolute filesystem path. Show only the basename
+      // so the user's directory layout (and username) never leaks into a toast.
+      const name = (typeof filePath === "string" ? filePath : "")
+        .split(/[\\/]/)
+        .pop()
+        ?.trim()
+      const notificationId = addNotification(`Downloaded: ${name || "file"}`)
       setTimeout(() => {
         removeNotification(notificationId)
       }, 3000)
@@ -188,15 +194,33 @@ function App() {
 
     const unsubHistory = EventsOn(
       "wa:history_progress",
-      (data: { done?: boolean; download?: number; upload?: number; total?: number }) => {
+      (data: {
+        type?: string
+        totalConversations?: number
+        processedConversations?: number
+        totalMessages?: number
+        processedMessages?: number
+        done?: boolean
+      }) => {
         if (data?.done) {
           setHistoryProgress(null)
-        } else if (data?.total) {
-          const downloaded = data.download ?? 0
-          const uploaded = data.upload ?? 0
-          const total = data.total
-          setHistoryProgress(Math.round(((downloaded + uploaded) / (total * 2)) * 100))
+          return
         }
+        if (!data) return
+        // `type` is the whatsmeow sync type (INITIAL_BOOTSTRAP / FULL / RECENT
+        // / ...), not a progress counter. The real counters are the explicit
+        // conversation/message fields. Prefer message counts when a message
+        // total is available (message-oriented syncs), otherwise use the
+        // conversation counts that every history batch carries.
+        const hasMessageTotal =
+          typeof data.totalMessages === "number" && data.totalMessages > 0
+        const total = hasMessageTotal ? data.totalMessages : data.totalConversations
+        const processed = hasMessageTotal
+          ? (data.processedMessages ?? 0)
+          : (data.processedConversations ?? 0)
+        if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) return
+        const pct = Math.round((Math.min(Math.max(processed, 0), total) / total) * 100)
+        setHistoryProgress(Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0)
       },
     )
 
