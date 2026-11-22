@@ -13,6 +13,7 @@ require (
 	github.com/urfave/cli v1.22.17
 	github.com/wailsapp/wails/v2 v2.12.0
 	go.mau.fi/whatsmeow v0.0.0-20261116172437-19d61352436f
+	golang.org/x/image v0.41.0
 	google.golang.org/protobuf v1.36.12
 )
 

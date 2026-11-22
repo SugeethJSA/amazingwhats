@@ -24,6 +24,7 @@ type Media struct {
 	fileEncSHA256 []byte
 	url           string
 	mimetype      string
+	fileName      string
 	mediaType     types.MediaType
 	width, height int
 	fileLength    int64
@@ -35,7 +36,7 @@ func NewMedia(
 	url, mimetype string,
 	width, height int,
 	mediaType types.MediaType,
-
+	fileName string,
 ) *Media {
 	return &Media{
 		directPath:    directPath,
@@ -44,6 +45,7 @@ func NewMedia(
 		fileEncSHA256: fileEncSHA256,
 		url:           url,
 		mimetype:      mimetype,
+		fileName:      fileName,
 		width:         width,
 		height:        height,
 		mediaType:     mediaType,
@@ -84,6 +86,11 @@ func (em *Media) GetMimetype() string {
 
 func (em *Media) GetDimensions() (width, height int) {
 	return em.width, em.height
+}
+
+// GetFileName returns the original file name reported by WhatsApp, if any.
+func (em *Media) GetFileName() string {
+	return em.fileName
 }
 
 // SetFileLength stores the decrypted file length reported by WhatsApp (used to

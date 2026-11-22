@@ -45,10 +45,31 @@ const (
 	ALTER TABLE message_media ADD COLUMN file_length INTEGER DEFAULT 0;
 	`
 
+	// InsertMessageMedia uses ON CONFLICT rather than REPLACE so a re-sync that
+	// arrives without a thumbnail cannot erase one already cached for the row.
+	// All 17 fork columns are preserved; COALESCE keeps existing values when the
+	// incoming row has NULL for the optional playback/PTT/thumbnail fields.
 	InsertMessageMedia = `
-	INSERT OR REPLACE INTO message_media
+	INSERT INTO message_media
 	(message_id, type, url, mimetype, direct_path, media_key, file_sha256, file_enc_sha256, width, height, file_name, gif_playback, thumbnail, ptt, seconds, waveform, file_length)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(message_id) DO UPDATE SET
+		type = excluded.type,
+		url = excluded.url,
+		mimetype = excluded.mimetype,
+		direct_path = excluded.direct_path,
+		media_key = excluded.media_key,
+		file_sha256 = excluded.file_sha256,
+		file_enc_sha256 = excluded.file_enc_sha256,
+		width = excluded.width,
+		height = excluded.height,
+		file_name = excluded.file_name,
+		gif_playback = COALESCE(excluded.gif_playback, message_media.gif_playback),
+		thumbnail = COALESCE(excluded.thumbnail, message_media.thumbnail),
+		ptt = COALESCE(excluded.ptt, message_media.ptt),
+		seconds = COALESCE(excluded.seconds, message_media.seconds),
+		waveform = COALESCE(excluded.waveform, message_media.waveform),
+		file_length = COALESCE(excluded.file_length, message_media.file_length);
 	`
 
 	SelectGifPlaybackByMessageID = `
@@ -77,5 +98,9 @@ const (
 
 	SelectMediaMetaByMessageID = `
 	SELECT direct_path, file_enc_sha256 FROM message_media WHERE message_id = ?;
+	`
+
+	UpdateThumbnailByMessageID = `
+	UPDATE message_media SET thumbnail = ? WHERE message_id = ?;
 	`
 )

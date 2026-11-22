@@ -17,6 +17,7 @@ import { EventsOn } from "../../wailsjs/runtime/runtime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
 import { useContactStore } from "../store/useContactStore"
 import { MessageList, type MessageListHandle } from "../components/chat/MessageList"
+import { preloadImages, visibleImageIDs } from "../components/chat/MediaContent"
 import { ChatHeader } from "../components/chat/ChatHeader"
 import { ChatInput } from "../components/chat/ChatInput"
 import { ChatInfo } from "../components/chat/ChatInfo"
@@ -352,6 +353,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           }
         }
         setMessages(chatId, merged)
+        preloadImages(visibleImageIDs(merged))
         const more = loadedMsgs.length >= PAGE_SIZE
         hasMoreRef.current = more
         setHasMore(more)
