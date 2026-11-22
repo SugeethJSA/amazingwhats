@@ -16,3 +16,5 @@ result
 *.AppImage
 *.exe
 whats4linux.exe
+.task/
+build/darwin/icons.icns
