@@ -1,0 +1,44 @@
+version: '3'
+
+includes:
+  common: ../Taskfile.yml
+
+tasks:
+  build:
+    summary: Builds the application for Linux
+    deps:
+      - task: common:go:mod:tidy
+      - task: common:build:frontend
+        vars:
+          BUILD_FLAGS:
+            ref: .BUILD_FLAGS
+          PRODUCTION:
+            ref: .PRODUCTION
+      - task: common:generate:icons
+    cmds:
+      - go build {{.BUILD_FLAGS}} -o "{{.OUTPUT}}"
+    vars:
+      # LDFLAGS is forwarded from CI: wails3 build LDFLAGS="-s -w -X main.version=..."
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="{{.LDFLAGS}}"{{else}}{{if .EXTRA_TAGS}}-tags {{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
+      OUTPUT: '{{.OUTPUT | default .DEFAULT_OUTPUT}}'
+      LDFLAGS: '{{.LDFLAGS | default "-w -s"}}'
+    env:
+      GOOS: linux
+      CGO_ENABLED: 1
+      GOARCH: '{{.ARCH | default ARCH}}'
+      PRODUCTION: '{{.PRODUCTION | default "false"}}'
+
+  package:
+    summary: Packages a production build for Linux
+    deps:
+      - task: build
+        vars:
+          PRODUCTION: "true"
+    cmds:
+      - echo "Binary built at {{.BIN_DIR}}/{{.APP_NAME}}; AppImage packaging is handled by .github/workflows"
+
+  run:
+    summary: Runs the Linux binary
+    cmds:
+      - '{{.BIN_DIR}}/{{.APP_NAME}}'

@@ -9,45 +9,15 @@ import (
 	"go.mau.fi/whatsmeow/types"
 )
 
-// Systray socket protocol for the notifications toggle.
-const (
-	trayCmdToggleNotifications = "toggle_notifications"
-	trayCmdGetNotifState       = "get_notifications_state"
-	trayNotifStateOn           = "notifications_state:on"
-	trayNotifStateOff          = "notifications_state:off"
-)
-
-// notificationsStateMessage encodes the global switch for the systray.
-func notificationsStateMessage(enabled bool) string {
-	if enabled {
-		return trayNotifStateOn
-	}
-	return trayNotifStateOff
-}
-
-// trayCommandHandler handles app-specific commands arriving from the systray
-// over the unix socket. Replies keep the tray checkbox in sync.
-func (a *Api) trayCommandHandler(cmd string) (string, bool) {
-	switch cmd {
-	case trayCmdToggleNotifications:
-		// SetNotificationsEnabled pushes the new state to the tray itself,
-		// so no extra reply is needed here.
-		_ = a.SetNotificationsEnabled(!store.GetNotificationsEnabled())
-		return "", true
-	case trayCmdGetNotifState:
-		return notificationsStateMessage(store.GetNotificationsEnabled()), true
-	}
-	return "", false
-}
-
 // GetNotificationsEnabled reports the global desktop notification switch.
 func (a *Api) GetNotificationsEnabled() bool {
 	return store.GetNotificationsEnabled()
 }
 
 // SetNotificationsEnabled flips the global desktop notification switch,
-// persists it to app_settings.json, notifies the frontend and keeps the
-// systray checkbox in sync.
+// persists it to app_settings.json and emits wa:notifications_toggled. The
+// Settings UI and the in-process system tray both listen for that event, so
+// they stay in sync with changes coming from either side.
 func (a *Api) SetNotificationsEnabled(enabled bool) error {
 	if err := store.SetNotificationsEnabled(enabled); err != nil {
 		return err
@@ -55,8 +25,6 @@ func (a *Api) SetNotificationsEnabled(enabled bool) error {
 	if a.ctx != nil {
 		a.app.Event.Emit("wa:notifications_toggled", enabled)
 	}
-	// Best-effort push; the tray may not be connected.
-	_ = a.us.SendCommand(notificationsStateMessage(enabled))
 	return nil
 }
 

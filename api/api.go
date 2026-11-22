@@ -21,7 +21,6 @@ import (
 	"github.com/lugvitc/whats4linux/internal/settings"
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/lugvitc/whats4linux/internal/wa"
-	"github.com/lugvitc/whats4linux/shared/socket"
 	"github.com/purpshell/meowcaller"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"go.mau.fi/whatsmeow"
@@ -42,7 +41,6 @@ type Api struct {
 	waClient            *whatsmeow.Client
 	messageStore        *store.MessageStore
 	imageCache          *cache.ImageCache
-	us                  *socket.UnixSocket
 	waContainer         *sqlstore.Container
 	callClient          *meowcaller.Client
 	sessionDB           *sql.DB
@@ -437,11 +435,6 @@ func (a *Api) ServiceShutdown() error {
 func (a *Api) closeResources() error {
 	var closeErr error
 	a.cleanupMeowcaller()
-	if a.us != nil {
-		_ = a.us.SendCommand("shutdown")
-		closeErr = errors.Join(closeErr, a.us.Close())
-		a.us = nil
-	}
 	if a.messageStore != nil {
 		closeErr = errors.Join(closeErr, a.messageStore.Close())
 		a.messageStore = nil
@@ -487,24 +480,10 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// The window is focused when the app launches; the frontend keeps this in
 	// sync via SetWindowFocused so we don't notify while the user is looking.
 	a.windowFocused.Store(true)
-	// Set the context before anything that may call back into the Api (the
-	// tray command handler needs it for event emission).
+	// Keep the request context before anything that may emit an event (the
+	// in-process system tray listens for wa:notifications_toggled).
 	a.ctx = ctx
 	var err error
-	a.us, err = socket.NewUnixSocket(ctx)
-	if err != nil {
-		a.failStartup(fmt.Errorf("create tray socket: %w", err))
-		return nil
-	}
-	a.us.SetCommandHandler(a.trayCommandHandler)
-	a.us.SetTargets(a.app, a.window)
-	socketServer := a.us
-	go func() {
-		err := socketServer.ListenAndServe()
-		if err != nil {
-			log.Println("Unix socket server error:", err)
-		}
-	}()
 
 	dbLog := waLog.Stdout("Database", settings.GetLogLevel(), true)
 	a.cw, err = wa.NewAppDatabase(ctx)

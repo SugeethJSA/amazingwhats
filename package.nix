@@ -6,7 +6,10 @@
   buildNpmPackage,
   pkg-config,
   wails,
-  gtk3,
+  # Wails v3 CLI; override with `wails3 = <v3 CLI derivation>` if `wails`
+  # points at the v2 package. The binary invoked below is `wails3`.
+  wails3 ? wails,
+  gtk4,
   pango,
   glib,
   harfbuzz,
@@ -15,7 +18,7 @@
   gdk-pixbuf,
   zlib,
   fontconfig,
-  webkitgtk_4_1,
+  webkitgtk_6_0,
   libsoup_3,
   nodejs_latest,
 }:
@@ -61,17 +64,17 @@ buildGoModule {
   subPackages = [ ]; # this defaults to "."
   doBuild = false; 
   
-  tags = [ "desktop,production" ];
+  # v3 builds use the Taskfile, not Go build tags.
   
   nativeBuildInputs = [
     makeWrapper
     pkg-config
-    wails
+    wails3
     nodejs_latest
   ];
   
   buildInputs = [
-    gtk3.dev
+    gtk4.dev
     pango.dev
     glib.dev
     harfbuzz.dev
@@ -80,7 +83,7 @@ buildGoModule {
     gdk-pixbuf.dev
     zlib.dev
     fontconfig.dev
-    webkitgtk_4_1.dev
+    webkitgtk_6_0.dev
     libsoup_3.dev
   ];
   
@@ -92,8 +95,9 @@ buildGoModule {
     # Set up a proper home directory for binding generation
     export HOME=$(mktemp -d)
     
-    # Build with Wails using buildGoModule's vendoring
-    wails build -s -tags "webkit2_41,soup_3"
+    # v3 build system: Taskfile-driven, GTK4/WebKitGTK6 by default.
+    # v3 output is ./bin, not the v2 ./build/bin.
+    wails3 build PRODUCTION=true
   '';
 
   buildPhase = "runHook preBuild"; # no `go build`
@@ -102,8 +106,8 @@ buildGoModule {
     runHook preInstall
 
     mkdir -p $out/bin $out/lib
-    [ -d build/bin ] && cp build/bin/whats4linux $out/bin/ || true   
-    [ -d build/lib ] && cp build/lib/* $out/lib/ || true   
+    [ -f bin/whats4linux ] && cp bin/whats4linux $out/bin/ || true
+    [ -d bin/lib ] && cp bin/lib/* $out/lib/ || true
 
     runHook postInstall
   '';
@@ -112,13 +116,13 @@ buildGoModule {
     # Wrap the binary with required library paths
     wrapProgram $out/bin/whats4linux \
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [
-        gtk3
-        webkitgtk_4_1
+        gtk4
+        webkitgtk_6_0
         libsoup_3
       ]}" \
       --prefix PKG_CONFIG_PATH : "${lib.concatStringsSep ":" [
-        "${gtk3.dev}/lib/pkgconfig"
-        "${webkitgtk_4_1.dev}/lib/pkgconfig"
+        "${gtk4.dev}/lib/pkgconfig"
+        "${webkitgtk_6_0.dev}/lib/pkgconfig"
         "${pango.dev}/lib/pkgconfig"
         "${glib.dev}/lib/pkgconfig"
         "${harfbuzz.dev}/lib/pkgconfig"

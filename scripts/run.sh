@@ -1,3 +1,4 @@
 #!/bin/sh
-./scripts/build.sh -debug
-./build/bin/whats4linux
+# Without PRODUCTION=true the Taskfile produces a development build.
+./scripts/build.sh
+./bin/whats4linux

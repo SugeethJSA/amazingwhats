@@ -22,7 +22,7 @@ An unofficial WhatsApp client whose differentiator is architectural: a native Go
 
 ## Operating Context
 
-Desktop application shell (Wails v2, WebKitGTK, Linux build tag `webkit2_41`), system tray integration, XDG base directories, Wayland and X11, and long-running sessions. Frontend surfaces present in the code: phone-pairing login, chat list and chat detail, message search, media lightbox, call overlay, and settings (account, chats, notifications, privacy, advanced, keyboard shortcuts, help/feedback, security notifications). The frontend is React 18 + TypeScript + Vite + Tailwind 4 with Zustand state, react-virtuoso for long histories, and GSAP for motion; the backend exposes strongly typed Wails bindings over SQLite (WAL mode) and a local media cache. Users can customise the UI with custom JS/CSS, a Bezier easing editor, and a colour-scheme editor.
+Desktop application shell (Wails v3, GTK4/WebKitGTK6, Taskfile build), in-process system tray integration, XDG base directories, Wayland and X11, and long-running sessions. Frontend surfaces present in the code: phone-pairing login, chat list and chat detail, message search, media lightbox, call overlay, and settings (account, chats, notifications, privacy, advanced, keyboard shortcuts, help/feedback, security notifications). The frontend is React 18 + TypeScript + Vite + Tailwind 4 with Zustand state, react-virtuoso for long histories, and GSAP for motion; the backend exposes strongly typed Wails bindings over SQLite (WAL mode) and a local media cache. Users can customise the UI with custom JS/CSS, a Bezier easing editor, and a colour-scheme editor.
 
 ## Capabilities and Constraints
 

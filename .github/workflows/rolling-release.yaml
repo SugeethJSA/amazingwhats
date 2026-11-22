@@ -44,23 +44,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-         - os: ubuntu-latest
+         - os: ubuntu-24.04
            platform: linux/amd64
            binary: Whats4Linux-Linux-x86_64.AppImage
            artifact: whats4linux-linux-amd64
-           webkit: true
+           linux: true
 
          - os: windows-latest
            platform: windows/amd64
            binary: whats4linux-windows-x86_64.exe
            artifact: whats4linux-windows-amd64
-           webkit: false
+           linux: false
 
          - os: macos-latest
            platform: darwin/amd64
            binary: whats4linux-darwin-x86_64
            artifact: whats4linux-macos-amd64
-           webkit: false
+           linux: false
 
     runs-on: ${{ matrix.os }}
 
@@ -78,23 +78,30 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Linux dependencies
-        if: matrix.webkit
+        if: matrix.linux
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev \
             libayatana-appindicator3-dev \
-            pkg-config
+            pkg-config \
+            build-essential
+
+      # go-sqlite3 needs cgo; windows-latest ships MSYS2 at C:\msys64.
+      - name: Add MSYS2 compiler to PATH (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: echo "/c/msys64/ucrt64/bin" >> $GITHUB_PATH
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.26.5"
 
-      - name: Install Wails
+      - name: Install Wails 3
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Build version info
@@ -112,13 +119,13 @@ jobs:
         env:
           CGO_ENABLED: "1"
         run: |
-          cd systray
-          go build -o whats4linux_tray .
-          cd ..
-          wails build \
-            -o ${{ matrix.binary }} \
-            ${{ matrix.webkit && '-tags webkit2_41' || '' }} \
-            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
+          wails3 build PRODUCTION=true ARCH=amd64 \
+            LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
+
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # Produce bin/whats4linux.app for the ditto step below.
+            wails3 task darwin:create:app:bundle
+          fi
 
       - name: Build binaries (Windows)
         if: matrix.os == 'windows-latest'
@@ -126,24 +133,21 @@ jobs:
         env:
           CGO_ENABLED: "1"
         run: |
-          cd systray
-          go build -o whats4linux_tray.exe .
-          cd ..
-          wails build \
-            -o ${{ matrix.binary }} \
-            -ldflags "-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
+          wails3 build PRODUCTION=true ARCH=amd64 \
+            LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
+          mv bin/whats4linux.exe "bin/${{ matrix.binary }}"
 
       - name: Download appimagetool
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           wget -q https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
 
       - name: Build AppImage
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
-          mv systray/whats4linux_tray packaging/AppImage/AppDir/usr/bin/
-          mv "build/bin/${{matrix.binary}}" packaging/AppImage/AppDir/usr/bin/whats4linux
+          mkdir -p packaging/AppImage/AppDir/usr/bin
+          mv bin/whats4linux packaging/AppImage/AppDir/usr/bin/whats4linux
           chmod +x packaging/AppImage/AppDir/usr/bin/*
           cd packaging/AppImage/AppDir
           for f in .DirIcon whats4linux.desktop whats4linux.png; do
@@ -151,21 +155,15 @@ jobs:
           done
           cd ../../..
           ./appimagetool-x86_64.AppImage packaging/AppImage/AppDir
-          mv Whats4Linux-x86_64.AppImage "build/bin/${{matrix.binary}}"
+          mv Whats4Linux-x86_64.AppImage "bin/${{matrix.binary}}"
 
       - name: Bundle macOS
         if: matrix.os == 'macos-latest'
         run: |
-          if [ -d "build/bin/whats4linux.app" ]; then
-            APP_DIR="build/bin/whats4linux.app"
-          else
-            mkdir -p "build/bin/whats4linux.app/Contents/MacOS"
-            cp "build/bin/${{ matrix.binary }}" "build/bin/whats4linux.app/Contents/MacOS/${{ matrix.binary }}"
-            cp build/darwin/Info.plist "build/bin/whats4linux.app/Contents/" 2>/dev/null || true
-            APP_DIR="build/bin/whats4linux.app"
+          if [ ! -d bin/whats4linux.app ]; then
+            wails3 task darwin:create:app:bundle
           fi
-          cp systray/whats4linux_tray "$APP_DIR/Contents/MacOS/whats4linux_tray"
-          cd build/bin
+          cd bin
           ditto -c -k --sequesterRsrc --keepParent \
             whats4linux.app \
             "${{ matrix.binary }}.zip"
@@ -174,7 +172,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: build/bin/${{ matrix.binary }}*
+          path: bin/${{ matrix.binary }}*
 
   release:
     needs: [build, prepare]

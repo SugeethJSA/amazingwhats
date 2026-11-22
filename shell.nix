@@ -3,12 +3,13 @@
   nodejs ? pkgs.nodejs_latest,
   go ? pkgs.go,
   wails ? pkgs.wails,
+  wails3 ? pkgs.wails3 or wails,
   jq ? pkgs.jq,
   pkg-config-unwrapped ? pkgs.pkg-config-unwrapped,
   makeWrapper ? pkgs.makeWrapper,
   fontconfig ? pkgs.fontconfig,
   pkg-config ? pkgs.pkg-config,
-  gtk3 ? pkgs.gtk3,
+  gtk4 ? pkgs.gtk4,
   glib ? pkgs.glib,
   pango ? pkgs.pango,
   harfbuzz ? pkgs.harfbuzz,
@@ -17,14 +18,14 @@
   zlib ? pkgs.zlib,
   atk ? pkgs.atk,
   gcc ? pkgs.gcc,
-  webkitgtk_4_1 ? pkgs.webkitgtk_4_1,
+  webkitgtk_6_0 ? pkgs.webkitgtk_6_0,
   libsoup_3 ? pkgs.libsoup_3,
 }:
 
 pkgs.mkShell {
   packages = [
     go
-    wails
+    wails3
     jq
     pkg-config-unwrapped
     gcc
@@ -35,7 +36,7 @@ pkgs.mkShell {
   ];
 
   buildInputs = [
-    gtk3.dev
+    gtk4.dev
     pkg-config
     pango.dev
     glib.dev
@@ -45,7 +46,7 @@ pkgs.mkShell {
     gdk-pixbuf.dev
     zlib.dev
     fontconfig.dev
-    webkitgtk_4_1.dev
+    webkitgtk_6_0.dev
     libsoup_3.dev
   ];
 
@@ -61,14 +62,14 @@ pkgs.mkShell {
     
     # Compose PKG_CONFIG_PATH from all relevant dev outputs
     export PKG_CONFIG_PATH=""
-    for pkg in ${gtk3.dev} ${webkitgtk_4_1.dev} ${pango.dev} ${glib.dev} ${harfbuzz.dev} ${atk.dev} ${cairo.dev} ${gdk-pixbuf.dev} ${libsoup_3.dev} ${zlib.dev} ${fontconfig.dev}; do
+    for pkg in ${gtk4.dev} ${webkitgtk_6_0.dev} ${pango.dev} ${glib.dev} ${harfbuzz.dev} ${atk.dev} ${cairo.dev} ${gdk-pixbuf.dev} ${libsoup_3.dev} ${zlib.dev} ${fontconfig.dev}; do
       if [ -d "$pkg/lib/pkgconfig" ]; then
         export PKG_CONFIG_PATH="$pkg/lib/pkgconfig:$PKG_CONFIG_PATH"
       fi
     done
     export PKG_CONFIG_PATH
     export LD_LIBRARY_PATH=""
-    for pkg in ${gtk3.dev} ${webkitgtk_4_1.dev} ${pango.dev} ${glib.dev} ${harfbuzz.dev} ${atk.dev} ${cairo.dev} ${gdk-pixbuf.dev} ${libsoup_3.dev} ${zlib.dev} ${fontconfig.dev}; do
+    for pkg in ${gtk4.dev} ${webkitgtk_6_0.dev} ${pango.dev} ${glib.dev} ${harfbuzz.dev} ${atk.dev} ${cairo.dev} ${gdk-pixbuf.dev} ${libsoup_3.dev} ${zlib.dev} ${fontconfig.dev}; do
       if [ -d "$pkg/lib" ]; then
         export LD_LIBRARY_PATH="$pkg/lib:$LD_LIBRARY_PATH"
       fi
@@ -82,13 +83,13 @@ pkgs.mkShell {
     makeWrapper $(command -v pkg-config) "$PWD/.pkg-config-wrapped" --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH"
     export PATH="$PWD:$PATH"
     
-    # Wrap wails to ensure PATH and PKG_CONFIG_PATH
-    if command -v wails >/dev/null; then
-      makeWrapper $(command -v wails) "$PWD/.wails-wrapped" --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH" --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" --set PATH "$PATH" --set LDFLAGS "$LDFLAGS" --set HOME "$HOME"
+    # Wrap the v3 CLI to ensure PATH and PKG_CONFIG_PATH
+    if command -v wails3 >/dev/null; then
+      makeWrapper $(command -v wails3) "$PWD/.wails-wrapped" --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH" --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" --set PATH "$PATH" --set LDFLAGS "$LDFLAGS" --set HOME "$HOME"
       export PATH="$PWD:$PATH"
     fi
-    
-    alias wails=".wails-wrapped"
+
+    alias wails3=".wails-wrapped"
     alias pkg-config=".pkg-config-wrapped"
     
     # For building with Nix (similar to package.nix)
@@ -103,7 +104,7 @@ pkgs.mkShell {
     # echo "LDFLAGS set to: $LDFLAGS"
     # echo "HOME set to: $HOME"
     echo -e "Available commands:"
-    echo -e "  Development build:$GREEN wails build -s -tags \"webkit2_41,soup_3\"$NC (uses buildGoModule vendoring)"
+    echo -e "  Development build:$GREEN wails3 build$NC (v3 Taskfile; GTK4/WebKitGTK6)"
     echo -e "  Nix package build:$GREEN build-nix$NC (reproducible build)"
   '';
 }

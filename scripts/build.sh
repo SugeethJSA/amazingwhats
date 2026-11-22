@@ -1,10 +1,3 @@
 #!/bin/sh
-cd systray
-TRAY_BIN=whats4linux_tray
-# Windows requires the .exe extension to launch the tray.
-case "$(uname -s 2>/dev/null)" in
-  MINGW*|MSYS*|CYGWIN*) TRAY_BIN=whats4linux_tray.exe ;;
-esac
-go build -o ../build/bin/$TRAY_BIN
-cd ..
-wails build $1
+# Wails v3 build: output lands in ./bin (the tray is in-process now).
+wails3 build "$@"

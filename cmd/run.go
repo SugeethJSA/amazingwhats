@@ -8,6 +8,7 @@ import (
 	apiPkg "github.com/lugvitc/whats4linux/api"
 	"github.com/lugvitc/whats4linux/internal/misc"
 	"github.com/lugvitc/whats4linux/internal/server"
+	"github.com/lugvitc/whats4linux/internal/tray"
 	"github.com/urfave/cli"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -37,10 +38,14 @@ func run(assets fs.FS) cli.ActionFunc {
 		// The second-instance callback is installed before the window exists;
 		// capture the variable and guard against an early notification.
 		var window *application.WebviewWindow
+		var systray *tray.Tray
 
 		app := application.New(application.Options{
 			Name:        misc.AppName,
 			Description: "An unofficial WhatsApp client.",
+			OnShutdown: func() {
+				systray.Destroy()
+			},
 			Assets: application.AssetOptions{
 				Handler: assetHandler(assets),
 			},
@@ -55,8 +60,18 @@ func run(assets fs.FS) cli.ActionFunc {
 					window.Focus()
 				},
 			},
+			// Closing the window keeps the app alive in the tray so Open can
+			// restore it (v2 behaviour via the external systray process).
+			// v3 exposes this per platform, not on application.Options.
+			Windows: application.WindowsOptions{
+				DisableQuitOnLastWindowClosed: true,
+			},
+			Mac: application.MacOptions{
+				ApplicationShouldTerminateAfterLastWindowClosed: false,
+			},
 			Linux: application.LinuxOptions{
-				ProgramName: AppName,
+				ProgramName:                   misc.AppName,
+				DisableQuitOnLastWindowClosed: true,
 			},
 		})
 
@@ -76,6 +91,10 @@ func run(assets fs.FS) cli.ActionFunc {
 
 		api := apiPkg.New(app, window)
 		app.RegisterService(application.NewService(api))
+
+		// The tray lives in-process now; build it once the window and service
+		// exist so every menu action has a target.
+		systray = tray.New(app, window, api)
 
 		return app.Run()
 	}

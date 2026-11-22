@@ -1,15 +1,14 @@
 build/bin
+bin
 **/node_modules
 **/dist
 frontend/wailsjs
 .DS_Store
 .env
 whats4linux
-whats4linux_tray
 wa.db
 wa.db.1
 vendor
-systray/systray
 /gomod2nix-template
 result
 .pkg-config-wrapped
