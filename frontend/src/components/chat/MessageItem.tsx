@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from "react"
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react"
 import {
   DownloadMediaToFile,
   EditMessage,
@@ -14,7 +14,7 @@ import {
 } from "../../../wailsjs/go/api/Api"
 import { MediaContent } from "./MediaContent"
 import { QuotedMessage } from "./QuotedMessage"
-import { ReactionBubble } from "./Reactions"
+import { ReactionBubble, ReactionDetails } from "./Reactions"
 import { LinkPreview } from "./LinkPreview"
 import clsx from "clsx"
 import { MessageMenu } from "./MessageMenu"
@@ -132,6 +132,8 @@ export function MessageItem({
   const addReactionToMessage = useMessageStore(state => state.addReactionToMessage)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [showFullEmoji, setShowFullEmoji] = useState(false)
+  const [showReactionDetails, setShowReactionDetails] = useState(false)
+  const reactionPillRef = useRef<HTMLDivElement>(null)
   // Derived directly from the message; no state/effect needed (a state+effect
   // here forced an extra re-render per message on mount).
   const reactions = message.reactions ?? []
@@ -640,9 +642,14 @@ export function MessageItem({
             </div>
           )}
 
-          {/* Hover reaction trigger just outside the bubble (WhatsApp-style). */}
+          {/* Hover reaction trigger just outside the bubble (WhatsApp-style).
+              This is the quick-picker control; the reaction pill below opens
+              the "who reacted" details instead. */}
           <button
-            onClick={() => setShowReactionPicker(v => !v)}
+            onClick={() => {
+              setShowReactionDetails(false)
+              setShowReactionPicker(v => !v)
+            }}
             title="React"
             className={clsx(
               "absolute bottom-1 z-20 rounded-full bg-white p-1 text-sm leading-none opacity-0 shadow transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none dark:bg-dark-tertiary",
@@ -756,7 +763,12 @@ export function MessageItem({
           {/* Reactions */}
           {reactions.length > 0 && (
             <div
-              onClick={() => setShowReactionPicker(v => !v)}
+              ref={reactionPillRef}
+              onClick={() => {
+                setShowReactionDetails(true)
+                setShowReactionPicker(false)
+                setShowFullEmoji(false)
+              }}
               className={clsx(
                 "absolute -bottom-3 z-9999 cursor-pointer transition-transform duration-150 hover:-translate-y-0.5",
                 isFromMe ? "right-2" : "left-2",
@@ -764,6 +776,18 @@ export function MessageItem({
             >
               <ReactionBubble reactions={reactions} isFromMe={isFromMe} />
             </div>
+          )}
+
+          {showReactionDetails && reactions.length > 0 && (
+            <ReactionDetails
+              reactions={reactions}
+              isFromMe={isFromMe}
+              messageText={htmlToPlainText(
+                content?.conversation || content?.extendedTextMessage?.text || "",
+              )}
+              anchorRef={reactionPillRef}
+              onClose={() => setShowReactionDetails(false)}
+            />
           )}
         </div>
       </div>
