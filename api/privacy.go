@@ -65,14 +65,25 @@ func (a *Api) GetBlockList() ([]BlockedContact, error) {
 	if a.waClient.Store.ID == nil {
 		return nil, fmt.Errorf("not logged in")
 	}
-	blocklist, err := a.waClient.GetBlocklist(a.ctx)
+	// An empty DHash forces a full fetch. A cached DHash can be added later to
+	// skip the round-trip when the server-side blocklist has not changed.
+	blocklist, err := a.waClient.GetBlocklist(a.ctx, "")
 	if err != nil {
 		return nil, err
 	}
-	result := make([]BlockedContact, 0, len(blocklist.JIDs))
-	for _, jid := range blocklist.JIDs {
+	result := make([]BlockedContact, 0, len(blocklist.Items))
+	for _, item := range blocklist.Items {
+		// Blocklist entries now carry both a LID and a PN. Prefer the PN so the
+		// UI keeps showing phone-number JIDs, falling back to the LID, then run
+		// it through the standard PN/LID canonicalization used by other contact
+		// surfaces (LID -> PN lookup plus non-AD normalization).
+		jid := item.PN
+		if jid.IsEmpty() {
+			jid = item.LID
+		}
+		jid = canonicalUserJID(a.ctx, a.waClient, jid)
 		name := jid.User
-		if contact, err := a.waClient.Store.Contacts.GetContact(a.ctx, jid.ToNonAD()); err == nil {
+		if contact, err := a.waClient.Store.Contacts.GetContact(a.ctx, jid); err == nil {
 			if contact.FullName != "" {
 				name = contact.FullName
 			} else if contact.PushName != "" {
@@ -94,7 +105,8 @@ func (a *Api) BlockContact(jidStr string) error {
 	if err != nil {
 		return err
 	}
-	_, err = a.waClient.UpdateBlocklist(a.ctx, jid, events.BlocklistChangeActionBlock)
+	// Empty DHash: a cached value can be supplied later to skip the round-trip.
+	_, err = a.waClient.UpdateBlocklist(a.ctx, jid, events.BlocklistChangeActionBlock, "")
 	if err != nil {
 		return err
 	}
@@ -111,7 +123,8 @@ func (a *Api) UnblockContact(jidStr string) error {
 	if err != nil {
 		return err
 	}
-	_, err = a.waClient.UpdateBlocklist(a.ctx, jid, events.BlocklistChangeActionUnblock)
+	// Empty DHash: a cached value can be supplied later to skip the round-trip.
+	_, err = a.waClient.UpdateBlocklist(a.ctx, jid, events.BlocklistChangeActionUnblock, "")
 	if err != nil {
 		return err
 	}

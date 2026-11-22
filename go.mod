@@ -6,14 +6,14 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/gen2brain/malgo v0.11.25
 	github.com/joho/godotenv v1.5.1
-	github.com/mattn/go-sqlite3 v1.14.48
+	github.com/mattn/go-sqlite3 v1.14.53
 	github.com/nyaruka/phonenumbers v1.8.0
 	github.com/purpshell/meowcaller v0.0.0-20260811012811-27a3c6b18657
 	github.com/rs/zerolog v1.35.1
 	github.com/urfave/cli v1.22.17
 	github.com/wailsapp/wails/v2 v2.12.0
-	go.mau.fi/whatsmeow v0.0.0-20260722203353-e9a033b24933
-	google.golang.org/protobuf v1.36.11
+	go.mau.fi/whatsmeow v0.0.0-20261116172437-19d61352436f
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
@@ -42,7 +42,7 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
-	github.com/petermattis/goid v0.0.0-20260713124913-97594f28f5ca // indirect
+	github.com/petermattis/goid v0.0.0-20261109124353-7cfa343ad0ab // indirect
 	github.com/pion/datachannel v1.6.0 // indirect
 	github.com/pion/dtls/v3 v3.1.2 // indirect
 	github.com/pion/logging v0.2.4 // indirect
@@ -64,14 +64,14 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.35 // indirect
 	github.com/wailsapp/go-webview2 v1.0.23 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	go.mau.fi/libsignal v0.2.2 // indirect
-	go.mau.fi/util v0.9.12-0.20260717235539-f9ffa7eca58d // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	go.mau.fi/libsignal v0.2.3 // indirect
+	go.mau.fi/util v0.11.1 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 )
 
 // replace github.com/wailsapp/wails/v2 v2.11.0 => /home/celestix/go/pkg/mod

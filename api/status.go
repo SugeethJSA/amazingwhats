@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"log/slog"
+
+	"go.mau.fi/whatsmeow/types"
 )
 
 type StatusPrivacyEntry struct {
@@ -15,7 +17,7 @@ func (a *Api) SetStatusMessage(text string) error {
 	if a.waClient.Store.ID == nil {
 		return fmt.Errorf("not logged in")
 	}
-	err := a.waClient.SetStatusMessage(a.ctx, text)
+	err := a.waClient.SetStatusMessage(a.ctx, types.SetStatusInput{Text: &text})
 	if err != nil {
 		return err
 	}
