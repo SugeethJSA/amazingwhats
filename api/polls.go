@@ -2,15 +2,22 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"go.mau.fi/util/random"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waCommon"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
+	"go.mau.fi/whatsmeow/util/gcmutil"
+	"go.mau.fi/whatsmeow/util/hkdfutil"
+	"google.golang.org/protobuf/proto"
 )
 
 // PollOptionVotes is the vote tally for a single poll option.
@@ -96,6 +103,9 @@ func (a *Api) pollOptionsFromCard(chatJID, pollMessageID string) (string, []stri
 // WhatsApp's msgsecret encryption and also recorded locally so the tally
 // updates instantly.
 func (a *Api) SendPollVote(chatJID, pollMessageID string, selectedOptions []string) (string, error) {
+	if len(selectedOptions) == 0 {
+		return "", fmt.Errorf("no poll options selected")
+	}
 	if a.waClient.Store.ID == nil {
 		return "", fmt.Errorf("not logged in")
 	}
@@ -120,34 +130,46 @@ func (a *Api) SendPollVote(chatJID, pollMessageID string, selectedOptions []stri
 			Chat:     chat,
 			Sender:   senderJID.ToNonAD(),
 			IsFromMe: original.Info.IsFromMe,
+			IsGroup:  chat.Server == types.GroupServer,
 		},
 		ID:        pollMessageID,
 		PushName:  "",
 		Timestamp: pollTS,
 	}
-	voteMsg, err := a.waClient.BuildPollVote(a.ctx, pollInfo, selectedOptions)
+	voteMsg, err := a.buildPollVoteLID(a.ctx, pollInfo, selectedOptions)
 	if err != nil {
 		return "", fmt.Errorf("failed to build poll vote: %w", err)
 	}
-	resp, err := a.waClient.SendMessage(a.ctx, chat, voteMsg)
-	if err != nil {
-		return "", err
-	}
 
-	// Record our own vote locally so the tally reflects it immediately.
+	// Record our own vote locally BEFORE sending so the tally reflects it
+	// immediately and a failed store is never silently swallowed.
 	_, options, found, err := a.messageStore.GetPollMetadata(chatJID, pollMessageID)
 	if err != nil {
-		slog.Warn("GetPollMetadata failed after sending vote", "source", "polls", "error", err)
+		return "", fmt.Errorf("failed to load poll options for own vote: %w", err)
 	}
 	if !found {
 		_, options = a.pollOptionsFromCard(chatJID, pollMessageID)
 	}
+	if len(options) == 0 {
+		return "", fmt.Errorf("poll options unknown, cannot record own vote")
+	}
 	indices := a.matchVoteHashes(options, whatsmeow.HashPollOptions(selectedOptions))
-	if a.waClient.Store.ID != nil && len(indices) > 0 {
-		voter := a.waClient.Store.ID.ToNonAD().String()
-		if uerr := a.messageStore.UpsertPollVote(chatJID, pollMessageID, voter, indices); uerr != nil {
-			slog.Warn("UpsertPollVote failed for own vote", "source", "polls", "error", uerr)
+	if len(indices) == 0 {
+		return "", fmt.Errorf("none of the selected poll options matched stored options")
+	}
+	ownJID := canonicalUserJID(a.ctx, a.waClient, *a.waClient.Store.ID).String()
+	if err := a.messageStore.UpsertPollVote(chatJID, pollMessageID, ownJID, indices); err != nil {
+		return "", fmt.Errorf("failed to store own poll vote: %w", err)
+	}
+	a.refreshPollCard(chatJID, pollMessageID)
+
+	resp, err := a.waClient.SendMessage(a.ctx, chat, &waE2E.Message{PollUpdateMessage: voteMsg})
+	if err != nil {
+		if derr := a.messageStore.DeletePollVote(chatJID, pollMessageID, ownJID); derr != nil {
+			slog.Warn("DeletePollVote failed during poll vote rollback", "source", "polls", "error", derr)
 		}
+		a.refreshPollCard(chatJID, pollMessageID)
+		return "", fmt.Errorf("failed to send poll vote: %w", err)
 	}
 
 	slog.Info(fmt.Sprintf("Voted in poll %s in %s (%d options selected)", pollMessageID, chatJID, len(selectedOptions)), "source", "messages")
@@ -158,6 +180,103 @@ func (a *Api) SendPollVote(chatJID, pollMessageID string, selectedOptions []stri
 	})
 	a.refreshPollCard(chatJID, pollMessageID)
 	return resp.ID, nil
+}
+
+// buildPollVoteLID builds a poll vote message using the LID (falling back to
+// the plain JID when no LID migration has happened) as the modification
+// sender. whatsmeow's BuildPollVote uses the plain JID whenever the poll
+// creator is a non-LID user, which breaks decryption on LID-migrated devices
+// that see our message sender as our LID. Reactions always use the LID, so we
+// mirror that here.
+func (a *Api) buildPollVoteLID(ctx context.Context, pollInfo *types.MessageInfo, optionNames []string) (*waE2E.PollUpdateMessage, error) {
+	plaintext, err := proto.Marshal(&waE2E.PollVoteMessage{
+		SelectedOptions: whatsmeow.HashPollOptions(optionNames),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal poll vote protobuf: %w", err)
+	}
+	ownID := a.waClient.Store.GetLID()
+	if ownID.IsEmpty() {
+		ownID = a.waClient.Store.GetJID()
+	}
+	baseEncKey, storedOrigSender, err := a.waClient.Store.MsgSecrets.GetMessageSecret(ctx, pollInfo.Chat, pollInfo.Sender, pollInfo.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get original message secret key: %w", err)
+	}
+	if baseEncKey == nil {
+		return nil, whatsmeow.ErrOriginalMessageSecretNotFound
+	}
+	secretKey, additionalData := generatePollVoteSecretKey(ownID, pollInfo.ID, storedOrigSender, baseEncKey)
+	iv := random.Bytes(12)
+	ciphertext, err := gcmutil.Encrypt(secretKey, iv, plaintext, additionalData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt poll vote: %w", err)
+	}
+	return &waE2E.PollUpdateMessage{
+		PollCreationMessageKey: pollCreationMessageKey(pollInfo),
+		Vote: &waE2E.PollEncValue{
+			EncPayload: ciphertext,
+			EncIV:      iv,
+		},
+		SenderTimestampMS: proto.Int64(time.Now().UnixMilli()),
+	}, nil
+}
+
+func pollCreationMessageKey(msgInfo *types.MessageInfo) *waCommon.MessageKey {
+	creationKey := &waCommon.MessageKey{
+		RemoteJID: proto.String(msgInfo.Chat.String()),
+		FromMe:    proto.Bool(msgInfo.IsFromMe),
+		ID:        proto.String(msgInfo.ID),
+	}
+	if msgInfo.IsGroup {
+		creationKey.Participant = proto.String(msgInfo.Sender.String())
+	}
+	return creationKey
+}
+
+// generatePollVoteSecretKey mirrors whatsmeow's generateMsgSecretKey for the
+// "Poll Vote" modification type: HKDF-SHA256 over the original message ID,
+// original sender, modification sender and use case.
+func generatePollVoteSecretKey(modificationSender types.JID, origMsgID types.MessageID, origMsgSender types.JID, origMsgSecret []byte) ([]byte, []byte) {
+	const modificationType = "Poll Vote"
+	origMsgSenderStr := origMsgSender.ToNonAD().String()
+	modificationSenderStr := modificationSender.ToNonAD().String()
+
+	useCaseSecret := make([]byte, 0, len(origMsgID)+len(origMsgSenderStr)+len(modificationSenderStr)+len(modificationType))
+	useCaseSecret = append(useCaseSecret, origMsgID...)
+	useCaseSecret = append(useCaseSecret, origMsgSenderStr...)
+	useCaseSecret = append(useCaseSecret, modificationSenderStr...)
+	useCaseSecret = append(useCaseSecret, modificationType...)
+
+	secretKey := hkdfutil.SHA256(origMsgSecret, nil, useCaseSecret, 32)
+	additionalData := fmt.Appendf(nil, "%s\x00%s", origMsgID, modificationSenderStr)
+	return secretKey, additionalData
+}
+
+// pollVoteSelfJID reports whether sender is one of our own identities
+// (canonical PN, LID lookalike, or reversed LID→PN lookup) and returns our
+// canonical PN JID so own-vote echoes always overwrite the same row. Returns
+// "" when the sender is someone else or we aren't logged in.
+func (a *Api) pollVoteSelfJID(sender types.JID) string {
+	if a.waClient.Store.ID == nil {
+		return ""
+	}
+	ownJID := canonicalUserJID(a.ctx, a.waClient, a.waClient.Store.GetJID()).String()
+	if canonicalUserJID(a.ctx, a.waClient, sender).String() == ownJID {
+		return ownJID
+	}
+	agent := sender.ActualAgent()
+	if agent != types.LIDDomain && agent != types.HostedLIDDomain {
+		return ""
+	}
+	ownLID := a.waClient.Store.GetLID()
+	if ownLID.User != "" && ownLID.User == sender.User && ownLID.Server == sender.Server {
+		return ownJID
+	}
+	if senderPN, err := a.waClient.Store.LIDs.GetPNForLID(a.ctx, sender); err == nil && senderPN.User == a.waClient.Store.GetJID().ToNonAD().User {
+		return ownJID
+	}
+	return ""
 }
 
 // handlePollVoteEvent processes an incoming encrypted poll vote: decrypts it,
@@ -201,13 +320,14 @@ func (a *Api) handlePollVoteEvent(v *events.Message) {
 		return
 	}
 
-	voter := v.Info.Sender.ToNonAD()
-	if voter.ActualAgent() == types.LIDDomain && a.waClient.Store.LIDs != nil {
-		if pn, lerr := a.waClient.Store.LIDs.GetPNForLID(a.ctx, voter); lerr == nil {
-			voter = pn
-		}
+	// Own votes echo back with our LID or PN depending on the device. Always
+	// store them under the canonical PN JID used by GetPollVotes so HasVoted
+	// and re-votes keep matching the same row.
+	voter := canonicalUserJID(a.ctx, a.waClient, v.Info.Sender).String()
+	if own := a.pollVoteSelfJID(v.Info.Sender); own != "" {
+		voter = own
 	}
-	if err := a.messageStore.UpsertPollVote(chatJID, pollMessageID, voter.String(), indices); err != nil {
+	if err := a.messageStore.UpsertPollVote(chatJID, pollMessageID, voter, indices); err != nil {
 		slog.Warn("UpsertPollVote failed", "source", "polls", "error", err)
 		return
 	}
