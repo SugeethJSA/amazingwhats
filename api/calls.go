@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,6 +57,37 @@ var (
 	// api.go, outside this remediation's file scope. Guarded by callsMu.
 	callOfferHandlerID uint32
 )
+
+// activeCallClient returns the meowcaller Call for callID under callsMu.
+// Bindings use this instead of reading activeCalls directly so a missing or
+// already torn-down call always yields a clean error, never a nil dereference.
+func activeCallClient(callID string) (*meowcaller.Call, error) {
+	callsMu.Lock()
+	ac := activeCalls[callID]
+	var call *meowcaller.Call
+	if ac != nil {
+		call = ac.Call
+	}
+	callsMu.Unlock()
+	if call == nil {
+		return nil, fmt.Errorf("call %s not found", callID)
+	}
+	return call, nil
+}
+
+// emitCallEvent forwards a meowcaller callback to the frontend only while the
+// call is still active. meowcaller fires these from its own goroutines, so a
+// terminal callback can race with teardown; the callsMu check drops those late
+// events, matching the guard used by call:remote_mute. (D-ID CALL-002a)
+func (a *Api) emitCallEvent(callID, event string, data map[string]any) {
+	callsMu.Lock()
+	stillActive := activeCalls[callID] != nil
+	callsMu.Unlock()
+	if !stillActive || a.ctx == nil || a.app == nil {
+		return
+	}
+	a.app.Event.Emit(event, data)
+}
 
 // initMeowcaller initializes the WhatsApp VoIP extension library
 func (a *Api) initMeowcaller() {
@@ -184,6 +217,11 @@ func (a *Api) initMeowcaller() {
 			})
 		})
 
+		// Attach the video sink and forward video/reaction/hand/screen-share
+		// callbacks for this call. Every forwarded event re-checks the active
+		// call map, so late callbacks after teardown are dropped.
+		a.wireVideoCallbacks(call)
+
 		// Group calls emit call:incoming from the CallOffer handler above,
 		// once the group JID is known. 1:1 calls emit here, after OnEnd is
 		// installed. Use the snapshotted isGroup value rather than reading the
@@ -197,6 +235,93 @@ func (a *Api) initMeowcaller() {
 				"isGroup": false,
 			})
 		}
+	})
+}
+
+// wireVideoCallbacks attaches the H.264 sink and the video/reaction/hand/screen
+// forwarders to a call. It is called exactly once per call at setup on both the
+// incoming and outgoing paths. (D-ID CALL-002a)
+func (a *Api) wireVideoCallbacks(call *meowcaller.Call) {
+	id := call.ID()
+
+	// ReceiveVideo replaces any previous sink, so this is the single attachment
+	// point for inbound video. The browser decodes the access units with
+	// WebCodecs; Go only carries base64 over the Wails event bus.
+	// Route sink events through emitCallEvent so a late frame released by
+	// meowcaller after teardown is dropped just like every other call event.
+	call.ReceiveVideo(&callVideoSink{callID: id, emit: func(event string, data any) {
+		payload, ok := data.(map[string]any)
+		if !ok {
+			return
+		}
+		a.emitCallEvent(id, event, payload)
+	}})
+
+	call.OnVideoState(func(v meowcaller.VideoState) {
+		a.emitCallEvent(id, "call:video_state", map[string]any{
+			"callID":      id,
+			"active":      v.Active,
+			"upgrade":     v.Upgrade,
+			"orientation": v.Orientation,
+			"raw":         v.Raw,
+		})
+	})
+
+	call.OnVideoKeyframeRequest(func() {
+		a.emitCallEvent(id, "call:video_keyframe", map[string]any{
+			"callID": id,
+		})
+	})
+
+	call.OnParticipantVideoFrame(func(f meowcaller.ParticipantVideoFrame) {
+		data, ok := encodeVideoFrame(id, f.AccessUnit)
+		if !ok {
+			return
+		}
+		a.emitCallEvent(id, "call:participant_video", map[string]any{
+			"callID":        id,
+			"participantID": f.ParticipantID,
+			"sender":        f.Sender.String(),
+			"device":        f.Device.String(),
+			"pid":           f.PID,
+			"hasPID":        f.HasPID,
+			"ssrc":          f.SSRC,
+			"orientation":   f.Orientation,
+			"access_unit":   data,
+		})
+	})
+
+	call.OnReaction(func(r meowcaller.CallReaction) {
+		a.emitCallEvent(id, "call:reaction", map[string]any{
+			"callID":        id,
+			"emoji":         r.Emoji,
+			"participantID": r.ParticipantID,
+			"sender":        r.Sender.String(),
+			"device":        r.Device.String(),
+			"pid":           r.PID,
+			"hasPID":        r.HasPID,
+			"removed":       r.Removed,
+		})
+	})
+
+	call.OnHandRaise(func(h meowcaller.HandRaiseState) {
+		a.emitCallEvent(id, "call:hand_raise", map[string]any{
+			"callID":      id,
+			"participant": h.Participant.String(),
+			"raised":      h.Raised,
+		})
+	})
+
+	call.OnScreenShare(func(s meowcaller.ScreenShareState) {
+		a.emitCallEvent(id, "call:screen_share", map[string]any{
+			"callID":           id,
+			"participant":      s.Participant.String(),
+			"active":           s.Active,
+			"version":          s.Version,
+			"screenShareID":    s.ScreenShareID,
+			"hasScreenShareID": s.HasScreenShareID,
+			"synthetic":        s.Synthetic,
+		})
 	})
 }
 
@@ -359,6 +484,11 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 		})
 	})
 
+	// Same wiring as the incoming path: one video sink and one set of event
+	// forwarders per outgoing call, with the late-event guard applied to all
+	// of them. (D-ID CALL-002a)
+	a.wireVideoCallbacks(call)
+
 	// Bridge setup happens after the handlers are installed. A call with no
 	// working audio path is unusable, so a bridge failure tears the call down
 	// and returns an error through MakeCall/MakeGroupCall to the UI toast,
@@ -437,6 +567,204 @@ func (a *Api) AddCallParticipant(callID, targetJID string) error {
 			"callID":    callID,
 			"targetJID": targetJID,
 		})
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Video / screen-share / reaction Wails bindings (D-ID CALL-002a)
+//
+// The browser owns H.264 pixel encode/decode via WebCodecs. These methods only
+// hand already encoded Annex-B access units to meowcaller, or drive call
+// signaling. Each one resolves the active call under callsMu and returns an
+// explicit error when it is gone, so the frontend never gets a nil panic.
+// ---------------------------------------------------------------------------
+
+// SendVideoFrame feeds one WebCodecs-encoded H.264 access unit (Annex-B,
+// standard base64) into the active call's outbound video track.
+func (a *Api) SendVideoFrame(callID string, accessUnitB64 string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	au, err := base64.StdEncoding.DecodeString(accessUnitB64)
+	if err != nil {
+		return fmt.Errorf("invalid base64 video frame: %w", err)
+	}
+	if len(au) == 0 {
+		return fmt.Errorf("empty video frame")
+	}
+	// The frontend is untrusted: cap the decoded access unit so a malformed
+	// base64 payload cannot force an oversized allocation on the Go side.
+	const maxVideoAccessUnit = 4 << 20 // 4 MiB
+	if len(au) > maxVideoAccessUnit {
+		return fmt.Errorf("video frame too large: %d bytes (max %d)", len(au), maxVideoAccessUnit)
+	}
+	if err := call.SendVideo(au); err != nil {
+		return fmt.Errorf("send video frame: %w", err)
+	}
+	return nil
+}
+
+// StartCallVideo requests an audio-to-video upgrade on the active call.
+func (a *Api) StartCallVideo(callID string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.StartVideo(); err != nil {
+		return fmt.Errorf("start video: %w", err)
+	}
+	return nil
+}
+
+// AcceptCallVideo accepts a peer's pending video upgrade.
+func (a *Api) AcceptCallVideo(callID string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.AcceptVideo(); err != nil {
+		return fmt.Errorf("accept video: %w", err)
+	}
+	return nil
+}
+
+// StopCallVideo stops our outbound video while keeping audio and peer video.
+func (a *Api) StopCallVideo(callID string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.StopVideo(); err != nil {
+		return fmt.Errorf("stop video: %w", err)
+	}
+	return nil
+}
+
+// SetCallVideoEnabled mutes or unmutes our outbound camera flow.
+func (a *Api) SetCallVideoEnabled(callID string, enabled bool) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.SetVideoEnabled(enabled); err != nil {
+		return fmt.Errorf("set video enabled: %w", err)
+	}
+	return nil
+}
+
+// SetCallVideoOrientation announces our camera rotation in clockwise quarter
+// turns. Values outside meowcaller's 0..3 range are clamped rather than passed
+// through to signaling.
+func (a *Api) SetCallVideoOrientation(callID string, orientation int) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if orientation < 0 {
+		orientation = 0
+	} else if orientation > 3 {
+		orientation = 3
+	}
+	if err := call.SetVideoOrientation(orientation); err != nil {
+		return fmt.Errorf("set video orientation: %w", err)
+	}
+	return nil
+}
+
+// StartCallScreenShare announces an independent screen share. screenShareID is
+// the browser's identifier for the shared display surface.
+func (a *Api) StartCallScreenShare(callID string, screenShareID uint32) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.StartScreenShare(&screenShareID); err != nil {
+		return fmt.Errorf("start screen share: %w", err)
+	}
+	return nil
+}
+
+// StopCallScreenShare stops screen sharing without touching camera video.
+func (a *Api) StopCallScreenShare(callID string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.StopScreenShare(); err != nil {
+		return fmt.Errorf("stop screen share: %w", err)
+	}
+	return nil
+}
+
+// SendCallReaction sends an emoji over the call's app-data stream. An empty
+// emoji would clear the reaction rather than send one, so reject it here.
+func (a *Api) SendCallReaction(callID string, emoji string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(emoji) == "" {
+		return fmt.Errorf("reaction emoji is empty")
+	}
+	if err := call.SendReaction(emoji); err != nil {
+		return fmt.Errorf("send reaction: %w", err)
+	}
+	return nil
+}
+
+// SetCallHandRaised announces our persistent hand-raised state.
+func (a *Api) SetCallHandRaised(callID string, raised bool) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if err := call.SetHandRaised(raised); err != nil {
+		return fmt.Errorf("set hand raised: %w", err)
+	}
+	return nil
+}
+
+// AddCallParticipants invites several JIDs to an established call. Targets may
+// be comma- or newline-separated; the first non-nil invite error is returned.
+// This is distinct from the existing singular AddCallParticipant binding.
+func (a *Api) AddCallParticipants(callID string, targets string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	fields := strings.FieldsFunc(targets, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r'
+	})
+	invites := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if target := strings.TrimSpace(field); target != "" {
+			invites = append(invites, target)
+		}
+	}
+	if len(invites) == 0 {
+		return fmt.Errorf("no participants provided")
+	}
+	for _, err := range call.AddParticipants(context.Background(), invites...) {
+		if err != nil {
+			return fmt.Errorf("add participant: %w", err)
+		}
+	}
+	return nil
+}
+
+// RingCallParticipant rings a participant already in the active call's roster.
+func (a *Api) RingCallParticipant(callID string, targetJID string) error {
+	call, err := activeCallClient(callID)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(targetJID) == "" {
+		return fmt.Errorf("target JID is empty")
+	}
+	if err := call.RingParticipant(context.Background(), targetJID); err != nil {
+		return fmt.Errorf("ring participant: %w", err)
 	}
 	return nil
 }

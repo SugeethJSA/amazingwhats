@@ -31,6 +31,13 @@ export function AcceptCall(callID: string): $CancellablePromise<void> {
     return $Call.ByID(1796833829, callID);
 }
 
+/**
+ * AcceptCallVideo accepts a peer's pending video upgrade.
+ */
+export function AcceptCallVideo(callID: string): $CancellablePromise<void> {
+    return $Call.ByID(4060226220, callID);
+}
+
 export function AcceptGroupInviteLink(inviteCode: string): $CancellablePromise<string> {
     return $Call.ByID(2106735973, inviteCode);
 }
@@ -41,6 +48,15 @@ export function AcceptGroupInviteLink(inviteCode: string): $CancellablePromise<s
  */
 export function AddCallParticipant(callID: string, targetJID: string): $CancellablePromise<void> {
     return $Call.ByID(1823670553, callID, targetJID);
+}
+
+/**
+ * AddCallParticipants invites several JIDs to an established call. Targets may
+ * be comma- or newline-separated; the first non-nil invite error is returned.
+ * This is distinct from the existing singular AddCallParticipant binding.
+ */
+export function AddCallParticipants(callID: string, targets: string): $CancellablePromise<void> {
+    return $Call.ByID(2278242782, callID, targets);
 }
 
 export function AddGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
@@ -692,6 +708,13 @@ export function RevokeMessage(chatJID: string, messageID: string): $CancellableP
     return $Call.ByID(282182418, chatJID, messageID);
 }
 
+/**
+ * RingCallParticipant rings a participant already in the active call's roster.
+ */
+export function RingCallParticipant(callID: string, targetJID: string): $CancellablePromise<void> {
+    return $Call.ByID(3387492228, callID, targetJID);
+}
+
 export function SaveSettings(s: { [_ in string]?: any }): $CancellablePromise<void> {
     return $Call.ByID(2553746381, s);
 }
@@ -715,6 +738,14 @@ export function SearchNewsletters(query: string): $CancellablePromise<$models.Ch
     return $Call.ByID(1374403199, query).then(($result: any) => {
         return $$createType19($result);
     });
+}
+
+/**
+ * SendCallReaction sends an emoji over the call's app-data stream. An empty
+ * emoji would clear the reaction rather than send one, so reject it here.
+ */
+export function SendCallReaction(callID: string, emoji: string): $CancellablePromise<void> {
+    return $Call.ByID(1333731828, callID, emoji);
 }
 
 export function SendChatPresence(jid: string, cp: types$0.ChatPresence, cpm: types$0.ChatPresenceMedia): $CancellablePromise<void> {
@@ -762,6 +793,37 @@ export function SendReaction(chatJID: string, senderJID: string, messageID: stri
  */
 export function SendShareContact(chatJID: string, displayName: string, phone: string): $CancellablePromise<string> {
     return $Call.ByID(592765150, chatJID, displayName, phone);
+}
+
+/**
+ * SendVideoFrame feeds one WebCodecs-encoded H.264 access unit (Annex-B,
+ * standard base64) into the active call's outbound video track.
+ */
+export function SendVideoFrame(callID: string, accessUnitB64: string): $CancellablePromise<void> {
+    return $Call.ByID(2210176603, callID, accessUnitB64);
+}
+
+/**
+ * SetCallHandRaised announces our persistent hand-raised state.
+ */
+export function SetCallHandRaised(callID: string, raised: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3924191142, callID, raised);
+}
+
+/**
+ * SetCallVideoEnabled mutes or unmutes our outbound camera flow.
+ */
+export function SetCallVideoEnabled(callID: string, enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1470823347, callID, enabled);
+}
+
+/**
+ * SetCallVideoOrientation announces our camera rotation in clockwise quarter
+ * turns. Values outside meowcaller's 0..3 range are clamped rather than passed
+ * through to signaling.
+ */
+export function SetCallVideoOrientation(callID: string, orientation: number): $CancellablePromise<void> {
+    return $Call.ByID(831953368, callID, orientation);
 }
 
 export function SetCustomCSS(css: string): $CancellablePromise<void> {
@@ -881,6 +943,35 @@ export function SetWindowFocused(focused: boolean): $CancellablePromise<void> {
  */
 export function StarMessage(chatJID: string, messageID: string, starred: boolean): $CancellablePromise<void> {
     return $Call.ByID(1939561056, chatJID, messageID, starred);
+}
+
+/**
+ * StartCallScreenShare announces an independent screen share. screenShareID is
+ * the browser's identifier for the shared display surface.
+ */
+export function StartCallScreenShare(callID: string, screenShareID: number): $CancellablePromise<void> {
+    return $Call.ByID(1587404018, callID, screenShareID);
+}
+
+/**
+ * StartCallVideo requests an audio-to-video upgrade on the active call.
+ */
+export function StartCallVideo(callID: string): $CancellablePromise<void> {
+    return $Call.ByID(3895087274, callID);
+}
+
+/**
+ * StopCallScreenShare stops screen sharing without touching camera video.
+ */
+export function StopCallScreenShare(callID: string): $CancellablePromise<void> {
+    return $Call.ByID(241485560, callID);
+}
+
+/**
+ * StopCallVideo stops our outbound video while keeping audio and peer video.
+ */
+export function StopCallVideo(callID: string): $CancellablePromise<void> {
+    return $Call.ByID(1475101040, callID);
 }
 
 /**
