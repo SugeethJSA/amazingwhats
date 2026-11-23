@@ -21,11 +21,19 @@ function ResizablePanel({
   children,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Panel>) {
+  // react-resizable-panels v4 size-prop semantics (defaultSize/minSize/maxSize):
+  //   number        -> PIXELS          (e.g. {340} === 340px)
+  //   "300px"       -> PIXELS
+  //   "34" / "34%"  -> PERCENTAGE
+  // Passing a bare number that was meant as a percentage silently produces a
+  // tiny pixel-sized pane (the v4 migration trap behind D-ID UI-001). Always
+  // spell out the unit. See node_modules/react-resizable-panels/dist/*.d.ts.
+  //
   // The outer Panel element is owned by the resize group: it carries the
-  // flex-basis/size and must keep `overflow-hidden` so an unshrinkable child
-  // (long unbroken text, wide media) cannot blow past the group. Layout and
-  // visibility classes belong on an inner wrapper, never on the sized element
-  // itself — `hidden` there leaves a phantom flex-sized gap behind.
+  // flex-basis/size and already sets `overflow: hidden` so an unshrinkable
+  // child (long unbroken text, wide media) cannot blow past the group. Layout
+  // and visibility classes belong on an inner wrapper, never on the sized
+  // element itself — `hidden` there leaves a phantom flex-sized gap behind.
   return (
     <ResizablePrimitive.Panel data-slot="resizable-panel" className="overflow-hidden" {...props}>
       <div className={cn("h-full min-h-0 min-w-0", className)}>{children}</div>

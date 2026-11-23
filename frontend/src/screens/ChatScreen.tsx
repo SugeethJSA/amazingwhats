@@ -111,7 +111,7 @@ interface HeaderProps {
 
 const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
-    <Wordmark compact />
+    <Wordmark compact textClassName="text-xl" markClassName="h-6 w-6" />
     <div className="flex items-center gap-1 text-gray-600 dark:text-[#8696a0]">
       <button
         title="Search Messages"
@@ -704,7 +704,7 @@ const WelcomeScreen = () => (
     </div>
 
     <div className="mb-4 relative z-10">
-      <Wordmark />
+      <Wordmark textClassName="text-3xl" markClassName="h-9 w-9" />
     </div>
 
     <p className="relative z-10 text-sm leading-relaxed text-gray-600 dark:text-[#8696a0]">
@@ -1641,12 +1641,18 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       )}
       {isWide ? (
         <ResizablePanelGroup className="h-full">
-          {/* Percentage sizes keep both panes usable down to ~400px. */}
-          <ResizablePanel defaultSize={30} minSize={25} maxSize={55}>
+          {/* react-resizable-panels v4: a NUMBER means pixels, an explicit "px"
+              string means pixels, and a bare/"%" string means a percentage.
+              The old bare numbers ({30}/{25}/{55}) were read as 30px/25px/55px,
+              so maxSize capped the list at 55px (~5% of a wide WebView) and it
+              was always crushed. Use px strings for real pixel constraints and
+              let the detail pane auto-fill the remainder (min 45% keeps it
+              usable on narrow windows). The md swap below still owns <768px. */}
+          <ResizablePanel defaultSize="340px" minSize="300px" maxSize="520px">
             {listPane}
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel defaultSize={70} minSize={45}>
+          <ResizablePanel minSize="45%">
             {detailPane}
           </ResizablePanel>
         </ResizablePanelGroup>
