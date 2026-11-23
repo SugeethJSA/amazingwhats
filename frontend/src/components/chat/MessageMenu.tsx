@@ -333,17 +333,22 @@ export function MessageMenu({
   }
 
   const handleLabel = async () => {
-    const id = resolveLabelId(labelId)
+    const raw = labelId.trim()
+    if (!raw) return
+    // The field accepts a saved human name or a raw ID; only the resolved ID
+    // ever crosses the RPC boundary. Storage stays an id -> name JSON map.
+    const id = resolveLabelId(raw)
     if (!id) return
+    const customName = labelName.trim()
+    const displayName = customName || labelNames[id] || (raw === id ? "" : raw)
     try {
       await ToggleMessageLabel(chatId, messageId, id, true)
-      const name = labelName.trim()
-      if (name) {
-        const next = { ...labelNames, [id]: name }
+      if (customName && customName !== labelNames[id]) {
+        const next = { ...labelNames, [id]: customName }
         setLabelNames(next)
         writeLabelNames(next)
       }
-      notify(name ? `Label "${name}" applied` : `Label ${id} applied`, {
+      notify(displayName ? `Label "${displayName}" applied` : `Label ${id} applied`, {
         tone: "success",
         durationMs: 4000,
       })
@@ -526,7 +531,7 @@ export function MessageMenu({
                   <div id={labelFormId} className="px-4 pb-2">
                     <datalist id={labelListId}>
                       {Object.entries(labelNames).map(([id, name]) => (
-                        <option key={id} value={id} label={name}>
+                        <option key={id} value={name} label={id}>
                           {name}
                         </option>
                       ))}
@@ -535,11 +540,11 @@ export function MessageMenu({
                       <input
                         autoFocus
                         list={labelListId}
-                        aria-label="Label ID or saved label name"
-                        className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100"
+                        aria-label="Label name or ID"
+                        className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100 dark:placeholder:text-gray-400"
                         value={labelId}
                         onChange={event => setLabelId(event.target.value)}
-                        placeholder="Label ID or saved name"
+                        placeholder="Label name or ID"
                         onKeyDown={event => {
                           if (event.key === "Enter") void handleLabel()
                         }}
@@ -555,7 +560,7 @@ export function MessageMenu({
                     </div>
                     <input
                       aria-label="Label name (optional)"
-                      className="mt-2 w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100"
+                      className="mt-2 w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100 dark:placeholder:text-gray-400"
                       value={labelName}
                       onChange={event => setLabelName(event.target.value)}
                       placeholder="Name for this label (optional)"

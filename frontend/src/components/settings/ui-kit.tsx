@@ -7,6 +7,11 @@ import ToggleButton from "./ToggleButton"
    Cards, rows, segmented/menu selects, inputs and buttons share the same
    design tokens as the rest of the app (light/dark aware). */
 
+// Shared keyboard-focus treatment: 2px outline at 2px offset in the global
+// --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
+const FOCUS_RING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
 const cardCls =
   "rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-dark-secondary shadow-[0_1px_2px_rgba(0,0,0,0.04)] overflow-hidden"
 
@@ -308,7 +313,8 @@ export function TextField({ label, wrapperClassName, className, ...props }: Text
         className={clsx(
           "w-full rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-transparent",
           "px-3 py-2 text-sm text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted",
-          "outline-none transition-all focus:border-[#21c063] focus:ring-2 focus:ring-[var(--color-focus-ring)]",
+          "transition-colors",
+          FOCUS_RING,
           className,
         )}
       />

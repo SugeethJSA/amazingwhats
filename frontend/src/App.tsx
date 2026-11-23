@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import {
   Login,
   GetCustomCSS,
@@ -128,13 +128,27 @@ function connectionView(status: string): ConnectionView {
   return { label: "Connecting…", tone: "connecting" }
 }
 
+/**
+ * Background history sync is driven entirely by the backend, which emits
+ * `wa:history_progress` batches. We surface a calm status for it and recover
+ * from a stalled batch rather than leaving a silent line on screen.
+ */
+type HistorySyncView =
+  | { phase: "idle" }
+  | { phase: "syncing"; percent: number }
+  | { phase: "failed" }
+
+/** If a batch goes quiet this long, treat the sync as stalled and offer Retry. */
+const HISTORY_SYNC_STALL_MS = 90_000
+
 function App() {
   const screen = useUIStore(state => state.screen)
   const setScreen = useUIStore(state => state.setScreen)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const loginStartedRef = useRef(false)
   const [status, setStatus] = useState<string>("waiting")
-  const [historyProgress, setHistoryProgress] = useState<number | null>(null)
+  const [historySync, setHistorySync] = useState<HistorySyncView>({ phase: "idle" })
+  const historyStallRef = useRef<number | null>(null)
   const connection = connectionView(status)
 
   const theme = useAppSettingsStore(state => state.theme)
@@ -142,6 +156,21 @@ function App() {
   const notifications = useUIStore(state => state.notifications)
   const addNotification = useUIStore(state => state.addNotification)
   const removeNotification = useUIStore(state => state.removeNotification)
+
+  const clearHistoryStall = useCallback(() => {
+    if (historyStallRef.current !== null) {
+      window.clearTimeout(historyStallRef.current)
+      historyStallRef.current = null
+    }
+  }, [])
+
+  const armHistoryStall = useCallback(() => {
+    if (historyStallRef.current !== null) window.clearTimeout(historyStallRef.current)
+    historyStallRef.current = window.setTimeout(() => {
+      historyStallRef.current = null
+      setHistorySync(previous => (previous.phase === "syncing" ? { phase: "failed" } : previous))
+    }, HISTORY_SYNC_STALL_MS)
+  }, [])
 
   useEffect(() => {
     useAppSettingsStore.getState().loadSettings()
@@ -339,12 +368,22 @@ function App() {
         totalMessages?: number
         processedMessages?: number
         done?: boolean
+        failed?: boolean
+        error?: string
       }) => {
-        if (data?.done) {
-          setHistoryProgress(null)
+        if (!data) return
+        if (data.done) {
+          clearHistoryStall()
+          setHistorySync({ phase: "idle" })
           return
         }
-        if (!data) return
+        // A backend may attach a diagnostic string on failure. Never render it
+        // verbatim — it can carry paths, URLs or JIDs. Show plain copy instead.
+        if (data.failed || typeof data.error === "string") {
+          clearHistoryStall()
+          setHistorySync({ phase: "failed" })
+          return
+        }
         // `type` is the whatsmeow sync type (INITIAL_BOOTSTRAP / FULL / RECENT
         // / ...), not a progress counter. The real counters are the explicit
         // conversation/message fields. Prefer message counts when a message
@@ -356,8 +395,10 @@ function App() {
           ? (data.processedMessages ?? 0)
           : (data.processedConversations ?? 0)
         if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) return
-        const pct = Math.round((Math.min(Math.max(processed, 0), total) / total) * 100)
-        setHistoryProgress(Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0)
+        const raw = Math.round((Math.min(Math.max(processed, 0), total) / total) * 100)
+        const percent = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0
+        setHistorySync({ phase: "syncing", percent })
+        armHistoryStall()
       },
     )
 
@@ -370,8 +411,9 @@ function App() {
       unsubUpdateAvailable()
       unsubUpdateError()
       unsubHistory()
+      clearHistoryStall()
     }
-  }, [addNotification, removeNotification])
+  }, [addNotification, removeNotification, clearHistoryStall, armHistoryStall])
 
   // Periodically evict stale entries from transient UI caches and cap message stores
   useEffect(() => {
@@ -382,18 +424,57 @@ function App() {
     return () => clearInterval(id)
   }, [])
 
+  const retryHistorySync = () => {
+    // The backend owns the real sync and re-emits progress on reconnect. Reset
+    // the indicator to a fresh, watched wait so a new batch resumes the bar.
+    clearHistoryStall()
+    setHistorySync({ phase: "syncing", percent: 0 })
+    armHistoryStall()
+  }
+
   return (
     <div className="min-h-screen bg-light-secondary text-light-text dark:bg-dark-bg dark:text-white relative">
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
 
-      {historyProgress !== null && (
-        <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gray-200 dark:bg-gray-800">
-          <div
-            className="h-full bg-[#21c063] transition-all duration-300 ease-out"
-            style={{ width: `${historyProgress}%` }}
-          />
+      {/* Background history sync is a quiet status, not a banner. The label is
+          the accessible state; the track is a labelled progressbar. Failure
+          uses plain copy and a Retry action — never a raw backend string. */}
+      {historySync.phase !== "idle" && (
+        <div className="history-sync">
+          {historySync.phase === "syncing" ? (
+            <>
+              <div className="history-sync-row" role="status" aria-live="polite">
+                <span className="history-sync-label">Syncing history…</span>
+                <span className="history-sync-percent" aria-hidden="true">
+                  {historySync.percent}%
+                </span>
+              </div>
+              <div
+                className="history-sync-track"
+                role="progressbar"
+                aria-label="History sync progress"
+                aria-valuenow={historySync.percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="history-sync-fill"
+                  style={{ width: `${historySync.percent}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="history-sync-row" role="status" aria-live="polite">
+              <span className="history-sync-label history-sync-label--error">
+                History sync didn't finish.
+              </span>
+              <button type="button" className="history-sync-retry" onClick={retryHistorySync}>
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       )}
       <Lightbox />

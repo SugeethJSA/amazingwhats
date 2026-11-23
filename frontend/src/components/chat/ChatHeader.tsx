@@ -13,11 +13,8 @@ interface ChatHeaderProps {
 
 const typingDot = (delay: string) => (
   <span
-    className="typing-dot inline-block h-1.5 w-1.5 rounded-full"
-    style={{
-      background: "#21c063",
-      animationDelay: delay,
-    }}
+    className="typing-dot inline-block h-1.5 w-1.5 rounded-full bg-green"
+    style={{ animationDelay: delay }}
   />
 )
 
@@ -78,10 +75,7 @@ export function ChatHeader({
               {chatName}
             </h2>
             {isTyping ? (
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium text-[#14663c] dark:text-[#21c063]"
-                style={{ background: "rgba(33,192,99,0.12)" }}
-              >
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium text-green-ink bg-green-muted">
                 <span>typing</span>
                 {typingDot("0ms")}
                 {typingDot("160ms")}
@@ -101,7 +95,7 @@ export function ChatHeader({
         {onCallClick && (
           <button
             onClick={onCallClick}
-            className="p-2 rounded-full transition-all duration-150 hover:bg-black/5 dark:hover:bg-white/10 text-[#21c063]"
+            className="p-2 rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/10 text-green-ink"
             aria-label="Start voice call"
             title="Start voice call"
           >

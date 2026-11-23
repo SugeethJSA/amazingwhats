@@ -971,14 +971,30 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   }, [chatId, chatType])
 
   useGSAP(() => {
-    if (!scrollButtonRef.current) return
+    const button = scrollButtonRef.current
+    if (!button) return
 
-    gsap.to(scrollButtonRef.current, {
-      opacity: scrollButtonVisible ? 1 : 0,
+    const targetAlpha = scrollButtonVisible ? 1 : 0
+
+    // Reduced motion: snap to the final state in the same frame. aria-hidden,
+    // tabIndex and visibility all derive from scrollButtonVisible (autoAlpha
+    // owns the inline visibility), so the control leaves the tab order and the
+    // a11y tree together. No opacity tween is started at all.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.killTweensOf(button)
+      gsap.set(button, { autoAlpha: targetAlpha })
+      return
+    }
+
+    // autoAlpha fades opacity and flips visibility at the right end of the
+    // tween, so the button can't be instantly hidden while still fading.
+    gsap.to(button, {
+      autoAlpha: targetAlpha,
       duration: 0.3,
       ease: scrollButtonVisible ? easeShowRef.current : easeHideRef.current,
+      overwrite: "auto",
     })
-  }, [scrollButtonVisible])
+  }, { dependencies: [scrollButtonVisible], revertOnUpdate: false })
 
   return (
     <div className="flex h-full min-w-0">
@@ -1106,8 +1122,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             aria-label="Scroll to latest message"
             aria-hidden={!scrollButtonVisible}
             tabIndex={scrollButtonVisible ? 0 : -1}
-            style={{ visibility: scrollButtonVisible ? "visible" : "hidden" }}
-            className="absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-[#2a3942]"
+            className={clsx(
+              // Initial hidden state; GSAP autoAlpha takes over visibility.
+              "invisible absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-[#2a3942]",
+              !scrollButtonVisible && "pointer-events-none",
+            )}
           >
             <svg
               viewBox="0 0 24 24"

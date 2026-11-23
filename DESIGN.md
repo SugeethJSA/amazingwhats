@@ -29,6 +29,8 @@ colors:
   danger: "#ef4444"
   warning: "#f0a500"
   link-blue: "#53bdeb"
+  focus-ring: "#137a45"
+  focus-ring-dark: "#3ddc84"
 typography:
   body:
     fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
@@ -156,6 +158,10 @@ The palette is a single vivid green living on two neutral canvases — near-blac
 
 - **Link Blue** (#53bdeb): In-message web links only. Distinct from the accent so a link never reads as an action button.
 
+### Focus
+
+- **Focus Ring** (#137a45 on light / #3ddc84 on dark): One semantic token, `--color-focus-ring`, with two canvas expressions — a deep green ink on light surfaces and its light counterpart on dark. Both clear 3:1 against their canvas. It is the single keyboard-focus cue: a 2px outline with a 2px offset on the global `:focus-visible` baseline, shared by every control. No component defines a local ring.
+
 ### Neutral
 
 - **Ink** (#000000): Dark-mode canvas and dark chat wallpaper base.
@@ -229,7 +235,7 @@ Soft but not pillowy. Pills and circles own the 9999px radius: avatars, presence
 - **Shape:** 12px radius, 8px vertical and 16px horizontal padding, 14px semibold label.
 - **Primary:** Signal Green fill with Action Ink text; hover moves to Signal Green Hover; disabled drops to 40% opacity and a not-allowed cursor.
 - **Neutral / Ghost / Danger:** neutral uses a 5% fill that lifts on hover; ghost is text-only until hover; danger uses Danger with white text. All share the same geometry.
-- **Focus:** the only focus cue is the global `:focus-visible` baseline — a 2px outline in `--color-focus-ring` with a 2px offset — shared by every control in both themes. Components do not define local rings.
+- **Focus:** the only focus cue is the global `:focus-visible` baseline — a 2px outline in `--color-focus-ring` (green-ink #137a45 on light, light green #3ddc84 on dark) with a 2px offset — shared by every control in both themes. Components do not define local rings.
 
 ### Chips
 
@@ -270,6 +276,16 @@ A 12px-radius, 220ms slide-up panel with a 3px coloured left border encoding ton
 ### Connection status
 
 A compact, fixed pill in the lower-left of the chats and settings surfaces shows the live connection state — Connected, Connecting…, Reconnecting…, or Disconnected — with a small status dot and a text label. It stays present for the whole signed-in session; toasts remain the transient layer. The surface is flat (paper/light or elevated dark), the label uses the primary text token, and the dot uses the status tones. The label is the accessible state (`role="status"`); the dot is decorative.
+
+### History sync status
+
+A compact, top-centred status strip reports background chat-history sync — a status, not a banner. While syncing it shows the label "Syncing history…", a numeric percent, and a hairline 4px progress track whose fill uses the live accent. The surface is flat (Paper in light, Charcoal in dark) with a 12px radius and a subtle 0 1px 2px shadow. It appears only while a sync is active and clears on `done`.
+
+The track is the labelled `role="progressbar"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` on a 0–100 scale; the label row is a `role="status"` with `aria-live="polite"` so the label is announced without re-announcing every percent change. If a batch is explicitly flagged as failed, or goes quiet for 90 seconds, the strip switches to the failure state: plain copy ("History sync didn't finish.") and a Retry action. Raw backend strings are never rendered. Retry resets the indicator to a fresh watched wait; the backend owns the actual sync and re-emits progress on reconnect. The fill's 300ms width transition is disabled under `prefers-reduced-motion`.
+
+### Wordmark
+
+The shared `@/components/common/Wordmark` lockup pairs the bundled `chat-mark.svg` beside the text "Whats4Linux", with the accent on "4Linux". It has a stable contract — `{ className?: string; compact?: boolean }` — so every surface uses the same mark and lettering. The whole lockup carries the accessible name "Whats4Linux"; the mark is decorative. `compact` steps the mark down from 28px to 20px and the label from 18px to 14px for dense chrome. Text uses the primary text token in both themes and the green-ink token for the accent, so it stays readable on either canvas.
 
 ### Named Rules
 

@@ -102,7 +102,9 @@ label[for] {
   --color-chat-wallpaper: #efeae2;
 
   /* Browser-drawn surfaces */
-  --color-focus-ring: #0b5fa5;
+  /* One semantic focus token with two canvas expressions: deep green ink on
+     light, its light counterpart on dark. Both clear 3:1 on their canvas. */
+  --color-focus-ring: #137a45;
   --color-scrollbar-thumb: rgba(11, 27, 33, 0.28);
   --color-selection: rgba(33, 192, 99, 0.28);
 }
@@ -118,7 +120,7 @@ label[for] {
   --color-danger-ink: #ffb4ab;
   --color-danger-tint: rgba(239, 68, 68, 0.16);
   --color-chat-wallpaper: #000000;
-  --color-focus-ring: #7ee2a8;
+  --color-focus-ring: #3ddc84;
   --color-scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --color-selection: rgba(33, 192, 99, 0.32);
 }
@@ -168,7 +170,8 @@ body {
   color: var(--color-dark-text);
 }
 
-/* Single keyboard-focus baseline (>=3:1 on both canvases, 2px, 2px offset). */
+/* Single keyboard-focus baseline: one green-ink hue family, two canvas
+   expressions (see --color-focus-ring). 2px outline, 2px offset, no local rings. */
 :focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -779,4 +782,92 @@ video::-webkit-media-controls-fullscreen-button {
 }
 .conn-status--offline .conn-status-dot {
   background: var(--color-danger);
+}
+
+/* ─── History sync status ─────────────────────────────────────────────────── */
+/* A compact, top-centred cue for background history sync — a status strip,
+   not a marketing banner. Flat surface, one label line, a hairline track.
+   Primary text carries the label; the fill uses the live/syncing accent. */
+.history-sync {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(320px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--color-light-bg);
+  color: var(--color-light-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.dark .history-sync {
+  background: var(--color-dark-secondary);
+  color: var(--color-dark-text);
+}
+.history-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.history-sync-label {
+  color: var(--color-light-text);
+}
+.dark .history-sync-label {
+  color: var(--color-dark-text);
+}
+.history-sync-label--error,
+.dark .history-sync-label--error {
+  color: var(--color-danger-ink);
+}
+.history-sync-percent {
+  flex-shrink: 0;
+  color: var(--color-light-text);
+  font-variant-numeric: tabular-nums;
+}
+.dark .history-sync-percent {
+  color: var(--color-dark-text);
+}
+.history-sync-track {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-light-tertiary);
+  overflow: hidden;
+}
+.dark .history-sync-track {
+  background: var(--color-dark-tertiary);
+}
+.history-sync-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--color-green);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-sync-fill {
+    transition: none;
+  }
+}
+.history-sync-retry {
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: transparent;
+  padding: 4px 10px;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.history-sync-retry:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.dark .history-sync-retry:hover {
+  background: rgba(255, 255, 255, 0.08);
 }

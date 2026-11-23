@@ -1,3 +1,4 @@
+import Wordmark from "@/components/common/Wordmark"
 import { SettingsCard, ChevronIcon, SettingsSection } from "../../components/settings/ui-kit"
 
 const ISSUE_URL = "https://github.com/SugeethJSA/amazingwhats/issues/new"
@@ -34,11 +35,14 @@ function LinkRow({
   description,
   href,
   icon,
+  tag,
 }: {
   title: string
   description: string
   href: string
   icon: React.ReactNode
+  /** Short source label so first-party and external help can be told apart at a glance. */
+  tag: string
 }) {
   return (
     <button
@@ -50,8 +54,13 @@ function LinkRow({
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-light-text dark:text-dark-text">
-          {title}
+        <div className="flex items-center gap-2">
+          <div className="truncate text-sm font-medium text-light-text dark:text-dark-text">
+            {title}
+          </div>
+          <span className="shrink-0 rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-light-text dark:bg-white/[0.06] dark:text-dark-text">
+            {tag}
+          </span>
         </div>
         <div className="mt-0.5 text-[13px] leading-snug text-light-muted dark:text-dark-muted">
           {description}
@@ -65,6 +74,25 @@ function LinkRow({
 const HelpAndFeedback = () => {
   return (
     <div className="flex flex-col gap-6">
+      <SettingsSection title="First-party help">
+        <SettingsCard>
+          <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+            <LinkRow
+              title="Report a problem"
+              description="Open an issue on the Whats4Linux GitHub tracker to report a bug or send feedback. Opens in your browser."
+              href={ISSUE_URL}
+              icon={<BugIcon />}
+              tag="First-party"
+            />
+          </div>
+        </SettingsCard>
+        <p className="px-1 text-[13px] leading-relaxed text-light-text dark:text-dark-text">
+          For questions about Whats4Linux itself, use the project tracker above. The Meta and WhatsApp
+          links below are external sites operated by WhatsApp; they cover the account, pairing, and
+          encryption side of the network, not this application.
+        </p>
+      </SettingsSection>
+
       <SettingsSection title="About Whats4Linux">
         <SettingsCard className="p-5">
           <div className="space-y-3 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
@@ -77,7 +105,7 @@ const HelpAndFeedback = () => {
             </p>
             <p>
               <strong className="font-semibold text-light-text dark:text-dark-text">
-                Official multi-device protocol.
+                Direct multi-device protocol.
               </strong>{" "}
               The app connects directly to WhatsApp's multi-device protocol through a native backend.
               It is an independent client, not a browser wrapper around WhatsApp Web.
@@ -100,15 +128,6 @@ const HelpAndFeedback = () => {
               interface looks and behaves. They run only in this app, on this device, and are
               unsupported experiments — a bad script can break the UI until you remove it.
             </p>
-            <p>
-              <strong className="font-semibold text-light-text dark:text-dark-text">
-                First-party help.
-              </strong>{" "}
-              For questions about Whats4Linux itself, use "Report a problem" below to open an issue
-              on the project's own tracker. The Meta/WhatsApp links here are external sites operated
-              by WhatsApp; they cover the account, pairing, and encryption side of the network, not
-              this application.
-            </p>
           </div>
         </SettingsCard>
       </SettingsSection>
@@ -121,24 +140,27 @@ const HelpAndFeedback = () => {
               description="Answers to common questions on the official WhatsApp site"
               href="https://faq.whatsapp.com/"
               icon={<DocsIcon />}
+              tag="External"
             />
             <LinkRow
               title="Linking a device (opens external site)"
               description="Learn about pairing this client with your phone"
               href="https://faq.whatsapp.com/2098951377590750"
               icon={<LinksIcon />}
+              tag="External"
             />
             <LinkRow
               title="WhatsApp security (opens external site)"
               description="Read how WhatsApp describes encryption and security"
               href="https://www.whatsapp.com/security/"
               icon={<LinksIcon />}
+              tag="External"
             />
           </div>
         </SettingsCard>
       </SettingsSection>
 
-      <SettingsSection title="Feedback and legal">
+      <SettingsSection title="Contact and legal">
         <SettingsCard>
           <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
             <LinkRow
@@ -146,18 +168,14 @@ const HelpAndFeedback = () => {
               description="Reach Meta's support team through the official site"
               href="https://www.whatsapp.com/contact/"
               icon={<MailIcon />}
-            />
-            <LinkRow
-              title="Report a problem (opens external site)"
-              description="Open a first-party GitHub issue to file a bug or send feedback"
-              href={ISSUE_URL}
-              icon={<BugIcon />}
+              tag="External"
             />
             <LinkRow
               title="WhatsApp privacy policy (opens external site)"
               description="Read the official WhatsApp privacy policy and terms"
               href="https://www.whatsapp.com/legal/privacy-policy"
               icon={<DocsIcon />}
+              tag="External"
             />
           </div>
         </SettingsCard>
@@ -171,9 +189,7 @@ const HelpAndFeedback = () => {
             </svg>
           </div>
           <div>
-            <div className="text-sm font-semibold text-light-text dark:text-dark-text">
-              Whats4Linux
-            </div>
+            <Wordmark compact />
             <div className="text-[13px] text-light-muted dark:text-dark-muted">
               Unofficial desktop client powered by the WhatsApp protocol
             </div>

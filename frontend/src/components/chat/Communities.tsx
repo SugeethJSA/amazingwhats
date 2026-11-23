@@ -13,6 +13,11 @@ import { GoBackIcon } from "../../assets/svgs/header_icons"
 import { getAvatarColor, AVATAR_ICON_COLOR } from "../../lib/utils"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
+// Shared keyboard-focus treatment: 2px outline at 2px offset in the global
+// --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
+const FOCUS_RING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
 /** Communities empty-state illustration. */
 const CommunitiesEmptyIcon = () => (
   <svg
@@ -272,7 +277,7 @@ function CreateSubGroupDialog({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Group name"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 ${FOCUS_RING}`}
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
@@ -597,14 +602,14 @@ function CreateCommunityDialog({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Community name"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 ${FOCUS_RING}`}
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={3}
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3 resize-none"
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 resize-none ${FOCUS_RING}`}
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">

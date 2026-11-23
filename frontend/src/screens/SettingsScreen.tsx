@@ -28,6 +28,11 @@ import {
   UserIcon,
 } from "../assets/svgs/settings_icons"
 
+// Shared keyboard-focus treatment: 2px outline at 2px offset in the global
+// --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
+const FOCUS_RING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
 type SettingsCategory =
   | "general"
   | "account"
@@ -279,13 +284,16 @@ function Sidebar({
             Settings
           </h1>
         </div>
-        <div className="group flex items-center gap-2.5 rounded-xl bg-light-secondary px-3 py-2 transition-all focus-within:ring-2 focus-within:ring-[#21c063]/25 dark:bg-dark-tertiary">
+        <div className="group flex items-center gap-2.5 rounded-xl bg-light-secondary px-3 py-2 transition-colors dark:bg-dark-tertiary">
           <SearchIcon className="h-4 w-4 shrink-0 text-light-muted dark:text-dark-muted" />
           <input
             type="text"
             aria-label="Search settings"
             placeholder="Search settings"
-            className="w-full bg-transparent text-sm text-light-text outline-none placeholder:text-light-muted dark:text-dark-text dark:placeholder:text-dark-muted"
+            className={clsx(
+              "w-full bg-transparent text-sm text-light-text placeholder:text-light-muted dark:text-dark-text dark:placeholder:text-dark-muted",
+              FOCUS_RING,
+            )}
             value={searchTerm}
             onChange={e => onSearchChange(e.target.value)}
           />

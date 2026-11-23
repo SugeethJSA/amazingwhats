@@ -22,8 +22,10 @@ import { MessageMenu } from "./MessageMenu"
 import { ForwardDialog } from "./ForwardDialog"
 import { PollVoteDialog } from "./PollVoteDialog"
 import {
-  ClockPendingIcon,
-  BlueTickIcon,
+  SendingIcon,
+  SingleTickIcon,
+  DoubleTickIcon,
+  ReadTickIcon,
   ForwardedIcon,
   DownloadIcon,
   UserAvatar,
@@ -44,18 +46,35 @@ const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
 const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
 
-// whatsmeow receipt types arrive as strings on message.receiptStatus. Map the
-// known ones to the tick meaning so screen readers and tooltips get the real
-// state, even though the blue-tick glyph itself looks the same in each state.
+// whatsmeow receipt types arrive as strings on message.receiptStatus. One
+// resolver drives both the drawn glyph and the accessible label, so the two
+// can never disagree about which state the message is in.
 const READ_RECEIPTS = new Set(["read", "reads", "read_self", "read-self", "played"])
 const DELIVERED_RECEIPTS = new Set(["delivered", "delivery", "received"])
 
-function receiptLabel(message: Message): string {
-  if (message.isPending) return "Sending"
+type ReceiptState = "sending" | "sent" | "delivered" | "read"
+
+function receiptState(message: Message): ReceiptState {
+  if (message.isPending) return "sending"
   const status = (message.receiptStatus ?? "").toLowerCase()
-  if (READ_RECEIPTS.has(status)) return "Read"
-  if (DELIVERED_RECEIPTS.has(status)) return "Delivered"
-  return "Sent"
+  if (READ_RECEIPTS.has(status)) return "read"
+  if (DELIVERED_RECEIPTS.has(status)) return "delivered"
+  return "sent"
+}
+
+const RECEIPT_LABELS: Record<ReceiptState, string> = {
+  sending: "Sending",
+  sent: "Sent",
+  delivered: "Delivered",
+  read: "Read",
+}
+
+// Sending, Sent, Delivered and Read each get their own artwork.
+const RECEIPT_ICONS: Record<ReceiptState, React.FC> = {
+  sending: SendingIcon,
+  sent: SingleTickIcon,
+  delivered: DoubleTickIcon,
+  read: ReadTickIcon,
 }
 
 type NotificationOptions = {
@@ -137,7 +156,6 @@ export function MessageItem({
   const isFromMe = message.Info.IsFromMe
   const content = message.Content
   const isSticker = !!content?.stickerMessage
-  const isPending = message.isPending || false
   const mediaBody =
     content?.imageMessage ||
     content?.videoMessage ||
@@ -383,29 +401,35 @@ export function MessageItem({
     [message.Info.Timestamp],
   )
 
-  // Inline metadata (time + ticks). For text messages it floats into the last
-  // line WhatsApp-style; for media/documents it renders as a bottom row.
-  const timeMeta = (floated: boolean) => (
-    <span
-      className={clsx(
-        "inline-flex items-center gap-1 text-[11px] leading-none opacity-75 select-none whitespace-nowrap",
-        floated && "float-right ml-2 mt-2",
-      )}
-    >
-      {message.edited && <span className="italic">Edited</span>}
-      <span>{timeStr}</span>
-      {isFromMe && (
-        <span
-          role="img"
-          aria-label={`Message ${receiptLabel(message).toLowerCase()}`}
-          title={`Message ${receiptLabel(message).toLowerCase()}`}
-          className="transition-colors duration-300"
-        >
-          {isPending ? <ClockPendingIcon /> : <BlueTickIcon />}
-        </span>
-      )}
-    </span>
-  )
+  // Inline metadata (time + receipt glyph). For text messages it floats into
+  // the last line WhatsApp-style; for media/documents it renders as a bottom
+  // row. The glyph and its label share one receipt state.
+  const timeMeta = (floated: boolean) => {
+    const state = receiptState(message)
+    const receiptText = `Message ${RECEIPT_LABELS[state].toLowerCase()}`
+    const ReceiptGlyph = RECEIPT_ICONS[state]
+    return (
+      <span
+        className={clsx(
+          "inline-flex items-center gap-1 text-[11px] leading-none opacity-75 select-none whitespace-nowrap",
+          floated && "float-right ml-2 mt-2",
+        )}
+      >
+        {message.edited && <span className="italic">Edited</span>}
+        <span>{timeStr}</span>
+        {isFromMe && (
+          <span
+            role="img"
+            aria-label={receiptText}
+            title={receiptText}
+            className="transition-colors duration-300"
+          >
+            <ReceiptGlyph />
+          </span>
+        )}
+      </span>
+    )
+  }
 
   const renderContent = () => {
     if (!content) return <span className="italic opacity-70">Empty Message</span>

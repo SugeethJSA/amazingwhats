@@ -61,6 +61,7 @@ import {
 } from "../components/common/resizable"
 import { MessageSearchScreen } from "./MessageSearchScreen"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
+import Wordmark from "@/components/common/Wordmark"
 
 /**
  * Tracks a CSS media query. Below the `md` breakpoint the chat shell must not
@@ -83,6 +84,24 @@ function useMediaQuery(query: string) {
   return matches
 }
 
+/**
+ * Human-friendly label names saved by MessageMenu, keyed by label id. The
+ * backend still speaks in ids, so this map is the only bridge from a typed
+ * name to the value ToggleChatLabel expects.
+ */
+function readSavedLabelNames(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem("whats4linux.labelNames")
+    if (!raw) return {}
+    const parsed: unknown = JSON.parse(raw)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, string>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
 interface HeaderProps {
   onOpenSettings: () => void
   onNewChat?: () => void
@@ -92,7 +111,7 @@ interface HeaderProps {
 
 const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
-    <h1 className="text-xl font-bold text-light-text dark:text-white">Whats4Linux</h1>
+    <Wordmark compact />
     <div className="flex items-center gap-1 text-gray-600 dark:text-[#8696a0]">
       <button
         title="Search Messages"
@@ -209,7 +228,7 @@ const MemoizedChatAvatar = memo(
 MemoizedChatAvatar.displayName = "MemoizedChatAvatar"
 
 /**
- * WhatsApp community stacked avatar: rounded-square community badge behind a
+ * Community stacked avatar: rounded-square community badge behind a
  * circular group photo.
  */
 const CommunityStackedAvatar = memo(
@@ -273,7 +292,7 @@ const CommunityStackedAvatar = memo(
 
 CommunityStackedAvatar.displayName = "CommunityStackedAvatar"
 
-// Small WhatsApp-style pin glyph shown on pinned chat rows.
+// Small pin glyph shown on pinned chat rows.
 const PinIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" width="14" height="14" className={clsx("fill-current", className)}>
     <path d="M16 3a1 1 0 0 1 .95 1.31l-.9 2.72 3.42 3.42a1 1 0 0 1-.21 1.57l-3.62 2.07-1.9 4.75a1 1 0 0 1-1.64.33L9 16.07l-4.29 4.3-1.42-1.42 4.3-4.29-3.1-3.1a1 1 0 0 1 .33-1.64l4.75-1.9 2.07-3.62A1 1 0 0 1 12.5 4z" />
@@ -311,7 +330,9 @@ const ChatListItemContent = memo(
         className={clsx(
           "group mx-2 my-1 flex w-[calc(100%_-_1rem)] items-center rounded-xl border border-transparent transition-colors duration-150",
           "hover:bg-gray-100/80 dark:hover:bg-white/5",
-          isSelected && "border-[#21c063]/40 bg-[#21c063]/10 dark:bg-[#21c063]/10",
+          // Same selected fill as the sidebar tabs: a signal tint plus a full
+          // inset ring (never a one-sided stripe). See .chat-row-selected.
+          isSelected && "chat-row-selected bg-green-muted",
         )}
       >
         <button
@@ -362,11 +383,11 @@ const ChatListItemContent = memo(
                   className={clsx(
                     "text-xs",
                     chat.unreadCount
-                      ? "font-medium text-[#14663c] dark:text-[#21c063]"
-                      : "text-gray-600 dark:text-[#8696a0]",
+                      ? "font-medium text-green-ink"
+                      : "text-gray-600 dark:text-dark-muted",
                   )}
                 >
-                  {formatChatTimestamp(chat.timestamp)}
+                  {formatChatTimestamp(chat.timestamp ?? 0)}
                 </span>
               </div>
             </div>
@@ -385,7 +406,7 @@ const ChatListItemContent = memo(
               </div>
               {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-[#8696a0]" />}
               {chat.unreadCount ? (
-                <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#21c063] text-[#0a1014] text-xs font-semibold">
+                <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-green text-action-ink text-xs font-semibold">
                   {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                 </span>
               ) : null}
@@ -455,10 +476,7 @@ interface EmptyStateProps {
 
 const EmptyState = ({ hasChats, isLoading, onRefresh }: EmptyStateProps) => (
   <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-[#8696a0] p-8">
-    <div
-      className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-      style={{ background: "rgba(33,192,99,0.08)", color: "#21c063" }}
-    >
+    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-green-muted text-green">
       <SearchIcon />
     </div>
     <p className="text-center font-medium">
@@ -467,8 +485,7 @@ const EmptyState = ({ hasChats, isLoading, onRefresh }: EmptyStateProps) => (
     <button
       onClick={onRefresh}
       disabled={isLoading}
-      className="mt-6 px-6 py-2.5 rounded-full text-sm font-semibold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-      style={{ background: "#21c063", color: "#0a1014" }}
+      className="mt-6 px-6 py-2.5 rounded-full text-sm font-semibold bg-green text-action-ink transition-colors hover:bg-green-dark disabled:cursor-not-allowed disabled:opacity-50"
     >
       {isLoading ? "Loading..." : "Refresh Chats"}
     </button>
@@ -496,8 +513,10 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
       setSuccess("Subscribed successfully!")
       setTimeout(onClose, 1500)
     } catch {
-      // Never surface a raw backend error: it can contain internal JIDs.
-      setError("Couldn't subscribe to that channel. Check the JID or invite code and try again.")
+      // Never surface a raw backend error: it can contain internal identifiers.
+      setError(
+        "Couldn't subscribe to that channel. Check the channel link or invite code and try again.",
+      )
     } finally {
       setBusy(false)
     }
@@ -513,7 +532,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
       await UnsubscribeNewsletter(jid)
       setSuccess("Unsubscribed!")
     } catch {
-      // Never surface a raw backend error: it can contain internal JIDs.
+      // Never surface a raw backend error: it can contain internal identifiers.
       setError("Couldn't leave that channel. Check your connection and try again.")
     } finally {
       setBusy(false)
@@ -555,8 +574,8 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Subscribe to Channel
           </h2>
-          <p className="text-sm text-gray-600 dark:text-[#8696a0] mb-4">
-            Enter a newsletter JID or search for channels.
+          <p className="text-sm text-gray-600 dark:text-dark-muted mb-4">
+            Enter a channel link or invite code, or search for channels below.
           </p>
           <input
             autoFocus
@@ -570,7 +589,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
               if (e.key === "Enter") handleSubscribe()
               if (e.key === "Escape") onClose()
             }}
-            placeholder="Newsletter JID or invite code"
+            placeholder="Channel link or invite code"
             className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3"
           />
 
@@ -597,20 +616,22 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
                     <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">
                       {ch.full_name || ch.push_name || ch.jid}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">{ch.jid}</p>
+                    <p className="text-xs text-light-muted dark:text-dark-muted truncate">
+                      Public channel
+                    </p>
                   </div>
                   <div className="flex gap-1 shrink-0 ml-2">
                     <button
                       onClick={() => handleSubscribe(ch.jid)}
                       disabled={busy}
-                      className="text-xs px-2 py-1 rounded bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
+                      className="text-xs px-2 py-1 rounded bg-green text-action-ink transition-colors hover:bg-green-dark disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Subscribe
                     </button>
                     <button
                       onClick={() => setPendingUnsubscribe(ch.jid)}
                       disabled={busy}
-                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50"
+                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Unsub
                     </button>
@@ -620,10 +641,21 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {error && (
-            <p className="mb-3 text-sm text-[var(--color-danger-ink)]">{error}</p>
+          {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+            <p className="mb-3 text-xs text-light-muted dark:text-dark-muted">
+              No channels found. Try another search, or paste a channel link above.
+            </p>
           )}
-          {success && <p className="mb-3 text-sm text-[var(--color-green-ink)]">{success}</p>}
+
+          {error && (
+            <p
+              role="alert"
+              className="mb-3 rounded-lg bg-danger-tint px-2 py-1 text-sm text-danger-ink"
+            >
+              {error}
+            </p>
+          )}
+          {success && <p className="mb-3 text-sm text-green-ink">{success}</p>}
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
@@ -634,7 +666,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => handleSubscribe()}
               disabled={busy || !input.trim()}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-green text-action-ink transition-colors hover:bg-green-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "Subscribing..." : "Subscribe"}
             </button>
@@ -664,12 +696,9 @@ const WelcomeScreen = () => (
       </div>
     </div>
 
-    <h1
-      className="text-3xl font-semibold mb-4 relative z-10 text-light-text dark:text-dark-text"
-      style={{ letterSpacing: "-0.02em" }}
-    >
-      Whats4Linux
-    </h1>
+    <div className="mb-4 relative z-10">
+      <Wordmark />
+    </div>
 
     <p className="relative z-10 text-sm leading-relaxed text-gray-600 dark:text-[#8696a0]">
       Send and receive messages without keeping your phone online.
@@ -1167,10 +1196,47 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     return () => unregs.forEach(unreg => unreg())
   }, [screen, handleChatSelect, getChat, setShowSearch, setShowCreateGroup, openChatMenu])
 
-  const [chatLabelId, setChatLabelId] = useState("")
+  const [chatLabelName, setChatLabelName] = useState("")
+  const [chatLabelError, setChatLabelError] = useState("")
   const [storyGroup, setStoryGroup] = useState<StatusGroup | null>(null)
   const viewRef = useRef(view)
   viewRef.current = view
+
+  // The menu asks for a label *name*; resolve it back to the id the RPC needs.
+  // Unknown names get a plain-language error instead of a raw backend failure.
+  const applyChatLabel = useCallback(async () => {
+    if (!chatMenu || !chatLabelName.trim()) return
+    const typed = chatLabelName.trim()
+    const names = readSavedLabelNames()
+    const id = Object.prototype.hasOwnProperty.call(names, typed)
+      ? typed
+      : Object.entries(names).find(
+          ([, name]) => typeof name === "string" && name.toLowerCase() === typed.toLowerCase(),
+        )?.[0]
+    if (!id) {
+      setChatLabelError(
+        `We don't know a label called "${typed}". Name it from a message first, then try again.`,
+      )
+      return
+    }
+    setChatLabelError("")
+    try {
+      await ToggleChatLabel(chatMenu.chat.id, id, true)
+      setChatLabelName("")
+      closeChatMenu()
+    } catch (err) {
+      console.error("Failed to label chat:", err)
+      setChatLabelError("Couldn't apply that label. Please try again.")
+    }
+  }, [chatMenu, chatLabelName, closeChatMenu])
+
+  // Each new menu starts with an empty label field and no stale error.
+  useEffect(() => {
+    if (chatMenu) {
+      setChatLabelName("")
+      setChatLabelError("")
+    }
+  }, [chatMenu])
 
   const fetchChats = useCallback(async () => {
     if (isFetchingRef.current) return
@@ -1336,8 +1402,10 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                 className={clsx(
                   "rounded-full border px-3 py-1 text-sm capitalize transition-colors shrink-0",
                   view === v
-                    ? "border-transparent bg-[#d9fdd3] font-medium text-[#0a1014] dark:bg-[#e9edef] dark:text-[#0b141a]"
-                    : "border-gray-300 dark:border-dark-border text-gray-600 dark:text-[#8696a0] hover:bg-gray-100 dark:hover:bg-white/5",
+                    ? // Same signal tint as the selected chat row, with the
+                      // tab's own underline affordance (see .sidebar-tab-active).
+                      "sidebar-tab-active border-transparent bg-green-muted font-medium text-green-ink"
+                    : "border-gray-300 dark:border-dark-border text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5",
                 )}
               >
                 {v}
@@ -1362,7 +1430,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             <div className="mx-3 mt-2 flex gap-2">
               <button
                 onClick={() => setShowSubscribeChannel(true)}
-                className="flex-1 px-4 py-2 bg-[#21c063] text-[#0a1014] rounded-lg text-sm font-medium hover:bg-[#1ea952] transition-colors"
+                className="flex-1 px-4 py-2 bg-green text-action-ink rounded-lg text-sm font-medium transition-colors hover:bg-green-dark"
               >
                 Subscribe
               </button>
@@ -1381,7 +1449,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
               onClick={() => setShowArchived(true)}
               className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
             >
-              <span className="flex w-12 justify-center text-[#14663c] dark:text-[#21c063]">
+              <span className="flex w-12 justify-center text-green-ink">
                 <svg viewBox="0 0 24 24" width="20" height="20" className="fill-current">
                   <path d="M20.54 5.23 19.15 3.55A1.5 1.5 0 0 0 18 3H6a1.5 1.5 0 0 0-1.16.55L3.46 5.23A2 2 0 0 0 3 6.5V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5a2 2 0 0 0-.46-1.27ZM6.24 5h11.52l.81.97H5.44ZM5 19V8h14v11Zm8-5.5V11h-2v2.5H8.5L12 17l3.5-3.5Z" />
                 </svg>
@@ -1523,30 +1591,44 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           <div className="px-4 py-2">
             <div className="flex gap-1">
               <input
-                className="flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
-                value={chatLabelId}
-                onChange={e => setChatLabelId(e.target.value)}
-                placeholder="Label ID"
-                aria-label="Chat label ID"
+                className="min-w-0 flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted"
+                value={chatLabelName}
+                onChange={e => {
+                  setChatLabelName(e.target.value)
+                  setChatLabelError("")
+                }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") void applyChatLabel()
+                }}
+                placeholder="Label name"
+                aria-label="Label name"
                 onClick={e => e.stopPropagation()}
               />
               <button
                 type="button"
-                onClick={async () => {
-                  if (!chatLabelId.trim() || !chatMenu) return
-                  try {
-                    await ToggleChatLabel(chatMenu.chat.id, chatLabelId.trim(), true)
-                  } catch (e) {
-                    console.error("Failed to label chat:", e)
-                  }
-                  setChatLabelId("")
-                  closeChatMenu()
+                onClick={e => {
+                  // Keep the menu open so an unknown-name error stays visible.
+                  e.stopPropagation()
+                  void applyChatLabel()
                 }}
-                className="rounded bg-[#21c063] px-2 py-1 text-xs font-medium text-[#0a1014]"
+                disabled={!chatLabelName.trim()}
+                className="rounded bg-green px-2 py-1 text-xs font-medium text-action-ink transition-colors hover:bg-green-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Label
               </button>
             </div>
+            {chatLabelError ? (
+              <p
+                role="alert"
+                className="mt-1 rounded-lg bg-danger-tint px-2 py-1 text-[11px] text-danger-ink"
+              >
+                {chatLabelError}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] text-light-muted dark:text-dark-muted">
+                Use a name you saved from a message.
+              </p>
+            )}
           </div>
         </div>
       )}

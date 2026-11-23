@@ -93,8 +93,65 @@ export const ClockPendingIcon = () => (
   </svg>
 )
 
+// Receipt glyphs are a drawn set, not emoji. Sent / Delivered / Read differ by
+// tick count and colour, so the state is legible without relying on the
+// accessible label. All ticks share the 1.5px round stroke used by
+// ClockPendingIcon, and the same 16x15 box so the timestamp never shifts.
+type TickPathProps = { d: string; color?: string }
+
+const TickPath = ({ d, color }: TickPathProps) => (
+  <path
+    d={d}
+    fill="none"
+    stroke={color ?? "currentColor"}
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
+)
+
+// The accent blue is token-backed (--color-link-ink) with the previous
+// tick blue as an offline fallback; no new colour token is introduced here.
+const READ_TICK_COLOR = "var(--color-link-ink, #4fc3f7)"
+
+/** Sent: one tick, in the bubble's own ink. */
+export const SingleTickIcon = () => (
+  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
+    <TickPath d="M2 8 L6 12 L13 4" />
+  </svg>
+)
+
+/** Delivered: two ticks, still in the bubble's own ink. */
+export const DoubleTickIcon = () => (
+  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
+    <TickPath d="M0.5 8 L4.5 12 L9.5 5" />
+    <TickPath d="M5.5 8 L9.5 12 L15.5 4" />
+  </svg>
+)
+
+/** Read: two ticks in the accent blue — the WhatsApp read-receipt convention. */
+export const ReadTickIcon = () => (
+  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
+    <TickPath d="M0.5 8 L4.5 12 L9.5 5" color={READ_TICK_COLOR} />
+    <TickPath d="M5.5 8 L9.5 12 L15.5 4" color={READ_TICK_COLOR} />
+  </svg>
+)
+
+/** Sending: three dots — deliberately neither a tick nor a clock. */
+export const SendingIcon = () => (
+  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
+    <circle cx="4" cy="7.5" r="1.2" fill="currentColor" opacity="0.7" />
+    <circle cx="8" cy="7.5" r="1.2" fill="currentColor" opacity="0.7" />
+    <circle cx="12" cy="7.5" r="1.2" fill="currentColor" opacity="0.7" />
+  </svg>
+)
+
+/**
+ * @deprecated Kept for any external/custom-JS consumers. MessageItem now uses
+ * the distinct SingleTick/DoubleTick/ReadTick glyphs above.
+ */
 export const BlueTickIcon = () => (
-  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1">
+  <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
     <path
       d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"
       fill="#4fc3f7"

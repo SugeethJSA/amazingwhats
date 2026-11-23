@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
+import Wordmark from "@/components/common/Wordmark"
 import { PairPhone } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import chatMark from "../assets/images/chat-mark.svg"
 
 const PAIR_WINDOW_SECONDS = 120
 
@@ -30,7 +30,7 @@ function friendlyStatus(status: string): string {
 }
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#21c063]"
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
 
 export function LoginScreen({
   canvasRef,
@@ -113,19 +113,13 @@ export function LoginScreen({
       <div className="relative z-10 w-full max-w-[900px] rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-2xl bg-dark-secondary md:min-h-[480px]">
         {/* LEFT: instructions */}
         <div className="flex-1 p-6 md:p-12 flex flex-col justify-center">
-          {/* Logo + wordmark */}
-          <div className="flex items-center gap-3 mb-10">
-            <img src={chatMark} className="w-11 h-11" alt="" aria-hidden="true" />
-            <div>
-              <div
-                className="text-[22px] font-semibold tracking-tight"
-                style={{ color: "#e9edef", letterSpacing: "-0.02em" }}
-              >
-                Whats<span style={{ color: "#21c063" }}>4Linux</span>
-              </div>
-              <div className="text-xs" style={{ color: "#aebac1" }}>
-                Native WhatsApp Client
-              </div>
+          {/* Shared wordmark; `dark` forces its light ink on this always-dark surface. */}
+          <div className="mb-10">
+            <span className="dark">
+              <Wordmark />
+            </span>
+            <div className="mt-1 text-xs" style={{ color: "#aebac1" }}>
+              Direct multi-device client
             </div>
           </div>
 
@@ -214,8 +208,6 @@ export function LoginScreen({
                   value={phoneInput}
                   onChange={e => setPhoneInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handlePair()}
-                  onFocus={e => (e.currentTarget.style.borderColor = "rgba(33,192,99,0.5)")}
-                  onBlur={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
                 />
                 <p id="pair-phone-hint" className="text-xs -mt-2" style={{ color: "#aebac1" }}>
                   Include your country code.

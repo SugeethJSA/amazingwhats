@@ -664,7 +664,7 @@ export function ChatInput({
       {/* Main input row: rounded pill (emoji left, attach right) with the
           send button as a separate circle outside, WhatsApp-style. */}
       <div className="flex items-end gap-2">
-        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors focus-within:border-(--color-focus-ring) focus-within:ring-2 focus-within:ring-(--color-focus-ring) dark:border-white/10 dark:bg-dark-secondary dark:focus-within:border-(--color-focus-ring) dark:focus-within:bg-dark-elevated">
+        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors dark:border-white/10 dark:bg-dark-secondary">
           {/* Emoji Button */}
           <IconButton ref={emojiButtonRef} onClick={onToggleEmojiPicker} title="Emoji">
             <EmojiIcon />
@@ -693,7 +693,7 @@ export function ChatInput({
               placeholder="Message"
               aria-label="Message"
               className={clsx(
-                "relative z-10 w-full p-2 bg-transparent resize-none outline-none max-h-32",
+                "relative z-10 w-full p-2 bg-transparent resize-none max-h-32",
                 "text-transparent caret-green",
                 "placeholder:text-gray-600 dark:placeholder:text-gray-400",
                 FOCUS_RING,
@@ -982,7 +982,7 @@ export function ChatInput({
                 id="location-lat"
                 ref={locationLatRef}
                 inputMode="decimal"
-                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
+                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Latitude (e.g. 37.7749)"
                 value={latInput}
                 onChange={event => {
@@ -999,7 +999,7 @@ export function ChatInput({
               <input
                 id="location-lng"
                 inputMode="decimal"
-                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
+                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Longitude (e.g. -122.4194)"
                 value={lngInput}
                 onChange={event => {
@@ -1015,7 +1015,7 @@ export function ChatInput({
               </label>
               <input
                 id="location-place"
-                className={`mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
+                className={`mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Place name (optional)"
                 value={placeName}
                 onChange={event => setPlaceName(event.target.value)}
