@@ -46,20 +46,26 @@ jobs:
         include:
          - os: ubuntu-24.04
            platform: linux/amd64
-           binary: Whats4Linux-Linux-x86_64.AppImage
+           binary: Whats4Linux-Linux-amd64.AppImage
            artifact: whats4linux-linux-amd64
+            # Sole updater-matching asset for this platform.
+            updater_asset: Whats4Linux-Linux-amd64.AppImage
            linux: true
 
          - os: windows-latest
            platform: windows/amd64
-           binary: whats4linux-windows-x86_64.exe
+           binary: whats4linux-windows.exe
            artifact: whats4linux-windows-amd64
+            # Only this ZIP matches the updater; the raw exe has no arch token.
+            updater_asset: whats4linux-windows-amd64.zip
            linux: false
 
          - os: macos-latest
            platform: darwin/amd64
-           binary: whats4linux-darwin-x86_64
+           binary: whats4linux-darwin
            artifact: whats4linux-macos-amd64
+            # Only this ZIP matches the updater; the raw bundle has no arch token.
+            updater_asset: whats4linux-darwin-amd64.zip
            linux: false
 
     runs-on: ${{ matrix.os }}
@@ -153,9 +159,62 @@ jobs:
         run: |
           # D-AUD-009d: AGPL-3.0 requires the license text to ship with the binary.
           Copy-Item LICENSE bin/LICENSE
-          $zipName = [System.IO.Path]::GetFileNameWithoutExtension('${{ matrix.binary }}') + '.zip'
+          $zipName = '${{ matrix.updater_asset }}'
           Compress-Archive -Path "bin/${{ matrix.binary }}", "bin/LICENSE" -DestinationPath "bin/$zipName"
           Write-Host "Created bin/$zipName"
+
+      # D-PKG-003: NSIS is only needed on Windows. Chocolatey ships on
+      # windows-latest; make the NSIS directory explicit as a fallback in case
+      # the package shim is not on PATH in a given runner image.
+      - name: Install NSIS (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          $candidates = @(
+            "${env:ProgramFiles(x86)}\NSIS",
+            "$env:ProgramFiles\NSIS",
+            "$env:ChocolateyInstall\lib\nsis\tools"
+          )
+          $nsisDir = $candidates | Where-Object { Test-Path (Join-Path $_ 'makensis.exe') } | Select-Object -First 1
+          if (-not $nsisDir) { throw "makensis.exe not found after choco install nsis" }
+          echo "$nsisDir" >> $env:GITHUB_PATH
+          Write-Host "NSIS directory: $nsisDir"
+
+      # D-PKG-003: run makensis directly rather than `wails3 task
+      # package:installer`, because that task declares a `build` dependency and
+      # would silently rebuild the exe WITHOUT the version LDFLAGS injected by
+      # the "Build binaries (Windows)" step above.
+      - name: Build Windows NSIS installer
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $appExe = '..\..\..\bin\${{ matrix.binary }}'
+          # installer.nsi's OutFile is resolved relative to the .nsi folder;
+          # create both candidate output directories before invoking makensis.
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          New-Item -ItemType Directory -Force -Path build/bin | Out-Null
+          makensis "/DAPP_EXE=$appExe" build/windows/installer/installer.nsi
+
+          $expected = Join-Path (Get-Location) 'bin/whats4linux-setup.exe'
+          $alternate = Join-Path (Get-Location) 'build/bin/whats4linux-setup.exe'
+          if ((Test-Path $alternate) -and -not (Test-Path $expected)) {
+            Move-Item -Force $alternate $expected
+          }
+          if (-not (Test-Path $expected)) {
+            throw "NSIS did not produce bin/whats4linux-setup.exe (also checked build/bin/whats4linux-setup.exe)"
+          }
+          Get-Item $expected | Select-Object FullName, Length
+
+      - name: Upload Windows installer artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          # Keep the FILE token-free so the updater cannot pick it; rolling
+          # releases have no -nightly suffix, so the artifact name is plain.
+          name: whats4linux-setup
+          path: bin/whats4linux-setup.exe
+          if-no-files-found: error
 
       - name: Download appimagetool
         if: matrix.os == 'ubuntu-24.04'
@@ -192,7 +251,46 @@ jobs:
           cd bin
           ditto -c -k --sequesterRsrc --keepParent \
             whats4linux.app \
-            "${{ matrix.binary }}.zip"
+            "${{ matrix.updater_asset }}"
+
+      # D-PKG-003: one checksum LINE per platform, produced with the native
+      # tool so no cross-platform hashing helper is needed. The release job
+      # concatenates these three fragments into the single SHA256SUMS asset.
+      - name: Generate checksum line (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="bin/${{ matrix.updater_asset }}"
+          # updater_asset already carries the .zip extension where needed.
+          test -f "$asset"
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd bin && sha256sum "$(basename "$asset")") > checksum.txt
+          else
+            # stock macOS ships shasum, not GNU sha256sum (same output format).
+            (cd bin && shasum -a 256 "$(basename "$asset")") > checksum.txt
+          fi
+          cat checksum.txt
+
+      - name: Generate checksum line (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $asset = 'bin/${{ matrix.updater_asset }}'
+          if (-not (Test-Path $asset)) { throw "Missing portable asset: $asset" }
+          $hash = (Get-FileHash -Path $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+          $name = Split-Path $asset -Leaf
+          # WriteAllText with an explicit LF: Set-Content would append CRLF,
+          # leaving "\r" inside the filename and breaking `sha256sum -c`.
+          [IO.File]::WriteAllText('checksum.txt', "$hash  $name`n")
+          Get-Content checksum.txt
+
+      - name: Upload checksum fragment
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksum-${{ matrix.artifact }}
+          path: checksum.txt
+          if-no-files-found: error
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -200,12 +298,20 @@ jobs:
           name: ${{ matrix.artifact }}
           path: bin/${{ matrix.binary }}*
 
+      - name: Upload macOS updater zip
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-portable
+          path: bin/${{ matrix.updater_asset }}
+          if-no-files-found: error
+
       - name: Upload licensed Windows zip
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}-licensed
-          path: bin/whats4linux-windows-x86_64.zip
+          path: bin/${{ matrix.updater_asset }}
 
   release:
     needs: [build, prepare]
@@ -232,6 +338,52 @@ jobs:
         shell: bash
         run: find dist -type f | sort
 
+      # D-PKG-003: merge the three native-tool fragments into ONE sidecar.
+      # Remove the fragment directories afterwards so `dist/**/*` cannot
+      # publish them as stray release assets. SHA256SUMS is published in the
+      # same softprops call as the binaries, so the release is atomic.
+      - name: Assemble SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > SHA256SUMS
+          for f in dist/checksum-*/checksum.txt; do
+            if [ ! -f "$f" ]; then
+              echo "Missing checksum fragment: $f" >&2
+              exit 1
+            fi
+            cat "$f" >> SHA256SUMS
+          done
+          sort -o SHA256SUMS SHA256SUMS
+          cat SHA256SUMS
+          test "$(wc -l < SHA256SUMS)" -eq 3
+          if grep -qi 'setup' SHA256SUMS; then
+            echo "Installer leaked into SHA256SUMS" >&2
+            exit 1
+          fi
+          rm -rf dist/checksum-*/
+
+      # D-PKG-003: prove the sidecar is usable BEFORE publishing. The fragments
+      # contain basenames only, so stage the three downloaded portable assets
+      # next to SHA256SUMS and let `sha256sum -c` verify the actual bytes.
+      - name: Verify SHA256SUMS against downloaded assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf verify && mkdir verify
+          cp SHA256SUMS verify/
+          for name in Whats4Linux-Linux-amd64.AppImage \
+                      whats4linux-windows-amd64.zip \
+                      whats4linux-darwin-amd64.zip; do
+            src="$(find dist -type f -name "$name" -print -quit)"
+            if [ -z "$src" ]; then
+              echo "Portable asset missing from downloaded artifacts: $name" >&2
+              exit 1
+            fi
+            cp "$src" "verify/$name"
+          done
+          (cd verify && sha256sum -c SHA256SUMS)
+
       - name: Create rolling release tag
         shell: bash
         run: |
@@ -247,7 +399,11 @@ jobs:
             Rolling release built from commit ${{ github.sha }}.
 
             ## Downloads
-            - **Linux**: `Whats4Linux-Linux-x86_64.AppImage`
-            - **Windows**: `whats4linux-windows-x86_64.zip` (binary + AGPL-3.0 LICENSE)
-            - **macOS**: `whats4linux-darwin-x86_64.zip`
-          files: dist/**/*
+            - **Linux**: `Whats4Linux-Linux-amd64.AppImage`
+            - **Windows**: `whats4linux-windows-amd64.zip` (binary + AGPL-3.0 LICENSE)
+            - **macOS**: `whats4linux-darwin-amd64.zip`
+            - **Windows installer**: `whats4linux-setup.exe` (per-user NSIS; not used by the updater)
+            - **Updater checksums**: `SHA256SUMS` (portable assets only)
+          files: |
+            dist/**/*
+            SHA256SUMS
