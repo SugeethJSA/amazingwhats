@@ -1,9 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import {
   Login,
   GetCustomCSS,
   GetCustomJS,
   SetWindowFocused,
+  RequestHistorySync,
 } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import QRCode from "qrcode"
@@ -129,17 +130,14 @@ function connectionView(status: string): ConnectionView {
 }
 
 /**
- * Background history sync is driven entirely by the backend, which emits
- * `wa:history_progress` batches. We surface a calm status for it and recover
- * from a stalled batch rather than leaving a silent line on screen.
+ * Background history sync is driven by the backend, which emits
+ * `wa:history_progress` batches including an explicit failure flag. Retry
+ * calls a real backend binding that asks the primary device for more history.
  */
 type HistorySyncView =
   | { phase: "idle" }
   | { phase: "syncing"; percent: number }
   | { phase: "failed" }
-
-/** If a batch goes quiet this long, treat the sync as stalled and offer Retry. */
-const HISTORY_SYNC_STALL_MS = 90_000
 
 function App() {
   const screen = useUIStore(state => state.screen)
@@ -148,7 +146,6 @@ function App() {
   const loginStartedRef = useRef(false)
   const [status, setStatus] = useState<string>("waiting")
   const [historySync, setHistorySync] = useState<HistorySyncView>({ phase: "idle" })
-  const historyStallRef = useRef<number | null>(null)
   const connection = connectionView(status)
 
   const theme = useAppSettingsStore(state => state.theme)
@@ -156,21 +153,6 @@ function App() {
   const notifications = useUIStore(state => state.notifications)
   const addNotification = useUIStore(state => state.addNotification)
   const removeNotification = useUIStore(state => state.removeNotification)
-
-  const clearHistoryStall = useCallback(() => {
-    if (historyStallRef.current !== null) {
-      window.clearTimeout(historyStallRef.current)
-      historyStallRef.current = null
-    }
-  }, [])
-
-  const armHistoryStall = useCallback(() => {
-    if (historyStallRef.current !== null) window.clearTimeout(historyStallRef.current)
-    historyStallRef.current = window.setTimeout(() => {
-      historyStallRef.current = null
-      setHistorySync(previous => (previous.phase === "syncing" ? { phase: "failed" } : previous))
-    }, HISTORY_SYNC_STALL_MS)
-  }, [])
 
   useEffect(() => {
     useAppSettingsStore.getState().loadSettings()
@@ -369,16 +351,14 @@ function App() {
         error?: string
       }) => {
         if (!data) return
-        if (data.done) {
-          clearHistoryStall()
-          setHistorySync({ phase: "idle" })
+        // The backend emits an explicit failure flag. Never render its
+        // diagnostic string — it can carry paths, URLs or JIDs.
+        if (data.failed || typeof data.error === "string") {
+          setHistorySync({ phase: "failed" })
           return
         }
-        // A backend may attach a diagnostic string on failure. Never render it
-        // verbatim — it can carry paths, URLs or JIDs. Show plain copy instead.
-        if (data.failed || typeof data.error === "string") {
-          clearHistoryStall()
-          setHistorySync({ phase: "failed" })
+        if (data.done) {
+          setHistorySync({ phase: "idle" })
           return
         }
         // `type` is the whatsmeow sync type (INITIAL_BOOTSTRAP / FULL / RECENT
@@ -395,7 +375,6 @@ function App() {
         const raw = Math.round((Math.min(Math.max(processed, 0), total) / total) * 100)
         const percent = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0
         setHistorySync({ phase: "syncing", percent })
-        armHistoryStall()
       },
     )
 
@@ -408,9 +387,8 @@ function App() {
       unsubUpdateAvailable()
       unsubUpdateError()
       unsubHistory()
-      clearHistoryStall()
     }
-  }, [addNotification, removeNotification, clearHistoryStall, armHistoryStall])
+  }, [addNotification, removeNotification])
 
   // Periodically evict stale entries from transient UI caches and cap message stores
   useEffect(() => {
@@ -422,11 +400,10 @@ function App() {
   }, [])
 
   const retryHistorySync = () => {
-    // The backend owns the real sync and re-emits progress on reconnect. Reset
-    // the indicator to a fresh, watched wait so a new batch resumes the bar.
-    clearHistoryStall()
     setHistorySync({ phase: "syncing", percent: 0 })
-    armHistoryStall()
+    // An empty chat JID lets the backend pick the most recently active chat.
+    // Progress (or an explicit failure event) arrives through wa:history_progress.
+    void RequestHistorySync("", 50).catch(() => setHistorySync({ phase: "failed" }))
   }
 
   return (

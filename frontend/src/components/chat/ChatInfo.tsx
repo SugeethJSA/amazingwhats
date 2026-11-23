@@ -53,6 +53,7 @@ import { GoBackIcon } from "../../assets/svgs/header_icons"
 import ToggleButton from "../settings/ToggleButton"
 import { useMuteStore } from "../../store/useMuteStore"
 import { InviteLinkDialog } from "./InviteLinkDialog"
+import type { ContactActionTarget } from "../../hooks/useContactActions"
 
 // Shared keyboard-focus treatment: 2px outline at 2px offset in the global
 // --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
@@ -103,6 +104,7 @@ interface ChatInfoProps {
   chatAvatar?: string
   isOpen: boolean
   onClose: () => void
+  onContactAction?: (target: ContactActionTarget, anchor?: HTMLElement | null) => void
 }
 
 export function ChatInfo({
@@ -112,6 +114,7 @@ export function ChatInfo({
   chatAvatar,
   isOpen,
   onClose,
+  onContactAction,
 }: ChatInfoProps) {
   const [contactInfo, setContactInfo] = useState<api.Contact | null>(null)
   const [groupInfo, setGroupInfo] = useState<api.Group | null>(null)
@@ -350,6 +353,18 @@ export function ChatInfo({
       loadInfo()
     }
   }, [isOpen, loadInfo])
+
+  // Admin actions taken from a sender popup have no local reload callback.
+  // Refresh this panel when the hook reports a mutation for this group.
+  useEffect(() => {
+    if (!isOpen || chatType !== "group") return
+    const onChanged = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== chatId) return
+      loadInfo()
+    }
+    window.addEventListener("wa:contact-action-group-changed", onChanged)
+    return () => window.removeEventListener("wa:contact-action-group-changed", onChanged)
+  }, [isOpen, chatType, chatId, loadInfo])
 
   useEffect(() => {
     GetMyJID()
@@ -853,28 +868,59 @@ export function ChatInfo({
                       // Group actions must address the primary JID (often an
                       // LID); contact.jid is the PN-canonical display identity.
                       const actionJid = participant.action_jid || participant.contact.jid
+                      const participantName =
+                        participant.contact.full_name ||
+                        "~ " + participant.contact.push_name ||
+                        participant.contact.phno ||
+                        participant.contact.jid
+                      const openActions = (anchor: HTMLElement) =>
+                        onContactAction?.(
+                          {
+                            jid: participant.contact.jid,
+                            actionJid,
+                            displayName: participantName,
+                            phone: participant.contact.phno,
+                            avatarUrl: participant.contact.avatar_url,
+                            groupJid: chatId,
+                            participantIsAdmin: !!participant.is_admin,
+                            canManage:
+                              isAdmin &&
+                              userPart(participant.contact.jid) !== userPart(myJid),
+                            onGroupChanged: loadInfo,
+                          },
+                          anchor,
+                        )
                       return (
                         <div
                           key={participant.contact.jid}
                           className="flex items-center gap-3 p-3 rounded-xl m-2 hover:bg-gray-100 dark:hover:bg-dark-tertiary"
                         >
-                          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={event => openActions(event.currentTarget)}
+                            aria-label={`Contact actions for ${participantName}`}
+                            className="w-10 h-10 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold overflow-hidden"
+                          >
                             {participant.contact.avatar_url ? (
                               <img
                                 src={participant.contact.avatar_url}
-                                alt={participant.contact.push_name}
+                                alt=""
                                 className="w-full h-full object-cover"
                               />
                             ) : (
                               <UserAvatar />
                             )}
-                          </div>
+                          </button>
 
                           <div className="flex-1 min-w-0">
-                            <p className="text-gray-900 dark:text-gray-100 font-medium truncate">
-                              {participant.contact.full_name ||
-                                "~ " + participant.contact.push_name}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={event => openActions(event.currentTarget)}
+                              aria-label={`Contact actions for ${participantName}`}
+                              className="max-w-full truncate text-left text-gray-900 dark:text-gray-100 font-medium hover:underline underline-offset-2"
+                            >
+                              {participantName}
+                            </button>
                             <p className="text-sm text-gray-600 dark:text-dark-muted">
                               {participant.contact.phno}
                             </p>

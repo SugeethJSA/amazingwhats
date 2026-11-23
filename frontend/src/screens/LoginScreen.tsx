@@ -116,7 +116,7 @@ export function LoginScreen({
           {/* Shared wordmark; `dark` forces its light ink on this always-dark surface. */}
           <div className="mb-10">
             <span className="dark">
-              <Wordmark />
+              <Wordmark textClassName="text-[22px]" markClassName="h-8 w-8" />
             </span>
             <div className="mt-1 text-xs" style={{ color: "#aebac1" }}>
               Direct multi-device client

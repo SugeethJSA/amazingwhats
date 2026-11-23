@@ -37,6 +37,7 @@ import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/whats
 import { isMe } from "../../lib/self"
 import { formatPhone, phoneFromJID, htmlToPlainText, sanitizeHtml } from "../../lib/utils"
 import { LRUCache } from "../../lib/lruCache"
+import type { ContactActionTarget } from "../../hooks/useContactActions"
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
@@ -96,6 +97,7 @@ interface MessageItemProps {
   sentMediaCache: React.MutableRefObject<Map<string, string>>
   onReply?: (message: Message) => void
   onQuotedClick?: (messageId: string) => void
+  onContactAction?: (target: ContactActionTarget, anchor?: HTMLElement | null) => void
   highlightedMessageId?: string | null
   isAnnounceGroup?: boolean
 }
@@ -106,7 +108,15 @@ const senderAvatarCache = new LRUCache<string, string | null>(128, 16 * 1024 * 1
   value ? value.length : 1,
 )
 
-function SenderAvatar({ jid }: { jid: string }) {
+function SenderAvatar({
+  jid,
+  name,
+  onOpen,
+}: {
+  jid: string
+  name: string
+  onOpen?: (anchor: HTMLElement) => void
+}) {
   const [url, setUrl] = useState<string | null>(senderAvatarCache.get(jid) ?? null)
 
   useEffect(() => {
@@ -124,9 +134,14 @@ function SenderAvatar({ jid }: { jid: string }) {
   }, [jid])
 
   return (
-    <div className="w-7 h-7 ml-3 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 shrink-0 self-start flex items-center justify-center text-gray-500 dark:text-dark-muted [&_svg]:w-5 [&_svg]:h-5">
-      {url ? <img src={url} className="w-full h-full object-cover" /> : <UserAvatar />}
-    </div>
+    <button
+      type="button"
+      onClick={event => onOpen?.(event.currentTarget)}
+      aria-label={`Contact actions for ${name}`}
+      className="w-7 h-7 ml-3 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 shrink-0 self-start flex items-center justify-center text-gray-500 dark:text-dark-muted [&_svg]:w-5 [&_svg]:h-5"
+    >
+      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <UserAvatar />}
+    </button>
   )
 }
 
@@ -150,6 +165,7 @@ export function MessageItem({
   sentMediaCache,
   onReply,
   onQuotedClick,
+  onContactAction,
   highlightedMessageId,
   isAnnounceGroup = false,
 }: MessageItemProps) {
@@ -175,6 +191,19 @@ export function MessageItem({
     cachedSender?.name || "~ " + message.Info.PushName || "Unknown",
   )
   const [senderColor, setSenderColor] = useState<string | undefined>(cachedSender?.senderColor)
+  // One target builder for the sender avatar and both sender-name positions.
+  // The hook resolves LIDs and looks up admin rights before rendering actions.
+  const openSenderActions = (anchor: HTMLElement) => {
+    onContactAction?.(
+      {
+        jid: message.Info.Sender,
+        displayName: senderName.replace(/^~\s*/, "").trim() || "Contact",
+        phone: senderPhone || phoneFromJID(message.Info.Sender) || undefined,
+        groupJid: isGroup ? chatId : undefined,
+      },
+      anchor,
+    )
+  }
   const getSenderInfo = useContactStore(state => state.getSenderInfo)
   const addReactionToMessage = useMessageStore(state => state.addReactionToMessage)
   const notify = useUIStore(s => s.addNotification) as unknown as Notify
@@ -686,7 +715,11 @@ export function MessageItem({
           !isFromMe &&
           isGroup &&
           (firstInGroup ? (
-            <SenderAvatar jid={message.Info.Sender} />
+            <SenderAvatar
+              jid={message.Info.Sender}
+              name={senderName}
+              onOpen={openSenderActions}
+            />
           ) : (
             <div className="w-7 ml-3 shrink-0" />
           ))}
@@ -718,9 +751,15 @@ export function MessageItem({
               no left-side context), otherwise only for received group messages. */}
           {isAnnounceGroup && (
             <div className="flex items-baseline justify-center gap-4 mb-0.5 pt-0.5">
-              <span className="text-[11px] font-semibold truncate" style={{ color: senderColor }}>
+              <button
+                type="button"
+                onClick={event => openSenderActions(event.currentTarget)}
+                aria-label={`Contact actions for ${senderName}`}
+                className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
+                style={{ color: senderColor }}
+              >
                 {senderName}
-              </span>
+              </button>
               {senderName.startsWith("~") && senderPhone && (
                 <span className="shrink-0 text-[11px] text-black/70 dark:text-white/70">
                   {senderPhone}
@@ -827,9 +866,15 @@ export function MessageItem({
 
           {!isAnnounceGroup && !isFromMe && chatId.endsWith("@g.us") && firstInGroup && (
             <div className="flex items-baseline justify-between gap-4 mb-0.5 pt-0.5">
-              <span className="text-[11px] font-semibold truncate" style={{ color: senderColor }}>
+              <button
+                type="button"
+                onClick={event => openSenderActions(event.currentTarget)}
+                aria-label={`Contact actions for ${senderName}`}
+                className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
+                style={{ color: senderColor }}
+              >
                 {senderName}
-              </span>
+              </button>
               {/* WhatsApp shows the phone number next to the name for senders
                   that aren't saved contacts (pushName-only, "~"-prefixed). */}
               {senderName.startsWith("~") && senderPhone && (

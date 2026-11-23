@@ -24,6 +24,8 @@ import { ChatHeader } from "../components/chat/ChatHeader"
 import { ChatInput } from "../components/chat/ChatInput"
 import { ChatInfo } from "../components/chat/ChatInfo"
 import { ForwardDialog } from "../components/chat/ForwardDialog"
+import { ContactActionSheet } from "../components/chat/ContactActionSheet"
+import { useContactActions } from "../hooks/useContactActions"
 import { registerShortcut } from "../lib/shortcuts"
 import type { ChatItem, Message } from "../store/types"
 import clsx from "clsx"
@@ -128,6 +130,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
 
   const enterIsSend = useAppSettingsStore(s => s.enterIsSend)
   const currentChat = useChatById(chatId)
+  // One sheet for the whole conversation. Every callback from this hook is
+  // stable, so memoized message rows never re-render because of it.
+  const contactActions = useContactActions()
 
   const chatMessages = messages ?? EMPTY_MESSAGES
   const [inputText, setInputText] = useState("")
@@ -1148,6 +1153,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               sentMediaCache={sentMediaCache}
               onReply={setReplyingTo}
               onQuotedClick={handleQuotedClick}
+              onContactAction={contactActions.openContactActions}
               onLoadMore={() => void loadMoreMessages()}
               onAtBottomChange={handleAtBottomChange}
               pinnedIds={pinnedIds}
@@ -1305,7 +1311,10 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         chatAvatar={chatAvatar}
         isOpen={chatInfoOpen}
         onClose={() => setChatInfoOpen(false)}
+        onContactAction={contactActions.openContactActions}
       />
+
+      <ContactActionSheet {...contactActions} />
 
       {forwardTarget && (
         <ForwardDialog

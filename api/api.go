@@ -1180,6 +1180,7 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 		return
 	}
 	stored := 0
+	failed := 0
 	totalConvs := len(conversations)
 	a.app.Event.Emit("wa:history_progress", map[string]any{
 		"type":                   v.Data.GetSyncType().String(),
@@ -1191,6 +1192,7 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 	for _, conv := range conversations {
 		chatJID, err := types.ParseJID(conv.GetID())
 		if err != nil {
+			failed++
 			continue
 		}
 		for _, histMsg := range conv.GetMessages() {
@@ -1200,12 +1202,14 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 			}
 			parsedMsg, err := a.waClient.ParseWebMessage(chatJID, webMsg)
 			if err != nil || parsedMsg.Message == nil {
+				failed++
 				continue
 			}
 			// ParseWebMessage doesn't unwrap containers (ephemeral/view-once)
 			// like the live path does, so do it here or the content is lost.
 			parsedMsg.Message = store.UnwrapMessage(parsedMsg.Message)
 			if parsedMsg.Message == nil {
+				failed++
 				continue
 			}
 			parsedHTML := a.processMessageText(parsedMsg.Message)
@@ -1214,14 +1218,20 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 			}
 		}
 	}
-	a.app.Event.Emit("wa:history_progress", map[string]any{
+	progress := map[string]any{
 		"type":                   v.Data.GetSyncType().String(),
 		"totalConversations":     totalConvs,
 		"processedConversations": totalConvs,
 		"totalMessages":          0,
 		"processedMessages":      stored,
 		"done":                   true,
-	})
+	}
+	if stored == 0 && failed > 0 {
+		// The frontend never renders diagnostic strings; it only needs the flag.
+		progress["failed"] = true
+		progress["error"] = "none_stored"
+	}
+	a.app.Event.Emit("wa:history_progress", progress)
 	slog.Info(fmt.Sprintf("Stored %d messages from %d conversations", stored, len(conversations)), "source", "history")
 	a.app.Event.Emit("wa:chat_list_refresh")
 }

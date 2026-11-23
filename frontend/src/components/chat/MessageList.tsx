@@ -3,6 +3,7 @@ import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso"
 import type { Message } from "../../store/types"
 import { dayKey, formatDateSeparator } from "../../lib/utils"
 import { MessageItem } from "./MessageItem"
+import type { ContactActionTarget } from "../../hooks/useContactActions"
 
 const TAG = "date"
 type DateSeparatorEntry = { __t: typeof TAG; label: string; key: string }
@@ -21,6 +22,7 @@ interface MessageListProps {
   sentMediaCache: React.MutableRefObject<Map<string, string>>
   onReply?: (message: Message) => void
   onQuotedClick?: (messageId: string) => void
+  onContactAction?: (target: ContactActionTarget, anchor?: HTMLElement | null) => void
   onLoadMore?: () => void
   onAtBottomChange?: (atBottom: boolean) => void
   pinnedIds?: Set<string>
@@ -85,6 +87,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
     sentMediaCache,
     onReply,
     onQuotedClick,
+    onContactAction,
     onLoadMore,
     onAtBottomChange,
     pinnedIds,
@@ -197,6 +200,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
                 sentMediaCache={sentMediaCache}
                 onReply={onReply}
                 onQuotedClick={onQuotedClick}
+                onContactAction={onContactAction}
                 highlightedMessageId={highlightedMessageId}
                 isAnnounceGroup={isAnnounceGroup}
               />
