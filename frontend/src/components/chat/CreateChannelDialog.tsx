@@ -93,7 +93,10 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
           Start a new WhatsApp channel.
         </p>
 
-        <label htmlFor="channel-name" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+        <label
+          htmlFor="channel-name"
+          className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+        >
           Channel name
         </label>
         <input
@@ -104,7 +107,10 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
           onChange={event => setName(event.target.value)}
           placeholder="Channel name"
         />
-        <label htmlFor="channel-description" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+        <label
+          htmlFor="channel-description"
+          className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+        >
           Description (optional)
         </label>
         <textarea

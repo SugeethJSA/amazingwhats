@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import { GetLinkPreviewImage, GetLinkPreview } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  GetLinkPreviewImage,
+  GetLinkPreview,
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { BrowserOpenURL } from "../../lib/wailsRuntime"
 import { LRUCache } from "../../lib/lruCache"
 

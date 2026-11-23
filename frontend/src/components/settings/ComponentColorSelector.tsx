@@ -116,9 +116,11 @@ const ComponentColorSelector = () => {
             </h2>
             <div className="space-y-4">
               {draft &&
-                (Object.keys(THEME[selectedComponent]) as Array<
-                  keyof (typeof THEME)[typeof selectedComponent]
-                >)
+                (
+                  Object.keys(THEME[selectedComponent]) as Array<
+                    keyof (typeof THEME)[typeof selectedComponent]
+                  >
+                )
                   .filter(label =>
                     theme === "dark"
                       ? String(label).includes("dark")

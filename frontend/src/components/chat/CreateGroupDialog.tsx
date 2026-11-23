@@ -1,5 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { CreateGroup, FetchContacts } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  CreateGroup,
+  FetchContacts,
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 
 const FOCUS_RING =
@@ -131,7 +134,10 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
           New group
         </h2>
 
-        <label htmlFor="group-subject" className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+        <label
+          htmlFor="group-subject"
+          className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+        >
           Group subject
         </label>
         <input

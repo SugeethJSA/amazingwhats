@@ -32,7 +32,10 @@ export function Lightbox() {
         return
       }
       // Let buttons handle their own Enter/Space activation.
-      if ((event.key === "Enter" || event.key === " ") && (event.target as HTMLElement)?.closest("button")) {
+      if (
+        (event.key === "Enter" || event.key === " ") &&
+        (event.target as HTMLElement)?.closest("button")
+      ) {
         return
       }
       if (event.key === "+" || event.key === "=" || event.key === "Enter") {
@@ -81,7 +84,11 @@ export function Lightbox() {
             >
               −
             </button>
-            <span className="min-w-12 text-center text-xs text-white/70" role="status" aria-live="polite">
+            <span
+              className="min-w-12 text-center text-xs text-white/70"
+              role="status"
+              aria-live="polite"
+            >
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -127,7 +134,10 @@ export function Lightbox() {
             event.stopPropagation()
             setZoomIndex(i => (i === 0 ? 1 : 0))
           }}
-          className={clsx("select-none object-contain", zoom > 1 ? "cursor-zoom-out" : "cursor-zoom-in")}
+          className={clsx(
+            "select-none object-contain",
+            zoom > 1 ? "cursor-zoom-out" : "cursor-zoom-in",
+          )}
           style={{ maxHeight: `${92 * zoom}vh`, maxWidth: `${92 * zoom}vw` }}
         />
       )}

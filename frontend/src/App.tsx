@@ -1,5 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react"
-import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  Login,
+  GetCustomCSS,
+  GetCustomJS,
+  SetWindowFocused,
+} from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import QRCode from "qrcode"
 import { LoginScreen } from "./screens/LoginScreen"
@@ -145,11 +150,15 @@ function App() {
   // Keep the backend informed of window focus so it only notifies when the
   // window is in the background.
   useEffect(() => {
-    const onFocus = () => SetWindowFocused(true).catch(err => console.error("SetWindowFocused failed:", err))
-    const onBlur = () => SetWindowFocused(false).catch(err => console.error("SetWindowFocused failed:", err))
+    const onFocus = () =>
+      SetWindowFocused(true).catch(err => console.error("SetWindowFocused failed:", err))
+    const onBlur = () =>
+      SetWindowFocused(false).catch(err => console.error("SetWindowFocused failed:", err))
     window.addEventListener("focus", onFocus)
     window.addEventListener("blur", onBlur)
-    SetWindowFocused(document.hasFocus()).catch(err => console.error("SetWindowFocused failed:", err))
+    SetWindowFocused(document.hasFocus()).catch(err =>
+      console.error("SetWindowFocused failed:", err),
+    )
     return () => {
       window.removeEventListener("focus", onFocus)
       window.removeEventListener("blur", onBlur)
@@ -245,10 +254,7 @@ function App() {
     const unsubDownload = EventsOn("download:complete", (filePath: string) => {
       // The backend emits an absolute filesystem path. Show only the basename
       // so the user's directory layout (and username) never leaks into a toast.
-      const name = (typeof filePath === "string" ? filePath : "")
-        .split(/[\\/]/)
-        .pop()
-        ?.trim()
+      const name = (typeof filePath === "string" ? filePath : "").split(/[\\/]/).pop()?.trim()
       addNotification(`Downloaded: ${name || "file"}`, { tone: "success", durationMs: 3000 })
     })
 
@@ -296,8 +302,7 @@ function App() {
         // conversation/message fields. Prefer message counts when a message
         // total is available (message-oriented syncs), otherwise use the
         // conversation counts that every history batch carries.
-        const hasMessageTotal =
-          typeof data.totalMessages === "number" && data.totalMessages > 0
+        const hasMessageTotal = typeof data.totalMessages === "number" && data.totalMessages > 0
         const total = hasMessageTotal ? data.totalMessages : data.totalConversations
         const processed = hasMessageTotal
           ? (data.processedMessages ?? 0)

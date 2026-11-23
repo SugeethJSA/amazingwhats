@@ -10,7 +10,7 @@ type EventCallback = (data: any) => void
 type Unsubscribe = () => void
 
 export function EventsOn(name: string, cb: EventCallback): Unsubscribe {
-  return Events.On(name, (event) => cb(event.data))
+  return Events.On(name, event => cb(event.data))
 }
 
 export function BrowserOpenURL(url: string): Promise<void> {

@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
-import { FetchMessagesPaged, GetCachedImage, DownloadMedia } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  FetchMessagesPaged,
+  GetCachedImage,
+  DownloadMedia,
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import * as store from "../../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
 import { useContactStore } from "../../store/useContactStore"
 import { sanitizeHtml } from "../../lib/utils"
@@ -342,5 +346,11 @@ export function StoryViewer({ group, onClose }: { group: StatusGroup; onClose: (
 }
 
 function Spinner() {
-  return <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white" role="status" aria-label="Loading media" />
+  return (
+    <div
+      className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"
+      role="status"
+      aria-label="Loading media"
+    />
+  )
 }
