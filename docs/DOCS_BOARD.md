@@ -11,6 +11,9 @@ Repo clean on `master` at `4c88aa3`; no existing `docs/`; source inventory captu
 **[3 | 2026-11-23] DONE_VERIFIED → DOC-001 — mother (vocabulary + quickstart)**
 `gate_DOC001b` GREEN; Critic PASS (3 minor label/order nits noted). Commit `4035987`.
 
+**[7 | 2026-11-23] DONE_VERIFIED → DOC-005 — mother (integration contracts)**
+`gate_DOC005` GREEN; Critic PASS (two evidence-gap WARNs, no defects). Commit `f431195`.
+
 **[6 | 2026-11-23] DONE_VERIFIED → DOC-004 — mother (frontend walkthrough)**
 `gate_DOC004` GREEN; Critic PASS (one minor note on an understated scrollToMessage bug in source). Commit `daa1dc3`.
 

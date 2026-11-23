@@ -1,0 +1,63 @@
+AMAZINGWHAT / WHATS4LINUX - DOCUMENTATION INDEX
+==============================================
+
+Repository directory: amazingwhats
+Go module: github.com/lugvitc/whats4linux (go.mod:1)
+Go version: 1.27.3 (go.mod:3)
+Product name: whats4linux, version 1.0.0 (wails.json:2,16-18)
+Purpose: "An unofficial WhatsApp client." (wails.json:18; see also build/config.yml:8,10)
+Desktop stack: Go + React, Wails v3 (wails.json, Taskfile.yml, build/Taskfile.yml)
+License: AGPL-3.0-or-later (package.nix:150; LICENSE)
+
+This is a plain-text index of documentation files that exist in this checkout.
+Every entry below is PATH | FRONTMATTER TITLE | FRONTMATTER DESCRIPTION.
+Descriptions are taken from each page's YAML frontmatter; no page is listed unless
+its file exists. Fictional or "planned" pages are deliberately excluded.
+This file (docs/llms.txt) is the index itself and has no frontmatter.
+
+START HERE
+----------
+docs/index.md | Junior-docs: start here | A reading order for learning this desktop app from source, from vocabulary and setup through architecture, components, integration, operations, and reference.
+docs/00-start-here/quickstart.md | Quickstart — from a clean machine to a running app | The exact tool versions and commands this repository uses to install, check, develop, and build the desktop app.
+docs/00-start-here/vocabulary.md | Vocabulary — every term before first use | Plain-language definitions of every moving part in this repository, each tied to a real file and line.
+
+ARCHITECTURE
+------------
+docs/01-architecture/system-map.md | System map: who owns what | The real component graph of this desktop app — one Go process, one Webview window, one registered Api service, a whatsmeow client, two SQLite stores, an in-process tray, and the React UI — with the exact boot and registration order taken from source.
+docs/01-architecture/data-flow.md | Data flow: from WhatsApp to the screen | Three real end-to-end sequences traced from source: an incoming message into SQLite and the React stores, a QR login through wa:qr, and a media download through download:complete.
+docs/01-architecture/decisions.md | Decisions: why the code looks like this | Seven architectural choices that are actually visible in the source or recorded in provenance docs, with the exact lines that enforce them and a clear label where source cannot verify the claim.
+
+COMPONENTS
+----------
+docs/02-components/backend-bootstrap.md | Backend bootstrap: from main() to a running Api service | How the Go side comes up: embedded assets, the urfave/cli shell, one Wails window, one registered Api service, ServiceStartup's exact dependency order, failStartup, ServiceShutdown, and the eight-worker background pool.
+docs/02-components/message-pipeline.md | Message pipeline: from WhatsApp event to wa:new_message and back | The exact live and outgoing message paths: ProcessMessageEvent, the single writer, GetDecodedMessage, every wa:new_message payload key, SendMessage local echo, and how edit, revoke and delete refresh the UI.
+docs/02-components/database.md | Database: three SQLite files, one writer, and a guarded schema | Where the app's durable state lives: app.db for groups, session.wa for WhatsApp credentials, messages.db for chat history, plus the image-cache index; the single writer goroutine, schema init and migrations, ON CONFLICT upserts, poll schema authority, chatListMap invalidation and 0600/0700 permissions.
+docs/02-components/frontend-app.md | Frontend app: from main.tsx to the window the user sees | The real React bootstrap: theme-before-paint, App.tsx's startup effects, the Wails runtime shim and event.data, login and status flow, window focus and custom CSS/JS, every listener with its unsubscribe, and the render tree.
+docs/02-components/state-and-events.md | State and events: small whiteboards, one loudspeaker | Which Zustand store owns each piece of frontend state, the event.data shim contract, all nine useWailsEvents subscriptions with their real payload keys, optimistic writes versus backend truth, and why every listener must be unsubscribed.
+docs/02-components/chat-ui.md | Chat UI: the chat list, the recyclable message list, media and calls | How ChatScreen feeds ChatDetail, why MessageList uses firstItemIndex and local-index math for date separators, what MessageItem renders (reactions, polls, media, edit and delete), how MediaContent reserves boxes and plays PTT/raw GIFs, and the five call events guarded by callID in CallOverlay.
+
+API INTEGRATION
+---------------
+docs/03-api-integration/wails-bindings.md | Wails bindings: phone numbers into Go functions | Where the generated TypeScript bindings come from, the exact signatures of real exported Api methods across auth, messages, media, calls and settings, how React calls them, and the regeneration rules that keep them honest.
+docs/03-api-integration/events.md | Events: the loudspeaker between Go and React | The complete list of event names the Go service emits, which frontend file listens to each one, the event.data contract of the v3 shim, the unsubscribe pattern, and why a name with no listener is still real IPC traffic.
+docs/03-api-integration/payload-shapes.md | Payload shapes: what is actually inside the envelope | Exact field names, types and meanings for the events a junior developer is most likely to touch: wa:new_message, wa:status, wa:qr, wa:error, wa:history_progress, every call:* event and download:complete, taken from the Go emit sites.
+
+OPERATIONS
+----------
+docs/04-operations/build-and-run.md | Build and run: the exact tasks, tools, and gates | How to develop, build, package, and verify the desktop app from the checked-in Taskfiles, Wails config, CI workflows, and Nix files — including CGO, GTK4/WebKitGTK6, output paths, and the canonical verifier.
+docs/04-operations/configuration.md | Configuration: files, keys, and environment | The configuration directory and every file path taken from code, the two environment variables the Go settings code really reads, the settings keys and their types, custom CSS/JS, and notification behavior — with no invented variables.
+docs/04-operations/security-privacy.md | Security and privacy: what the code actually enforces | The real 0700/0600 file permissions, local-only storage, what this source set does and does not log, the AGPL license payload in release artifacts, and a clear split between code-enforced controls and SECURITY.md policy claims.
+
+REFERENCE
+---------
+docs/05-reference/known-issues.md | Known issues: honest, sourced, and unverified where needed | The residual accepted risks from the audit register closure, each labelled as code-verified or "recorded in audit register; verify in source", plus the provenance inconsistency in the register itself. No polished fiction.
+
+INTERNAL SWARM BOOKKEEPING (NOT HANDBOOK PAGES)
+------------------------------------------------
+These files exist but have no YAML frontmatter, so no frontmatter-derived
+description is possible. Their titles below are their H1 headings, not invented
+frontmatter. They are tooling/process records, not part of the reading order.
+docs/DOCS_BOARD.md | Junior-docs swarm board (H1) | No frontmatter; swarm D-ID/authoring log.
+docs/DRIFT_REGISTER.md | Junior-docs swarm register (H1) | No frontmatter; D-ID scope and ownership table.
+
+END OF INDEX
