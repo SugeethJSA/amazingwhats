@@ -856,6 +856,13 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	a.sessionDB = db
 	container := sqlstore.NewWithDB(db, "sqlite3", dbLog)
 	a.waContainer = container
+	// A DB created by upstream whatsmeow already contains wasa_root_secret_id,
+	// which HyperMeow's v18->v19 migration tries to add again. Reconcile that
+	// known divergence before upgrading so existing logins keep working.
+	if err := wa.ReconcileUpstreamSessionSchema(ctx, db); err != nil {
+		a.failStartup(fmt.Errorf("reconcile WhatsApp session schema: %w", err))
+		return nil
+	}
 	err = container.Upgrade(ctx)
 	if err != nil {
 		a.failStartup(fmt.Errorf("upgrade WhatsApp session database: %w", err))
