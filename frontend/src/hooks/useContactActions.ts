@@ -21,14 +21,7 @@ import { userPart } from "../lib/self"
 import { phoneFromJID } from "../lib/utils"
 
 export type ContactActionKey =
-  | "message"
-  | "voice"
-  | "profile"
-  | "copy"
-  | "block"
-  | "promote"
-  | "demote"
-  | "remove"
+  "message" | "voice" | "profile" | "copy" | "block" | "promote" | "demote" | "remove"
 
 /** Viewport-space rect of the control that opened the sheet. */
 export interface AnchorRect {
@@ -183,9 +176,7 @@ export function useContactActions(): UseContactActionsResult {
             if (!phone) phone = contact.phno || ""
             if (!name || name === phoneFromJID(next.jid) || name.startsWith("~")) {
               name =
-                contact.full_name ||
-                (contact.push_name ? `~ ${contact.push_name}` : name) ||
-                name
+                contact.full_name || (contact.push_name ? `~ ${contact.push_name}` : name) || name
             }
             patch = {
               jid,

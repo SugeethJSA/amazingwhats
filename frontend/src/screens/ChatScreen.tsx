@@ -1652,9 +1652,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             {listPane}
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel minSize="45%">
-            {detailPane}
-          </ResizablePanel>
+          <ResizablePanel minSize="45%">{detailPane}</ResizablePanel>
         </ResizablePanelGroup>
       ) : (
         <div className="h-full w-full min-w-0">
