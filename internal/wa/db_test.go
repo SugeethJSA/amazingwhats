@@ -143,8 +143,8 @@ func TestGroupsMigrationStatements(t *testing.T) {
 // without a query. It mirrors the nine columns emitted by the select queries.
 type groupScanStub struct {
 	jid, name, topic, ownerJID, parentJID, parentName string
-	participantCount, isParent, isDefaultSub         int
-	err                                              error
+	participantCount, isParent, isDefaultSub          int
+	err                                               error
 }
 
 func (s *groupScanStub) Scan(dest ...any) error {
@@ -424,9 +424,9 @@ func TestAppDatabase_CountLinkedGroups(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		parentJID  string
-		want       int
+		name      string
+		parentJID string
+		want      int
 	}{
 		{"two linked groups", "parent1", 2},
 		{"one linked group", "parent2", 1},

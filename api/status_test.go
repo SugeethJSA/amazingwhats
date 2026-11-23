@@ -12,10 +12,10 @@ import (
 // observable JSON contract of the DTO instead.
 func TestStatusPrivacyEntryJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		entry   StatusPrivacyEntry
-		want    []string
-		absent  []string
+		name   string
+		entry  StatusPrivacyEntry
+		want   []string
+		absent []string
 	}{
 		{
 			name:   "explicit list and non-default",

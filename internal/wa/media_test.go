@@ -189,8 +189,8 @@ func TestMedia_Getters(t *testing.T) {
 			fileName:   "clip.mp4",
 		},
 		{
-			name:    "zero values",
-			width:   -1,
+			name:   "zero values",
+			width:  -1,
 			height: 0,
 		},
 	}
@@ -250,9 +250,9 @@ func TestMedia_FileLength(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		sets   []int64
-		want   int64
+		name string
+		sets []int64
+		want int64
 	}{
 		{name: "never set reports unknown", want: -1},
 		{name: "positive length", sets: []int64{1024}, want: 1024},
