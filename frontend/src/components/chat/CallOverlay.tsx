@@ -13,7 +13,6 @@ import {
   StartCallVideo,
   StopCallVideo,
   SetCallVideoEnabled,
-  SetCallVideoOrientation,
   StartCallScreenShare,
   StopCallScreenShare,
   SendVideoFrame,
@@ -154,6 +153,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   const [showReactions, setShowReactions] = useState(false)
   const [reaction, setReaction] = useState<{ emoji: string; id: number } | null>(null)
   const [participantKeys, setParticipantKeys] = useState<string[]>([])
+  const [mediaError, setMediaError] = useState<string | null>(null)
 
   const dragRef = useRef<{
     startX: number
@@ -372,6 +372,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
             })
     } catch (err) {
       console.error(mode === "screen" ? "getDisplayMedia failed:" : "getUserMedia failed:", err)
+      setMediaError(
+        mode === "screen"
+          ? "Screen capture was cancelled or blocked by the browser."
+          : "Camera access was denied or is unavailable.",
+      )
       return false
     }
     if (activeCallIDRef.current !== callID) {
@@ -424,14 +429,16 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
     encoderRef.current = encoder
     localStreamRef.current = stream
     forceKeyRef.current = true
-    void SetCallVideoOrientation(callID, 0).catch(err =>
-      console.error("SetCallVideoOrientation failed:", err),
-    )
+    // Do not set device orientation here: during a screen-share upgrade the
+    // call may not have active video media yet, and the binding correctly
+    // rejects the request ("call has no active video media"). Orientation 0
+    // is meowcaller's default, so omitting the call is lossless.
     if (mode === "screen") {
       try {
         await StartCallScreenShare(callID, 1)
       } catch (err) {
         console.error("StartCallScreenShare failed:", err)
+        setMediaError("Screen sharing needs an active video call. Start video first, then share.")
         // Do not leave a live display capture behind if Go rejected the
         // upgrade: the caller sees false and never commits screenSharing.
         stopCapture()
@@ -448,6 +455,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       return false
     }
     trackReaderRef.current = reader
+    setMediaError(null)
     const token = captureTokenRef.current
     const pump = async () => {
       try {
@@ -1197,6 +1205,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         </div>
         {activeCall.isGroup && activeCall.participants > 0 && (
           <p className="text-[11px] text-gray-400 mb-0.5">{activeCall.participants} participants</p>
+        )}
+        {mediaError && (
+          <p role="alert" className="text-[11px] text-amber-400 mb-0.5 text-center px-2">
+            {mediaError}
+          </p>
         )}
         <p className="text-xs text-emerald-400 font-mono mb-6">
           {activeCall.status === "ringing"

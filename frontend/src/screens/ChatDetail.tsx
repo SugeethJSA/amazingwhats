@@ -12,6 +12,10 @@ import {
   MakeGroupCall,
   StarMessage,
 } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  addScheduledMessage,
+  startScheduledSender,
+} from "../lib/scheduledMessages"
 import * as store from "../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
@@ -720,6 +724,46 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     [failedSends, removeNotification, setMessages, chatId],
   )
 
+  // Scheduled messages use the same SendMessage binding; the ticker runs for
+  // the lifetime of the page and dispatches items whose time has arrived.
+  useEffect(() => {
+    startScheduledSender((chat, payload) => SendMessage(chat, payload as never))
+  }, [])
+
+  const handleScheduleMessage = (sendAt: number) => {
+    const text = inputText.trim()
+    if (!text || pastedImage || selectedFile) return
+    let processedText = text
+    const mentionsToSend: string[] = []
+    const sorted = [...selectedMentions].sort((a, b) => {
+      const name = (m: any) => m.full_name || (m.push_name ? `~ ${m.push_name}` : m.short || m.phno)
+      return name(b).length - name(a).length
+    })
+    for (const mention of sorted) {
+      let name = mention.full_name
+      if (!name) name = mention.push_name ? `~ ${mention.push_name}` : mention.short || mention.phno
+      const token = `@${name}`
+      if (processedText.includes(token)) {
+        processedText = processedText.replaceAll(token, `@${mention.jid.split("@")[0]}`)
+        mentionsToSend.push(mention.jid)
+      }
+    }
+    addScheduledMessage(
+      chatId,
+      {
+        type: "text",
+        text: processedText,
+        quotedMessageId: replyingTo?.Info.ID,
+        mentions: mentionsToSend,
+        clientTempId: `sched-${Date.now()}`,
+      },
+      sendAt,
+    )
+    setInputText("")
+    setReplyingTo(null)
+    setSelectedMentions([])
+  }
+
   const handleSendMessage = async () => {
     if (!inputText.trim() && !pastedImage && !selectedFile) return
 
@@ -1374,6 +1418,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           onCancelReply={() => setReplyingTo(null)}
           onMentionAdd={contact => setSelectedMentions(prev => [...prev, contact])}
           selectedMentions={selectedMentions}
+          onScheduleMessage={handleScheduleMessage}
         />
       </div>
 

@@ -55,6 +55,8 @@ interface ChatInputProps {
   /** Send the selected video as an animated GIF (gifPlayback message). */
   sendAsGif?: boolean
   onToggleSendAsGif?: () => void
+  /** Schedule the current text draft for a future timestamp (ms epoch). */
+  onScheduleMessage?: (sendAt: number) => void
 }
 
 const FILE_TYPE_ICONS = {
@@ -76,6 +78,15 @@ interface IconButtonProps {
 // no component-local green ring.
 const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
+/** Clock + plus: the WhatsApp-style "schedule message" affordance. */
+const ScheduleIcon = () => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+    <title>ic-schedule</title>
+    <path d="M12 22a10.1 10.1 0 0 1-9.21-6.1A9.74 9.74 0 0 1 2 12a10.1 10.1 0 0 1 6.1-9.21A9.74 9.74 0 0 1 12 2a10.1 10.1 0 0 1 9.21 6.1c.53 1.22.79 2.52.79 3.9s-.26 2.68-.79 3.9a10.1 10.1 0 0 1-5.31 5.31A9.74 9.74 0 0 1 12 22Zm0-2a7.7 7.7 0 0 0 5.66-2.34A7.71 7.71 0 0 0 20 12a7.7 7.7 0 0 0-2.34-5.66A7.71 7.71 0 0 0 12 4a7.7 7.7 0 0 0-5.66 2.34A7.71 7.71 0 0 0 4 12c0 2.23.78 4.13 2.34 5.68A7.72 7.72 0 0 0 12 20Z" />
+    <path d="M12 11.6V8a1 1 0 1 0-2 0v4c0 .27.1.5.3.7l3 3a1 1 0 0 0 1.4-1.4l-2.7-2.7Z" />
+  </svg>
+)
 
 // Contact names are inserted into a RegExp for mention highlighting. Escape
 // regex metacharacters so a name like " Ada (work) [admin]" cannot throw.
@@ -213,6 +224,7 @@ export function ChatInput({
   selectedMentions,
   sendAsGif,
   onToggleSendAsGif,
+  onScheduleMessage,
 }: ChatInputProps) {
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([])
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
@@ -231,6 +243,8 @@ export function ChatInput({
   const [loadingAvatars, setLoadingAvatars] = useState<Record<string, boolean>>({})
   const [locationSending, setLocationSending] = useState(false)
   const [locationError, setLocationError] = useState("")
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [scheduleAt, setScheduleAt] = useState("")
 
   const addNotification = useUIStore(state => state.addNotification)
 
@@ -378,6 +392,19 @@ export function ChatInput({
       backdropRef.current.scrollTop = textareaRef.current.scrollTop
     }
   }
+
+  // Keep the textarea and its highlight backdrop the same height. Without
+  // this the textarea stays one row tall, wraps internally and the caret
+  // appears offset from the rendered text.
+  useEffect(() => {
+    const el = textareaRef.current
+    const backdrop = backdropRef.current
+    if (!el) return
+    el.style.height = "auto"
+    const next = Math.min(el.scrollHeight, 128)
+    el.style.height = `${next}px`
+    if (backdrop) backdrop.style.height = `${next}px`
+  }, [inputText, textareaRef, backdropRef])
 
   const renderHighlightedText = () => {
     if (!inputText) return null
@@ -660,21 +687,20 @@ export function ChatInput({
       {/* Main input row: rounded pill (emoji left, attach right) with the
           send button as a separate circle outside, WhatsApp-style. */}
       <div className="flex items-end gap-2">
-        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors dark:border-white/10 dark:bg-dark-secondary">
+        <div className="flex min-w-0 flex-1 items-end rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors dark:border-white/10 dark:bg-dark-secondary">
           {/* Emoji Button */}
           <IconButton ref={emojiButtonRef} onClick={onToggleEmojiPicker} title="Emoji">
             <EmojiIcon />
           </IconButton>
 
           {/* Text Input */}
-          <div className="flex-1 bg-transparent rounded-full relative">
+          <div className="relative min-w-0 flex-1 overflow-hidden rounded-xl">
             <div
               ref={backdropRef}
               className={clsx(
-                "absolute inset-0 w-full p-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words pointer-events-none",
+                "pointer-events-none absolute inset-x-0 top-0 max-h-32 overflow-hidden whitespace-pre-wrap break-words p-2 text-sm leading-5",
                 "text-gray-900 dark:text-white",
               )}
-              style={{ fontFamily: "inherit", fontSize: "inherit", lineHeight: "inherit" }}
               aria-hidden="true"
             >
               {renderHighlightedText()}
@@ -689,8 +715,8 @@ export function ChatInput({
               placeholder="Message"
               aria-label="Message"
               className={clsx(
-                "relative z-10 w-full p-2 bg-transparent resize-none max-h-32",
-                "text-transparent caret-green",
+                "relative z-10 block w-full resize-none overflow-y-auto p-2 text-sm leading-5",
+                "max-h-32 bg-transparent text-transparent caret-green",
                 "placeholder:text-gray-600 dark:placeholder:text-gray-400",
                 FOCUS_RING,
               )}
@@ -923,7 +949,61 @@ export function ChatInput({
           />
         </div>
 
-        {/* Send Button — separate green circle outside the pill */}
+        {/* Schedule Button - only for text drafts with content */}
+        {onScheduleMessage && hasContent && (
+          <div className="relative mb-0.5">
+            <button
+              type="button"
+              onClick={() => setScheduleOpen(open => !open)}
+              aria-label="Schedule message"
+              title="Schedule message"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-white/10 hover:text-gray-200 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              <ScheduleIcon />
+            </button>
+            {scheduleOpen && (
+              <div className="absolute bottom-12 right-0 z-50 w-64 rounded-xl border border-gray-200 bg-white p-3 shadow-xl dark:border-white/10 dark:bg-dark-secondary">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">
+                  Send at
+                  <input
+                    type="datetime-local"
+                    value={scheduleAt}
+                    onChange={event => setScheduleAt(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent p-2 text-sm dark:border-white/20"
+                  />
+                </label>
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScheduleOpen(false)
+                      setScheduleAt("")
+                    }}
+                    className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const at = new Date(scheduleAt).getTime()
+                      if (!Number.isFinite(at) || at <= Date.now()) return
+                      onScheduleMessage(at)
+                      setScheduleOpen(false)
+                      setScheduleAt("")
+                    }}
+                    disabled={!scheduleAt || new Date(scheduleAt).getTime() <= Date.now()}
+                    className="rounded-lg bg-[#21c063] px-3 py-1 text-xs text-white disabled:opacity-40"
+                  >
+                    Schedule
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Send Button - separate green circle outside the pill */}
         <button
           type="button"
           onClick={onSendMessage}
