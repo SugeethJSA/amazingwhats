@@ -10,6 +10,7 @@ require (
 	github.com/nyaruka/phonenumbers v1.8.0
 	github.com/purpshell/meowcaller v0.0.0-20260811012811-27a3c6b18657
 	github.com/rs/zerolog v1.35.1
+	github.com/stretchr/testify v1.12.0
 	github.com/urfave/cli v1.22.17
 	github.com/wailsapp/wails/v3 v3.1.0
 	go.mau.fi/util v0.11.1
@@ -58,4 +59,5 @@ require (
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
