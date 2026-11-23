@@ -19,7 +19,11 @@ import {
   ForwardIcon,
   StarIcon,
 } from "../../assets/svgs/message_menu_icons"
-import { ToggleMessageLabel, DeleteMedia, DownloadMediaToFile } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  ToggleMessageLabel,
+  DeleteMedia,
+  DownloadMediaToFile,
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useUIStore } from "../../store"
 
 interface MessageMenuProps {
@@ -227,9 +231,7 @@ export function MessageMenu({
   const hasPosition = menuPosition !== null
   useEffect(() => {
     if (!isMenuOpen || !hasPosition) return
-    dropdownRef.current
-      ?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')
-      ?.focus()
+    dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMenuOpen, hasPosition])
 
@@ -425,11 +427,16 @@ export function MessageMenu({
                 "mt-1 border-t border-black/[0.06] pt-3 dark:border-white/[0.08]",
               )}
             >
-              <span aria-hidden="true" className={clsx("inline-flex transition-transform", showMore && "rotate-180")}>
+              <span
+                aria-hidden="true"
+                className={clsx("inline-flex transition-transform", showMore && "rotate-180")}
+              >
                 <MenuArrowIcon />
               </span>
               <span className="flex-1">More</span>
-              <span className="text-[11px] opacity-75">{showMore ? "Show less" : "All actions"}</span>
+              <span className="text-[11px] opacity-75">
+                {showMore ? "Show less" : "All actions"}
+              </span>
             </button>
 
             {showMore && (
@@ -486,7 +493,13 @@ export function MessageMenu({
                     }}
                     className={menuItemClass()}
                   >
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
                       <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                     </svg>
                     <span>Save media to disk</span>

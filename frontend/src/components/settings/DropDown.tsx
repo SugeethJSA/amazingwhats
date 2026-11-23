@@ -152,7 +152,9 @@ const DropDown = ({
 
   return (
     <div ref={containerRef} className="flex flex-col">
-      {title && <div className="font-semibold mb-2 text-light-text dark:text-dark-text">{title}</div>}
+      {title && (
+        <div className="font-semibold mb-2 text-light-text dark:text-dark-text">{title}</div>
+      )}
       <button
         ref={triggerRef}
         type="button"

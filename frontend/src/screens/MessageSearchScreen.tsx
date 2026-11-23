@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import clsx from "clsx"
-import { SearchMessages, GetSearchSuggestions } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  SearchMessages,
+  GetSearchSuggestions,
+} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useMessageStore } from "../store"
 import { htmlToPlainText } from "../lib/utils"
 import { GoBackIcon } from "../assets/svgs/header_icons"
@@ -177,7 +180,11 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-dark-bg" onKeyDown={handleKeyDown}>
-      <div role="search" aria-label="Message search" className="relative flex items-center p-3 border-b border-gray-200 dark:border-white/5 gap-2">
+      <div
+        role="search"
+        aria-label="Message search"
+        className="relative flex items-center p-3 border-b border-gray-200 dark:border-white/5 gap-2"
+      >
         <button
           onClick={onClose}
           className={clsx("p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full", focusRing)}
@@ -228,7 +235,11 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         )}
       </div>
 
-      <div role="group" aria-label="Filter results by type" className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-gray-200 dark:border-white/5">
+      <div
+        role="group"
+        aria-label="Filter results by type"
+        className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-gray-200 dark:border-white/5"
+      >
         {CORE_FILTERS.map(renderFilterButton)}
         <button
           type="button"
@@ -310,7 +321,9 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
 
         {!loading && !error && query && results.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <p className="text-sm font-medium text-light-text dark:text-dark-text">No messages found</p>
+            <p className="text-sm font-medium text-light-text dark:text-dark-text">
+              No messages found
+            </p>
             <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
               Try a different word or remove a filter.
             </p>
@@ -318,7 +331,9 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         )}
         {!query && (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <p className="text-sm font-medium text-light-text dark:text-dark-text">Search your messages</p>
+            <p className="text-sm font-medium text-light-text dark:text-dark-text">
+              Search your messages
+            </p>
             <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
               Type at least two characters to find a message.
             </p>
@@ -356,14 +371,19 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
               </span>
             </div>
             {r.edited && (
-              <span className="text-xs text-[#5a6670] dark:text-dark-muted italic mt-0.5">Edited</span>
+              <span className="text-xs text-[#5a6670] dark:text-dark-muted italic mt-0.5">
+                Edited
+              </span>
             )}
           </button>
         ))}
 
         {loading && (
           <div role="status" aria-live="polite" className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#21c063]" aria-hidden="true" />
+            <div
+              className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#21c063]"
+              aria-hidden="true"
+            />
             <span className="sr-only">Searching messages…</span>
           </div>
         )}

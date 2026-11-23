@@ -1,11 +1,4 @@
-import {
-  useMemo,
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type RefObject,
-} from "react"
+import { useMemo, useState, useEffect, useLayoutEffect, useRef, type RefObject } from "react"
 import { createPortal } from "react-dom"
 import * as store from "../../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
 import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"

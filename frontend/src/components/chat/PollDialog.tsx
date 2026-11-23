@@ -107,7 +107,10 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
           Create poll
         </h2>
 
-        <label htmlFor="poll-question" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+        <label
+          htmlFor="poll-question"
+          className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+        >
           Question
         </label>
         <input

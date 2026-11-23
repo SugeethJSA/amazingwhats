@@ -55,9 +55,7 @@ export function useWailsEvents() {
         const jid = data?.jid || data?.sender
         if (!jid) return
         const isOnline =
-          typeof data.unavailable === "boolean"
-            ? !data.unavailable
-            : data.status === "available"
+          typeof data.unavailable === "boolean" ? !data.unavailable : data.status === "available"
         useUIStore.getState().setOnlineStatus(jid, isOnline)
       },
     )
@@ -72,24 +70,21 @@ export function useWailsEvents() {
     )
 
     // 5. Poll Vote Events
-    const unsubPollVote = EventsOn(
-      "wa:poll_vote_submitted",
-      (data: { chatId: string }) => {
-        if (data?.chatId) {
-          // This event is emitted only for our own vote (SendPollVote) and has
-          // no sender field, so the chat-list preview must read "You".
-          useChatStore
-            .getState()
-            .updateChatLastMessage(
-              data.chatId,
-              "Vote submitted",
-              Math.floor(Date.now() / 1000),
-              "You",
-              true,
-            )
-        }
-      },
-    )
+    const unsubPollVote = EventsOn("wa:poll_vote_submitted", (data: { chatId: string }) => {
+      if (data?.chatId) {
+        // This event is emitted only for our own vote (SendPollVote) and has
+        // no sender field, so the chat-list preview must read "You".
+        useChatStore
+          .getState()
+          .updateChatLastMessage(
+            data.chatId,
+            "Vote submitted",
+            Math.floor(Date.now() / 1000),
+            "You",
+            true,
+          )
+      }
+    })
 
     // 6. Newsletter / Channel Activity Events
     const unsubNewsletterJoined = EventsOn("wa:newsletter_joined", (channelId: string) => {

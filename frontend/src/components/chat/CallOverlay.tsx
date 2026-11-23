@@ -541,7 +541,10 @@ export function CallOverlay() {
             className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] flex flex-col shadow-xl"
           >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 id="add-to-call-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2
+                id="add-to-call-title"
+                className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+              >
                 Add to call
               </h2>
               <input

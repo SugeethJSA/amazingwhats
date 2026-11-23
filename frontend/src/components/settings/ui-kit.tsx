@@ -275,7 +275,9 @@ export function SelectMenu<T extends string>({
                 "flex min-h-9 w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[13px] transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50",
                 "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
-                o.value === value ? "text-light-text dark:text-dark-text" : "text-light-muted dark:text-dark-muted",
+                o.value === value
+                  ? "text-light-text dark:text-dark-text"
+                  : "text-light-muted dark:text-dark-muted",
               )}
             >
               <span>{o.label}</span>

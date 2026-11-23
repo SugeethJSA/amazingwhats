@@ -26,9 +26,7 @@ function friendlyPairError(err: unknown): string {
 }
 
 function friendlyStatus(status: string): string {
-  return status
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase())
+  return status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
 }
 
 const focusRing =
@@ -336,10 +334,43 @@ export function LoginScreen({
               >
                 {!qrReady && (
                   <div className="absolute inset-3 rounded-xl qr-placeholder skeleton flex items-center justify-center">
-                    <svg viewBox="0 0 40 40" width="40" height="40" style={{ opacity: 0.25 }} aria-hidden="true">
-                      <rect x="2" y="2" width="16" height="16" rx="3" fill="none" stroke="#111" strokeWidth="2" />
-                      <rect x="22" y="2" width="16" height="16" rx="3" fill="none" stroke="#111" strokeWidth="2" />
-                      <rect x="2" y="22" width="16" height="16" rx="3" fill="none" stroke="#111" strokeWidth="2" />
+                    <svg
+                      viewBox="0 0 40 40"
+                      width="40"
+                      height="40"
+                      style={{ opacity: 0.25 }}
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="2"
+                        y="2"
+                        width="16"
+                        height="16"
+                        rx="3"
+                        fill="none"
+                        stroke="#111"
+                        strokeWidth="2"
+                      />
+                      <rect
+                        x="22"
+                        y="2"
+                        width="16"
+                        height="16"
+                        rx="3"
+                        fill="none"
+                        stroke="#111"
+                        strokeWidth="2"
+                      />
+                      <rect
+                        x="2"
+                        y="22"
+                        width="16"
+                        height="16"
+                        rx="3"
+                        fill="none"
+                        stroke="#111"
+                        strokeWidth="2"
+                      />
                       <rect x="6" y="6" width="8" height="8" rx="1" fill="#111" opacity="0.3" />
                       <rect x="26" y="6" width="8" height="8" rx="1" fill="#111" opacity="0.3" />
                       <rect x="6" y="26" width="8" height="8" rx="1" fill="#111" opacity="0.3" />
@@ -362,12 +393,24 @@ export function LoginScreen({
                 />
               </div>
 
-              <p role="status" aria-live="polite" className="text-sm text-center" style={{ color: "#aebac1" }}>
-                {qrReady ? "Scan this code with WhatsApp on your phone." : "Preparing your QR code…"}
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-center"
+                style={{ color: "#aebac1" }}
+              >
+                {qrReady
+                  ? "Scan this code with WhatsApp on your phone."
+                  : "Preparing your QR code…"}
               </p>
 
               {status && status !== "waiting" && (
-                <p role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "#21c063" }}>
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-xs font-medium"
+                  style={{ color: "#21c063" }}
+                >
                   {friendlyStatus(status)}
                 </p>
               )}
@@ -406,7 +449,8 @@ export function LoginScreen({
               </div>
               <div className="w-full max-w-[240px] flex flex-col items-center gap-2">
                 <p className="text-xs" style={{ color: "#aebac1" }}>
-                  Keep this window open — {codeExpired ? "code expired" : `code expires in ${timeLabel}`}
+                  Keep this window open —{" "}
+                  {codeExpired ? "code expired" : `code expires in ${timeLabel}`}
                 </p>
                 {!codeExpired && (
                   <div
@@ -428,7 +472,12 @@ export function LoginScreen({
                     />
                   </div>
                 )}
-                <p role="status" aria-live="polite" className="text-xs" style={{ color: codeExpired ? "#ffd6d6" : "#aebac1" }}>
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-xs"
+                  style={{ color: codeExpired ? "#ffd6d6" : "#aebac1" }}
+                >
                   {codeExpired
                     ? "That code has expired. Generate a new one to continue."
                     : pairingCode

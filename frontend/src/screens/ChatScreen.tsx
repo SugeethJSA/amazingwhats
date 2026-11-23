@@ -359,7 +359,9 @@ const ChatListItemContent = memo(
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 text-sm text-gray-600 dark:text-[#8696a0] truncate [&_p]:inline [&_p]:m-0 ">
-              {chat.isFromMe && <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>}
+              {chat.isFromMe && (
+                <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>
+              )}
               {chat.sender && chat.type === "group" && !chat.isFromMe && (
                 <span className="mr-1">{chat.sender}: </span>
               )}
@@ -541,7 +543,9 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
           className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
         />
 
-        {searching && <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>}
+        {searching && (
+          <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>
+        )}
 
         {searchResults.length > 0 && (
           <div className="flex-1 overflow-y-auto max-h-40 mb-3 border border-gray-200 dark:border-dark-border rounded-lg">
@@ -554,9 +558,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">
                     {ch.full_name || ch.push_name || ch.jid}
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">
-                    {ch.jid}
-                  </p>
+                  <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">{ch.jid}</p>
                 </div>
                 <div className="flex gap-1 shrink-0 ml-2">
                   <button
@@ -1395,7 +1397,9 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           </ResizablePanel>
         </ResizablePanelGroup>
       ) : (
-        <div className="h-full w-full min-w-0">{selectedChatId || selectedCommunity ? detailPane : listPane}</div>
+        <div className="h-full w-full min-w-0">
+          {selectedChatId || selectedCommunity ? detailPane : listPane}
+        </div>
       )}
       {storyGroup && <StoryViewer group={storyGroup} onClose={() => setStoryGroup(null)} />}
       {showCreateGroup && <CreateGroupDialog onClose={() => setShowCreateGroup(false)} />}

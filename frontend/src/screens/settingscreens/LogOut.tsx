@@ -45,7 +45,12 @@ const LogOut = () => {
             <StatusBanner tone="error">{error}</StatusBanner>
           </div>
         )}
-        <ActionButton variant="danger" onClick={() => setConfirmOpen(true)} disabled={busy} className="mt-5">
+        <ActionButton
+          variant="danger"
+          onClick={() => setConfirmOpen(true)}
+          disabled={busy}
+          className="mt-5"
+        >
           {busy ? "Logging out…" : "Log out"}
         </ActionButton>
       </SettingsCard>

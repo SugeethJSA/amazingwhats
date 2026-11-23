@@ -13,7 +13,11 @@ import {
   ContactIcon,
   LocationIcon,
 } from "../../assets/svgs/chat_icons"
-import { GetCachedAvatar, SendLocation, PickAttachmentFile } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import {
+  GetCachedAvatar,
+  SendLocation,
+  PickAttachmentFile,
+} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import type { Message } from "../../store/types"
 import { useContactStore } from "../../store/useContactStore"
 import { useUIStore } from "../../store"
@@ -533,7 +537,13 @@ export function ChatInput({
     <div className="relative z-20 mx-3 mb-3 mt-1.5">
       {showEmojiPicker && (
         <div ref={emojiPickerRef} className="absolute bottom-full left-0 z-50 mb-2">
-          <Suspense fallback={<div className="p-4 text-sm" role="status">Loading emojis…</div>}>
+          <Suspense
+            fallback={
+              <div className="p-4 text-sm" role="status">
+                Loading emojis…
+              </div>
+            }
+          >
             <EmojiPicker
               onEmojiSelect={handleEmojiSelect}
               theme="auto"
@@ -796,7 +806,10 @@ export function ChatInput({
               <p className="mb-3 text-sm text-gray-600 dark:text-[#8696a0]">
                 Share your current location or enter coordinates.
               </p>
-              <label htmlFor="location-lat" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+              <label
+                htmlFor="location-lat"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+              >
                 Latitude
               </label>
               <input
@@ -811,7 +824,10 @@ export function ChatInput({
                   setLocationError("")
                 }}
               />
-              <label htmlFor="location-lng" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+              <label
+                htmlFor="location-lng"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+              >
                 Longitude
               </label>
               <input
@@ -825,7 +841,10 @@ export function ChatInput({
                   setLocationError("")
                 }}
               />
-              <label htmlFor="location-place" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+              <label
+                htmlFor="location-place"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+              >
                 Place name (optional)
               </label>
               <input
@@ -872,7 +891,9 @@ export function ChatInput({
                       setLocationSending(false)
                     }
                   }}
-                  disabled={locationSending || isNaN(parseFloat(latInput)) || isNaN(parseFloat(lngInput))}
+                  disabled={
+                    locationSending || isNaN(parseFloat(latInput)) || isNaN(parseFloat(lngInput))
+                  }
                   aria-busy={locationSending}
                   className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
                 >
