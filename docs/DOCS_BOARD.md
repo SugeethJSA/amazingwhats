@@ -1,0 +1,9 @@
+# Junior-docs swarm board
+
+Format: `**[n | YYYY-MM-DD] KIND → D-XXX — author (subject)**`
+
+**[1 | 2026-11-23] DECISION → mother — mother (plain-Markdown fallback)**
+No docs site pipeline and no `DOCS_DISPATCH_TOKEN`; using `docs/` Markdown + Mermaid + relative links per skill fallback. Six D-IDs registered in DRIFT_REGISTER.md.
+
+**[2 | 2026-11-23] REPORT → board — mother (survey)**
+Repo clean on `master` at `4c88aa3`; no existing `docs/`; source inventory captured (cmd, api, internal/query, internal/store, internal/wa, frontend/src, build, tools).
