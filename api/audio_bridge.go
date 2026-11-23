@@ -35,6 +35,13 @@ type LiveAudioBridge struct {
 	isClosed atomic.Bool
 	phase    float64 // for synthetic comfort noise
 
+	// muted is the LOCAL microphone mute flag. meowcaller has no public local
+	// mute setter (its OnMuteState callback only reports the REMOTE party), so
+	// we zero frames in our own AudioSource instead. Guarded by an atomic.Bool
+	// because MuteCall/Wails and the meowcaller reader run on different
+	// goroutines. (CALL-001)
+	muted atomic.Bool
+
 	logCounter int
 }
 
@@ -150,6 +157,29 @@ func (b *LiveAudioBridge) Start() error {
 	return b.device.Start()
 }
 
+// SetMuted enables/disables local microphone muting. Thread-safe: it may be
+// called from the Wails binding goroutine while ReadFrame runs in meowcaller.
+// (CALL-001)
+func (b *LiveAudioBridge) SetMuted(muted bool) {
+	b.muted.Store(muted)
+}
+
+// IsMuted reports the current local microphone mute state. (CALL-001)
+func (b *LiveAudioBridge) IsMuted() bool {
+	return b.muted.Load()
+}
+
+// muteFrame is a pure helper: when muted it returns a fresh all-zero slice of
+// the same length, otherwise it returns the input unchanged. The input is
+// never mutated so the capture buffer/comfort-noise producer stays untouched.
+// (CALL-001)
+func muteFrame(frame []float32, muted bool) []float32 {
+	if !muted {
+		return frame
+	}
+	return make([]float32, len(frame))
+}
+
 // ---------------------------------------------------------
 // meowcaller.AudioSource Implementation
 // ---------------------------------------------------------
@@ -194,7 +224,11 @@ func (b *LiveAudioBridge) ReadFrame() ([]float32, error) {
 		b.captureBuf = b.captureBuf[len(b.captureBuf)-frameSamples*10:]
 	}
 
-	return frame, nil
+	// Apply local mute at the very last step so BOTH the captured-audio path
+	// and the comfort-noise path are silenced. The capture buffer has already
+	// been drained and bloat-trimmed above, so muting never stalls the queue or
+	// changes pacing. (CALL-001)
+	return muteFrame(frame, b.muted.Load()), nil
 }
 
 // ---------------------------------------------------------

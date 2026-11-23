@@ -8,6 +8,7 @@ import {
   GetProfile,
   GetGroupInfo,
   AddCallParticipant,
+  MuteCall,
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import type * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
@@ -24,6 +25,10 @@ interface CallState {
   contactName: string
   avatarUrl: string
   participants: number
+  // Local microphone mute (our own AudioSource) and the REMOTE party's mic
+  // state reported by meowcaller's OnMuteState. (CALL-001)
+  muted: boolean
+  remoteMuted: boolean
 }
 
 function parseJID(jid: string): { user: string; server: string } {
@@ -180,6 +185,8 @@ function CallOverlayContent() {
           contactName: name,
           avatarUrl: avatar,
           participants,
+          muted: false,
+          remoteMuted: false,
         })
       })
     }
@@ -238,11 +245,30 @@ function CallOverlayContent() {
         .catch(err => console.error("GetCallStats failed:", err))
     }
 
+    // Local mute acknowledgement from MuteCall, and the REMOTE party's mic
+    // state from meowcaller's OnMuteState. Both are call-scoped: ignore events
+    // for any other (or already ended) call. (CALL-001)
+    const onMuteState = (data: { callID?: string; muted?: boolean }) => {
+      if (!data?.callID || data.callID !== activeCallIDRef.current) return
+      setActiveCall(prev =>
+        prev && prev.callID === data.callID ? { ...prev, muted: !!data.muted } : prev,
+      )
+    }
+
+    const onRemoteMute = (data: { callID?: string; muted?: boolean }) => {
+      if (!data?.callID || data.callID !== activeCallIDRef.current) return
+      setActiveCall(prev =>
+        prev && prev.callID === data.callID ? { ...prev, remoteMuted: !!data.muted } : prev,
+      )
+    }
+
     const offIncoming = EventsOn("call:incoming", onIncoming)
     const offOutgoing = EventsOn("call:outgoing", onOutgoing)
     const offAccepted = EventsOn("call:accepted", onAccepted)
     const offEnded = EventsOn("call:ended", onEnded)
     const offParticipantAdded = EventsOn("call:participant_added", onParticipantAdded)
+    const offMuteState = EventsOn("call:mute_state", onMuteState)
+    const offRemoteMute = EventsOn("call:remote_mute", onRemoteMute)
 
     return () => {
       offIncoming()
@@ -250,6 +276,8 @@ function CallOverlayContent() {
       offAccepted()
       offEnded()
       offParticipantAdded()
+      offMuteState()
+      offRemoteMute()
     }
   }, [clearCall])
 
@@ -320,6 +348,20 @@ function CallOverlayContent() {
       console.error("Failed to end call", err)
     }
     clearCall(callID)
+  }
+
+  const handleToggleMute = async () => {
+    if (!activeCall) return
+    const callID = activeCall.callID
+    const next = !activeCall.muted
+    try {
+      await MuteCall(callID, next)
+      // Only commit the optimistic value if this call is still the visible one.
+      if (activeCallIDRef.current !== callID) return
+      setActiveCall(prev => (prev && prev.callID === callID ? { ...prev, muted: next } : prev))
+    } catch (err) {
+      console.error("MuteCall failed:", err)
+    }
   }
 
   const formatTimer = (seconds: number) => {
@@ -410,9 +452,23 @@ function CallOverlayContent() {
         </div>
 
         {/* Contact Name & Call Status */}
-        <h3 className="text-base font-semibold text-white tracking-tight mb-0.5">
-          {activeCall.contactName}
-        </h3>
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-base font-semibold text-white tracking-tight mb-0.5">
+            {activeCall.contactName}
+          </h3>
+          {activeCall.remoteMuted && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] text-gray-400"
+              title="Peer microphone is off"
+              aria-label="Peer microphone off"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
+              </svg>
+              Microphone off
+            </span>
+          )}
+        </div>
         {activeCall.isGroup && activeCall.participants > 0 && (
           <p className="text-[11px] text-gray-400 mb-0.5">{activeCall.participants} participants</p>
         )}
@@ -428,6 +484,30 @@ function CallOverlayContent() {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-center gap-6 w-full pt-1">
+          {activeCall.status === "active" && (
+            <button
+              onClick={handleToggleMute}
+              disabled={activeCall.status !== "active"}
+              className={`p-3 rounded-full transition-all duration-150 disabled:opacity-50 ${
+                activeCall.muted
+                  ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  : "bg-white/10 text-gray-300 hover:bg-white/20"
+              }`}
+              aria-label={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
+              title={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
+            >
+              {activeCall.muted ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                </svg>
+              )}
+            </button>
+          )}
+
           {activeCall.status === "active" && (
             <button
               onClick={() => {

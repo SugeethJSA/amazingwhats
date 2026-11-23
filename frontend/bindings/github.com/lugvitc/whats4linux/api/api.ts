@@ -570,6 +570,16 @@ export function MarkRead(chatJID: string, messageIDs: string[], Type: string): $
     return $Call.ByID(610599084, chatJID, messageIDs, Type);
 }
 
+/**
+ * MuteCall toggles the LOCAL microphone mute for an active call. This mutes in
+ * our own AudioSource (meowcaller has no public local-mute setter). The updated
+ * state is broadcast with call:mute_state for the dedicated call window.
+ * (CALL-001)
+ */
+export function MuteCall(callID: string, muted: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4068241404, callID, muted);
+}
+
 export function NewsletterMarkViewed(jidStr: string, serverIDs: number[]): $CancellablePromise<void> {
     return $Call.ByID(3623047583, jidStr, serverIDs);
 }

@@ -151,6 +151,7 @@ func (a *Api) initMeowcaller() {
 				// Close is idempotent; safe even when no bridge was attached.
 				// (D-AUD-004g)
 				if ended.Bridge != nil {
+					ended.Bridge.SetMuted(false) // clear local mute on teardown (CALL-001)
 					_ = ended.Bridge.Close()
 				}
 				a.insertCallLog(ended)
@@ -164,6 +165,23 @@ func (a *Api) initMeowcaller() {
 				// The call is over: retire the dedicated call window.
 				hideCallWindow()
 			}
+		})
+
+		// meowcaller's OnMuteState reports the REMOTE party's microphone state
+		// (a local mute setter does not exist in the library). Forward it as a
+		// distinct event; ignore late events once this call is no longer active.
+		// (CALL-001)
+		call.OnMuteState(func(muted bool) {
+			callsMu.Lock()
+			stillActive := activeCalls[call.ID()] != nil
+			callsMu.Unlock()
+			if !stillActive || a.ctx == nil {
+				return
+			}
+			a.app.Event.Emit("call:remote_mute", map[string]any{
+				"callID": call.ID(),
+				"muted":  muted,
+			})
 		})
 
 		// Group calls emit call:incoming from the CallOffer handler above,
@@ -297,6 +315,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 			// Close is idempotent, so this is safe even if setup never attached
 			// a bridge. (D-AUD-004g)
 			if ended.Bridge != nil {
+				ended.Bridge.SetMuted(false) // clear local mute on teardown (CALL-001)
 				_ = ended.Bridge.Close()
 			}
 			a.insertCallLog(ended)
@@ -322,6 +341,22 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 				"callID": call.ID(),
 			})
 		}
+	})
+
+	// Mirror the incoming path: forward the REMOTE party's mic state from
+	// meowcaller's OnMuteState without touching our local mute flag. Late
+	// events after the call ended are dropped. (CALL-001)
+	call.OnMuteState(func(muted bool) {
+		callsMu.Lock()
+		stillActive := activeCalls[call.ID()] != nil
+		callsMu.Unlock()
+		if !stillActive || a.ctx == nil {
+			return
+		}
+		a.app.Event.Emit("call:remote_mute", map[string]any{
+			"callID": call.ID(),
+			"muted":  muted,
+		})
 	})
 
 	// Bridge setup happens after the handlers are installed. A call with no
@@ -406,6 +441,35 @@ func (a *Api) AddCallParticipant(callID, targetJID string) error {
 	return nil
 }
 
+// MuteCall toggles the LOCAL microphone mute for an active call. This mutes in
+// our own AudioSource (meowcaller has no public local-mute setter). The updated
+// state is broadcast with call:mute_state for the dedicated call window.
+// (CALL-001)
+func (a *Api) MuteCall(callID string, muted bool) error {
+	callsMu.Lock()
+	ac, ok := activeCalls[callID]
+	if !ok {
+		callsMu.Unlock()
+		return fmt.Errorf("call %s not found", callID)
+	}
+	bridge := ac.Bridge
+	callsMu.Unlock()
+	if bridge == nil {
+		// A still-ringing incoming call has no bridge; the UI only enables the
+		// mute button once the call is active, so this is a defensive guard.
+		return fmt.Errorf("call %s has no active audio bridge", callID)
+	}
+
+	bridge.SetMuted(muted)
+	if a.ctx != nil {
+		a.app.Event.Emit("call:mute_state", map[string]any{
+			"callID": callID,
+			"muted":  muted,
+		})
+	}
+	return nil
+}
+
 // RejectCall rejects an incoming call
 func (a *Api) RejectCall(callID string) error {
 	callsMu.Lock()
@@ -420,6 +484,7 @@ func (a *Api) RejectCall(callID string) error {
 	// callData here. (D-AUD-004f)
 	a.insertCallLog(callData)
 	if callData.Bridge != nil {
+		callData.Bridge.SetMuted(false) // clear local mute on teardown (CALL-001)
 		_ = callData.Bridge.Close()
 	}
 	if err := callData.Call.Reject(); err != nil {
@@ -608,6 +673,7 @@ func (a *Api) EndCall(callID string) error {
 	// Removed from the map under the lock; safe to read outside it. (D-AUD-004f)
 	a.insertCallLog(callData)
 	if callData.Bridge != nil {
+		callData.Bridge.SetMuted(false) // clear local mute on teardown (CALL-001)
 		_ = callData.Bridge.Close()
 	}
 	if err := callData.Call.Hangup(); err != nil {
