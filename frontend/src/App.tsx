@@ -134,9 +134,7 @@ function connectionView(status: string): ConnectionView {
  * from a stalled batch rather than leaving a silent line on screen.
  */
 type HistorySyncView =
-  | { phase: "idle" }
-  | { phase: "syncing"; percent: number }
-  | { phase: "failed" }
+  { phase: "idle" } | { phase: "syncing"; percent: number } | { phase: "failed" }
 
 /** If a batch goes quiet this long, treat the sync as stalled and offer Retry. */
 const HISTORY_SYNC_STALL_MS = 90_000
@@ -456,10 +454,7 @@ function App() {
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
-                <div
-                  className="history-sync-fill"
-                  style={{ width: `${historySync.percent}%` }}
-                />
+                <div className="history-sync-fill" style={{ width: `${historySync.percent}%` }} />
               </div>
             </>
           ) : (

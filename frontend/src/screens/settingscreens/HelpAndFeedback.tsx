@@ -87,9 +87,9 @@ const HelpAndFeedback = () => {
           </div>
         </SettingsCard>
         <p className="px-1 text-[13px] leading-relaxed text-light-text dark:text-dark-text">
-          For questions about Whats4Linux itself, use the project tracker above. The Meta and WhatsApp
-          links below are external sites operated by WhatsApp; they cover the account, pairing, and
-          encryption side of the network, not this application.
+          For questions about Whats4Linux itself, use the project tracker above. The Meta and
+          WhatsApp links below are external sites operated by WhatsApp; they cover the account,
+          pairing, and encryption side of the network, not this application.
         </p>
       </SettingsSection>
 
