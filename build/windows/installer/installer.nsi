@@ -47,6 +47,7 @@ VIAddVersionKey "CompanyName"     "${PUBLISHER}"
 VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Installer"
 VIAddVersionKey "ProductVersion"  "${VERSION}"
 VIAddVersionKey "FileVersion"     "${VERSION}"
+VIAddVersionKey "LegalCopyright"  "Copyright (c) lugvitc. Licensed under AGPL-3.0."
 
 ManifestDPIAware true
 SetCompressor /SOLID lzma
