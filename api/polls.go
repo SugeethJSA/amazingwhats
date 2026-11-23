@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/lugvitc/whats4linux/internal/store"
-	"go.mau.fi/util/random"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waCommon"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
@@ -16,6 +15,7 @@ import (
 	"github.com/polymorfa/hypermeow/types/events"
 	"github.com/polymorfa/hypermeow/util/gcmutil"
 	"github.com/polymorfa/hypermeow/util/hkdfutil"
+	"go.mau.fi/util/random"
 	"google.golang.org/protobuf/proto"
 )
 

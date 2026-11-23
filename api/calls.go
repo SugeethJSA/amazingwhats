@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/polymorfa/hypermeow/types/events"
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"
-	"github.com/polymorfa/hypermeow/types/events"
 )
 
 // CallStats holds diagnostic info about an active call for the frontend stats panel.

@@ -8,9 +8,9 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/misc"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/polymorfa/hypermeow/store/sqlstore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/polymorfa/hypermeow/store/sqlstore"
 )
 
 // newTestContainer builds a real, fully upgraded whatsmeow store against a
