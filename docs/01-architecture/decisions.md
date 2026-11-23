@@ -397,4 +397,4 @@ Date: 2026-11-23. Repo: `C:\Users\sugee\Github\SugeethJSA\amazingwhats`. Fork ba
 - [Data flow](data-flow.md) — the message, login and download paths that rely on them.
 - [Vocabulary](../00-start-here/vocabulary.md) — JID, LID, binding, event and other terms used above.
 - [Quickstart](../00-start-here/quickstart.md) — commands from this repo, no guessed flags.
-- [Docs index](../index.md) — what is ready and what is still planned.
+- [Docs index](../index.md) — the full reading order; every wing is ready.

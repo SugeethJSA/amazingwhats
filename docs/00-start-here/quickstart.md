@@ -165,4 +165,4 @@ Run these from the repository root unless a source line says otherwise.
 
 - [Vocabulary: every term before first use](vocabulary.md)
 - [Landing page and reading order](../index.md)
-- Later: Build and run details (planned, DOC-006, `../04-operations/build-and-run.md`) and Configuration (planned, DOC-006, `../04-operations/configuration.md`)
+- Later: [Build and run details](../04-operations/build-and-run.md) and [Configuration](../04-operations/configuration.md)

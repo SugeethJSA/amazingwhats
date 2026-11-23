@@ -11,7 +11,7 @@ description: "A reading order for learning this desktop app from source, from vo
 
 The repository is a desktop app with two halves that are easy to confuse: a compiled program that talks to WhatsApp and a web-style page that the user sees. The code is large, and much of it is protocol and sync machinery. Without a reading order, a newcomer either stares at the entry point and cannot find the UI, or jumps into a long event handler and cannot find where events come from.
 
-This page gives you that order. It also tells you which pages are ready now and which are planned, so a missing link is a schedule fact, not a broken promise.
+This page gives you that order. Every page listed here is ready and linked, so you can follow the arrows with no gaps to guess at.
 
 ## The idea, in plain words
 
@@ -71,45 +71,45 @@ import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/
 |---|---|---|---|
 | 1 | [Vocabulary](00-start-here/vocabulary.md) | Ready | Every term defined before use, with a file:line pointer. |
 | 2 | [Quickstart](00-start-here/quickstart.md) | Ready | Exact tool versions and commands from this repo. |
-| 3 | Architecture | Planned (DOC-002) | System map, Data flow, Decisions. |
-| 4 | Components | Planned (DOC-003, DOC-004) | Backend bootstrap, Message pipeline, Database, Frontend app, State and events, Chat UI. |
-| 5 | Integration | Planned (DOC-005) | Wails bindings, Events, Payload shapes. |
-| 6 | Operations | Planned (DOC-006) | Build and run, Configuration, Security and privacy. |
-| 7 | Reference | Planned (DOC-006) | Known issues, llms.txt. |
+| 3 | [Architecture](01-architecture/system-map.md) | Ready | [System map](01-architecture/system-map.md), [Data flow](01-architecture/data-flow.md), [Decisions](01-architecture/decisions.md). |
+| 4 | [Components](02-components/backend-bootstrap.md) | Ready | [Backend bootstrap](02-components/backend-bootstrap.md), [Message pipeline](02-components/message-pipeline.md), [Database](02-components/database.md), [Frontend app](02-components/frontend-app.md), [State and events](02-components/state-and-events.md), [Chat UI](02-components/chat-ui.md). |
+| 5 | [Integration](03-api-integration/wails-bindings.md) | Ready | [Wails bindings](03-api-integration/wails-bindings.md), [Events](03-api-integration/events.md), [Payload shapes](03-api-integration/payload-shapes.md). |
+| 6 | [Operations](04-operations/build-and-run.md) | Ready | [Build and run](04-operations/build-and-run.md), [Configuration](04-operations/configuration.md), [Security and privacy](04-operations/security-privacy.md). |
+| 7 | [Reference](05-reference/known-issues.md) | Ready | [Known issues](05-reference/known-issues.md), [llms.txt](llms.txt). |
 
-> **Planned does not mean missing forever.** The section names above are registered for future documentation work (`docs/DRIFT_REGISTER.md`). They are listed as plain text on purpose — no link is shown until the target file actually exists. Those files are authored in later passes.
+> **Every entry is a real link.** All six wings have been authored and checked in; the section names below link straight to their files. The reading order still runs top to bottom — names first, then setup, then the big picture, then the details. The D-ID for each wing stays recorded in `docs/DRIFT_REGISTER.md`.
 
-### Architecture — planned
+### Architecture — ready
 
-- System map (planned, DOC-002, `01-architecture/system-map.md`) — the real boot, service, event, and database graph.
-- Data flow (planned, DOC-002, `01-architecture/data-flow.md`) — how a WhatsApp event becomes something on screen.
-- Decisions (planned, DOC-002, `01-architecture/decisions.md`) — why the code is shaped this way.
+- [System map](01-architecture/system-map.md) — the real boot, service, event, and database graph.
+- [Data flow](01-architecture/data-flow.md) — how a WhatsApp event becomes something on screen.
+- [Decisions](01-architecture/decisions.md) — why the code is shaped this way.
 
-### Components — planned
+### Components — ready
 
-- Backend bootstrap (planned, DOC-003, `02-components/backend-bootstrap.md`) — `cmd/` and service startup.
-- Message pipeline (planned, DOC-003, `02-components/message-pipeline.md`) — live and history messages.
-- Database (planned, DOC-003, `02-components/database.md`) — the Go store.
-- Frontend app (planned, DOC-004, `02-components/frontend-app.md`) — `App.tsx` and screens.
-- State and events (planned, DOC-004, `02-components/state-and-events.md`) — the frontend stores and event shim.
-- Chat UI (planned, DOC-004, `02-components/chat-ui.md`) — the virtualized list and media/call overlays.
+- [Backend bootstrap](02-components/backend-bootstrap.md) — `cmd/` and service startup.
+- [Message pipeline](02-components/message-pipeline.md) — live and history messages.
+- [Database](02-components/database.md) — the Go store.
+- [Frontend app](02-components/frontend-app.md) — `App.tsx` and screens.
+- [State and events](02-components/state-and-events.md) — the frontend stores and event shim.
+- [Chat UI](02-components/chat-ui.md) — the virtualized list and media/call overlays.
 
-### Integration contracts — planned
+### Integration contracts — ready
 
-- Wails bindings (planned, DOC-005, `03-api-integration/wails-bindings.md`) — exported method names and arguments.
-- Events (planned, DOC-005, `03-api-integration/events.md`) — every emitted name and its payload.
-- Payload shapes (planned, DOC-005, `03-api-integration/payload-shapes.md`) — the exact keys crossing the bridge.
+- [Wails bindings](03-api-integration/wails-bindings.md) — exported method names and arguments.
+- [Events](03-api-integration/events.md) — every emitted name and its payload.
+- [Payload shapes](03-api-integration/payload-shapes.md) — the exact keys crossing the bridge.
 
-### Operations — planned
+### Operations — ready
 
-- Build and run (planned, DOC-006, `04-operations/build-and-run.md`) — recipes and flags in full.
-- Configuration (planned, DOC-006, `04-operations/configuration.md`) — env vars, paths, settings.
-- Security and privacy (planned, DOC-006, `04-operations/security-privacy.md`) — credential storage and disclosure rules.
+- [Build and run](04-operations/build-and-run.md) — recipes and flags in full.
+- [Configuration](04-operations/configuration.md) — env vars, paths, settings.
+- [Security and privacy](04-operations/security-privacy.md) — credential storage and disclosure rules.
 
-### Reference — planned
+### Reference — ready
 
-- Known issues (planned, DOC-006, `05-reference/known-issues.md`) — honest limitations from the audit register.
-- llms.txt (planned, DOC-006, `llms.txt`) — a compact index of the finished docs.
+- [Known issues](05-reference/known-issues.md) — honest limitations from the audit register.
+- [llms.txt](llms.txt) — a compact index of the finished docs.
 
 ## What can go wrong
 
@@ -119,10 +119,10 @@ import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/
 
 > **Stale v2 assumptions are the most common trap.** This is a v3 codebase: bindings come from `frontend/bindings/` (`frontend/src/App.tsx:2`) and events go through the v3 runtime shim (`frontend/src/lib/wailsRuntime.ts:7`). The integration report records checks that these old patterns are absent (`provenance-docs/INTEGRATION_REPORT.md:8`).
 
-> **A planned section has no link yet.** Planned sections are listed as plain text with their intended path and D-ID. When their pages are authored in later passes, the entries become links; until then, check `docs/DRIFT_REGISTER.md` for the D-ID.
+> **A broken link is a drift signal.** Every section is linked now; if a target ever moves or disappears, check `docs/DRIFT_REGISTER.md` for its D-ID rather than guessing at a path.
 
 ## Where to next
 
 - [Vocabulary](00-start-here/vocabulary.md) — first.
 - [Quickstart](00-start-here/quickstart.md) — second.
-- Then the first planned wing: System map (planned, DOC-002, `01-architecture/system-map.md`).
+- Then the first wing: [System map](01-architecture/system-map.md).

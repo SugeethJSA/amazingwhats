@@ -189,4 +189,4 @@ export function EventsOn(name: string, cb: EventCallback): Unsubscribe {
 
 - [Quickstart: install the tools and run the app](quickstart.md)
 - [Landing page and reading order](../index.md)
-- Later, once these names are comfortable: System map (planned, DOC-002, `../01-architecture/system-map.md`) and Wails bindings contract (planned, DOC-005, `../03-api-integration/wails-bindings.md`)
+- Later, once these names are comfortable: [System map](../01-architecture/system-map.md) and [Wails bindings contract](../03-api-integration/wails-bindings.md)
