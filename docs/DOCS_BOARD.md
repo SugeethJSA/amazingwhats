@@ -7,3 +7,6 @@ No docs site pipeline and no `DOCS_DISPATCH_TOKEN`; using `docs/` Markdown + Mer
 
 **[2 | 2026-11-23] REPORT → board — mother (survey)**
 Repo clean on `master` at `4c88aa3`; no existing `docs/`; source inventory captured (cmd, api, internal/query, internal/store, internal/wa, frontend/src, build, tools).
+
+**[3 | 2026-11-23] DONE_VERIFIED → DOC-001 — mother (vocabulary + quickstart)**
+`gate_DOC001b` GREEN; Critic PASS (3 minor label/order nits noted). Commit `4035987`.
