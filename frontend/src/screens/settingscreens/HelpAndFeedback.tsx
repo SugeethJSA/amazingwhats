@@ -79,8 +79,8 @@ const HelpAndFeedback = () => {
               <strong className="font-semibold text-light-text dark:text-dark-text">
                 Official multi-device protocol.
               </strong>{" "}
-              The app connects directly to WhatsApp's multi-device protocol through a native backend.
-              It is an independent client, not a browser wrapper around WhatsApp Web.
+              The app connects directly to WhatsApp's multi-device protocol through a native
+              backend. It is an independent client, not a browser wrapper around WhatsApp Web.
             </p>
             <p>
               <strong className="font-semibold text-light-text dark:text-dark-text">
@@ -89,8 +89,8 @@ const HelpAndFeedback = () => {
               Everything is kept locally in a <code className={CODE_CLS}>whats4linux</code> folder
               inside your operating system's user config directory — for example{" "}
               <code className={CODE_CLS}>~/.config/whats4linux</code> on Linux. That includes the
-              local SQLite databases and the media cache. Removing that folder removes local data, so
-              back it up first if you rely on it.
+              local SQLite databases and the media cache. Removing that folder removes local data,
+              so back it up first if you rely on it.
             </p>
             <p>
               <strong className="font-semibold text-light-text dark:text-dark-text">

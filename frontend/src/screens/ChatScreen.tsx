@@ -423,7 +423,14 @@ interface ChatListItemProps {
 
 // Container component that subscribes to specific chat data
 const ChatListItem = memo(
-  ({ chatId, isSelected, onSelect, onContextMenu, onMenuTrigger, isMenuOpen }: ChatListItemProps) => {
+  ({
+    chatId,
+    isSelected,
+    onSelect,
+    onContextMenu,
+    onMenuTrigger,
+    isMenuOpen,
+  }: ChatListItemProps) => {
     // This hook only triggers re-render when THIS specific chat changes
     const chat = useChatById(chatId)
     // Boolean selector - only re-renders when THIS chat's muted flag flips
@@ -620,9 +627,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {error && (
-            <p className="mb-3 text-sm text-[var(--color-danger-ink)]">{error}</p>
-          )}
+          {error && <p className="mb-3 text-sm text-[var(--color-danger-ink)]">{error}</p>}
           {success && <p className="mb-3 text-sm text-[var(--color-green-ink)]">{success}</p>}
           <div className="flex justify-end gap-2">
             <button

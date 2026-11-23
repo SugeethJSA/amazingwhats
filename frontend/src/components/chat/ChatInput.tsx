@@ -279,15 +279,11 @@ export function ChatInput({
     const frame = requestAnimationFrame(() => {
       if (attachSubmenuOpen) {
         submenuWasOpenRef.current = true
-        attachMenuRef.current
-          ?.querySelector<HTMLElement>('[data-attach-level="sub"]')
-          ?.focus()
+        attachMenuRef.current?.querySelector<HTMLElement>('[data-attach-level="sub"]')?.focus()
       } else if (submenuWasOpenRef.current) {
         attachMoreButtonRef.current?.focus()
       } else {
-        attachMenuRef.current
-          ?.querySelector<HTMLElement>('[data-attach-level="primary"]')
-          ?.focus()
+        attachMenuRef.current?.querySelector<HTMLElement>('[data-attach-level="primary"]')?.focus()
       }
     })
     return () => cancelAnimationFrame(frame)

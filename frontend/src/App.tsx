@@ -299,18 +299,15 @@ function App() {
     // `event.data` straight to the callback, so the payload object arrives here
     // directly. The callback stays synchronous (addNotification is sync), so no
     // floating promise can reject inside the event handler.
-    const unsubUpdateAvailable = EventsOn(
-      "wa:update_available",
-      (data: { version?: string }) => {
-        const version = typeof data?.version === "string" ? data.version.trim() : ""
-        addNotification(
-          version
-            ? `Update v${version} is available — open Settings → Advanced to install.`
-            : "An update is available — open Settings → Advanced to install.",
-          { tone: "info", durationMs: 10000 },
-        )
-      },
-    )
+    const unsubUpdateAvailable = EventsOn("wa:update_available", (data: { version?: string }) => {
+      const version = typeof data?.version === "string" ? data.version.trim() : ""
+      addNotification(
+        version
+          ? `Update v${version} is available — open Settings → Advanced to install.`
+          : "An update is available — open Settings → Advanced to install.",
+        { tone: "info", durationMs: 10000 },
+      )
+    })
 
     // Update failures arrive as a short, user-safe static string from the
     // backend; display it as-is, with a fallback for a malformed payload.

@@ -120,7 +120,9 @@ const AdvancedScreen = () => {
       })
       .catch(() => {
         if (!cancelled) {
-          setCodeError("Could not load your saved customizations. You can still edit and save below.")
+          setCodeError(
+            "Could not load your saved customizations. You can still edit and save below.",
+          )
         }
       })
     return () => {
@@ -154,7 +156,9 @@ const AdvancedScreen = () => {
       // Clearing the settings search does not navigate away.
       if (button.getAttribute("aria-label") === "Clear search") return
       if (
-        !window.confirm("You have unsaved changes in Custom CSS or Custom JS. Leave without saving?")
+        !window.confirm(
+          "You have unsaved changes in Custom CSS or Custom JS. Leave without saving?",
+        )
       ) {
         e.preventDefault()
         e.stopPropagation()
@@ -212,7 +216,9 @@ const AdvancedScreen = () => {
       setCssBaseline(customCSS)
       setCssSaved(true)
     } catch {
-      setCodeError("Could not save custom CSS. Your changes are still in the editor — please try again.")
+      setCodeError(
+        "Could not save custom CSS. Your changes are still in the editor — please try again.",
+      )
     }
   }
 
@@ -224,7 +230,9 @@ const AdvancedScreen = () => {
       setJsBaseline(customJS)
       setJsSaved(true)
     } catch {
-      setCodeError("Could not save custom JS. Your changes are still in the editor — please try again.")
+      setCodeError(
+        "Could not save custom JS. Your changes are still in the editor — please try again.",
+      )
     }
   }
 
@@ -246,7 +254,9 @@ const AdvancedScreen = () => {
       applyCustomCode(js, "custom-js", "script")
       setReloadMsg("Custom CSS and JS reloaded from disk")
     } catch {
-      setCodeError("Could not reload customizations from disk. Your editor contents were left unchanged.")
+      setCodeError(
+        "Could not reload customizations from disk. Your editor contents were left unchanged.",
+      )
     }
   }
 
@@ -256,7 +266,9 @@ const AdvancedScreen = () => {
       await Reinitialize()
       setReloadMsg("Connection re-initialized")
     } catch {
-      setCodeError("Could not re-initialize the connection. Your session is unchanged — please try again.")
+      setCodeError(
+        "Could not re-initialize the connection. Your session is unchanged — please try again.",
+      )
     }
   }
 
