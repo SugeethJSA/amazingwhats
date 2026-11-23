@@ -93,8 +93,7 @@ function handleNotificationChatOpen(
   const existing = chatStore.getChat(chatJid)
   const chat: ChatItem = existing ?? {
     id: chatJid,
-    name:
-      safeDisplayName(payload.name) || phoneFromJID(chatJid) || chatJid.split("@")[0] || "Chat",
+    name: safeDisplayName(payload.name) || phoneFromJID(chatJid) || chatJid.split("@")[0] || "Chat",
     subtitle: "",
     type: chatJid.endsWith("@g.us") ? "group" : "contact",
     avatar: safeAvatarUrl(payload.avatar),
