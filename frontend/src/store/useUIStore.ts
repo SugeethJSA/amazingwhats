@@ -61,6 +61,22 @@ export interface NotificationReplyIntent {
   text?: string
 }
 
+/**
+ * A group the backend just joined, waiting for ChatScreen (which owns the
+ * local sidebar view) to switch to the chats view and open the conversation.
+ * A monotonic id keeps two consecutive joins to the same group distinct.
+ *
+ * Every string here is untrusted payload data. Producers sanitize it before
+ * writing; consumers must only use it as display text or as a store/RPC key,
+ * never as raw JID/path output.
+ */
+export interface GroupJoinIntent {
+  id: number
+  chatJid: string
+  name?: string
+  avatar?: string
+}
+
 interface UIStore {
   screen: AppScreen
   setScreen: (screen: AppScreen) => void
@@ -91,12 +107,18 @@ interface UIStore {
   pendingNotificationReply: NotificationReplyIntent | null
   setPendingNotificationReply: (intent: Omit<NotificationReplyIntent, "id">) => void
   clearPendingNotificationReply: () => void
+  /** Group join waiting for ChatScreen to switch view and open the chat. */
+  pendingGroupJoin: GroupJoinIntent | null
+  setPendingGroupJoin: (intent: Omit<GroupJoinIntent, "id">) => void
+  clearPendingGroupJoin: () => void
 }
 
 // Monotonic IDs avoid collisions when several toasts are created in one tick.
 let nextNotificationId = Date.now()
 // Separate from toast ids: identical quick replies must still be distinct.
 let nextReplyIntentId = 1
+// Consecutive joins to the same group must still produce distinct intents.
+let nextGroupJoinIntentId = 1
 
 export const useUIStore = create<UIStore>(set => ({
   screen: "login",
@@ -120,6 +142,11 @@ export const useUIStore = create<UIStore>(set => ({
   setPendingNotificationReply: intent =>
     set({ pendingNotificationReply: { ...intent, id: nextReplyIntentId++ } }),
   clearPendingNotificationReply: () => set({ pendingNotificationReply: null }),
+
+  pendingGroupJoin: null,
+  setPendingGroupJoin: intent =>
+    set({ pendingGroupJoin: { ...intent, id: nextGroupJoinIntentId++ } }),
+  clearPendingGroupJoin: () => set({ pendingGroupJoin: null }),
 
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: open => set({ sidebarOpen: open }),
@@ -167,7 +194,10 @@ export const useUIStore = create<UIStore>(set => ({
       ...(typeof options.durationMs === "number" ? { durationMs: options.durationMs } : {}),
     }
     set(state => ({
-      notifications: [...state.notifications, notification].slice(-50),
+      // Only the newest 3 toasts can ever be visible. Trimming here (not just
+      // in the render) keeps the store authoritative: evicting the oldest also
+      // unmounts it, which clears its auto-dismiss timer and retires its action.
+      notifications: [...state.notifications, notification].slice(-3),
     }))
     return id
   },

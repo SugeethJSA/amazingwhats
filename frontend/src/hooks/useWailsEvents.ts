@@ -19,6 +19,16 @@ interface NotificationReplyPayload extends NotificationChatPayload {
   text?: string
 }
 
+/** Payload of `wa:group_joined`. Every string is untrusted. */
+interface GroupJoinedPayload {
+  jid?: string
+  name?: string
+  topic?: string
+  /** Groups have no picture in the join event; accept one defensively. */
+  picture?: string
+  avatar?: string
+}
+
 /** Strip markup and control characters from an untrusted display name. */
 function safeDisplayName(value: unknown): string {
   if (typeof value !== "string") return ""
@@ -113,6 +123,50 @@ function handleNotificationChatOpen(
     name: safeDisplayName(reply.name) || undefined,
     avatar: safeAvatarUrl(reply.avatar),
     text: notificationText(reply.text),
+  })
+}
+
+/**
+ * A group joined on this or another device. The UI shows a first-party toast
+ * and opens the group; ChatScreen consumes `pendingGroupJoin` because it owns
+ * the sidebar view (Status / Communities / Channels) locally.
+ */
+function handleGroupJoined(payload: GroupJoinedPayload | null | undefined) {
+  if (!payload || typeof payload !== "object") return
+
+  const ui = useUIStore.getState()
+  // Pairing/login has no session to open a group into. Drop the event by
+  // design rather than queueing it across a login the user may abandon.
+  if (ui.screen === "login") return
+
+  const chatStore = useChatStore.getState()
+  const rawJid = typeof payload.jid === "string" ? payload.jid.trim() : ""
+  // An already-loaded chat is trusted by definition; an unknown id must look
+  // like a JID (no path separators, no whitespace, bounded length). The JID is
+  // only ever a store key — it is never used as display text.
+  const jid = chatStore.getChat(rawJid) ? rawJid : safeJid(rawJid)
+  if (!jid) return
+
+  const name = safeDisplayName(payload.name)
+  ui.addNotification(name ? `Joined ${name}` : "Joined a group", { tone: "success" })
+
+  if (ui.screen === "settings") ui.setScreen("chats")
+
+  const existing = chatStore.getChat(jid)
+  const chat: ChatItem = existing ?? {
+    id: jid,
+    name: name || "Group",
+    subtitle: "",
+    type: jid.endsWith("@g.us") ? "group" : "contact",
+    avatar: safeAvatarUrl(payload.picture ?? payload.avatar),
+  }
+
+  chatStore.selectChat(chat)
+  chatStore.clearUnreadCount(jid)
+  ui.setPendingGroupJoin({
+    chatJid: jid,
+    name: name || undefined,
+    avatar: chat.avatar,
   })
 }
 
@@ -254,6 +308,12 @@ export function useWailsEvents() {
       },
     )
 
+    // 9. Group joins (this or another device): toast + open the group. The
+    //    backend payload is untrusted, so handleGroupJoined sanitizes it.
+    const unsubGroupJoined = EventsOn("wa:group_joined", (data: GroupJoinedPayload) => {
+      handleGroupJoined(data)
+    })
+
     return () => {
       unsubReceipt()
       unsubChatPresence()
@@ -266,6 +326,7 @@ export function useWailsEvents() {
       unsubLabelChat()
       unsubOpenChat()
       unsubNotificationReply()
+      unsubGroupJoined()
     }
   }, [addNotification])
 }

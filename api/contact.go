@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -20,6 +21,70 @@ type Contact struct {
 	AvatarURL  string `json:"avatar_url"`
 }
 
+// isUserJIDServer reports whether a server can host a 1:1 user identity.
+// Restricting this keeps a malformed server string from ever reaching
+// hypermeow's usync switch, which rejects it with "unknown user server ...".
+func isUserJIDServer(server string) bool {
+	switch server {
+	case types.DefaultUserServer, types.LegacyUserServer, types.HiddenUserServer,
+		types.HostedServer, types.HostedLIDServer, types.BotServer:
+		return true
+	default:
+		return false
+	}
+}
+
+// normalizeUserJIDString is the single input boundary for user identifiers.
+// It accepts a full JID (including an LID JID) or a bare/formatted phone
+// number (any "+", spaces, dashes or parentheses) and returns a canonical
+// user JID with the phone digits in User and the server in Server.
+//
+// This matters because types.ParseJID treats a string with no "@" as the
+// *server*: ParseJID("+91 96770 02037") yields
+// JID{User: "", Server: "+91 96770 02037"}, which later fails inside
+// hypermeow with "unknown user server '+91 96770 02037'". Normalizing first
+// guarantees a formatted phone number never reaches ParseJID as a server.
+func normalizeUserJIDString(raw string) (types.JID, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return types.JID{}, fmt.Errorf("empty JID or phone number")
+	}
+
+	if strings.Contains(s, "@") {
+		jid, err := types.ParseJID(s)
+		if err != nil {
+			return types.JID{}, fmt.Errorf("invalid JID %q: %w", raw, err)
+		}
+		if jid.User == "" || jid.Server == "" {
+			return types.JID{}, fmt.Errorf("invalid JID %q: missing user or server", raw)
+		}
+		if !isUserJIDServer(jid.Server) {
+			return types.JID{}, fmt.Errorf("invalid JID %q: unknown user server %q", raw, jid.Server)
+		}
+		return jid.ToNonAD(), nil
+	}
+
+	// Bare phone number: retain digits only, then normalize to E164 so that
+	// display formatting can never leak into the JID user or server.
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	digits := b.String()
+	if digits == "" {
+		return types.JID{}, fmt.Errorf("invalid phone number %q: no digits", raw)
+	}
+	if len(digits) < 7 {
+		return types.JID{}, fmt.Errorf("invalid phone number %q: too short", raw)
+	}
+	if num, err := phonenumbers.Parse("+"+digits, ""); err == nil && phonenumbers.IsValidNumber(num) {
+		digits = strings.TrimPrefix(phonenumbers.Format(num, phonenumbers.E164), "+")
+	}
+	return types.NewJID(digits, types.DefaultUserServer), nil
+}
+
 func canonicalUserJID(ctx context.Context, client *whatsmeow.Client, jid types.JID) types.JID {
 	if jid.ActualAgent() == types.LIDDomain {
 		if pn, err := client.Store.LIDs.GetPNForLID(ctx, jid); err == nil {
@@ -30,26 +95,36 @@ func canonicalUserJID(ctx context.Context, client *whatsmeow.Client, jid types.J
 }
 
 func (a *Api) GetContact(jid types.JID) (*Contact, error) {
-	jid = canonicalUserJID(a.ctx, a.waClient, jid)
+	// A JID unmarshalled from a formatted phone string can arrive with the
+	// number in Server and an empty User (ParseJID's no-"@" behaviour).
+	// Re-normalize through the string boundary to repair that shape.
+	normalized, err := normalizeUserJIDString(jid.String())
+	if err != nil {
+		return nil, err
+	}
+	jid = canonicalUserJID(a.ctx, a.waClient, normalized)
+
 	contact, err := a.waClient.Store.Contacts.GetContact(a.ctx, jid)
 	if err != nil {
 		return nil, err
 	}
-	rawNum := "+" + jid.User
-	// Parse phone number to use as International Format
-	num, err := phonenumbers.Parse(rawNum, "")
-	if err != nil {
-		return nil, fmt.Errorf("invalid phone number")
+
+	// Best-effort international formatting; a JID user may be an unresolved
+	// LID rather than a phone number, which is not a reason to fail the call.
+	formattedPhone := "+" + jid.User
+	if num, err := phonenumbers.Parse(formattedPhone, ""); err == nil {
+		formattedPhone = phonenumbers.Format(num, phonenumbers.INTERNATIONAL)
 	}
 
-	// If this is an empty stub that survived pruning, return nil so the
-	// caller falls through to push_name or phone-number display.
+	// An empty stub is a normal, expected result (e.g. an unknown sender).
+	// Return a minimal contact so callers fall back to push name / phone
+	// naturally instead of surfacing a binding error.
 	if contact.FirstName == "" && contact.FullName == "" && contact.PushName == "" && contact.BusinessName == "" {
-		return nil, fmt.Errorf("contact is empty stub")
+		return &Contact{Phno: formattedPhone, JID: jid.String()}, nil
 	}
 
 	return &Contact{
-		Phno:       phonenumbers.Format(num, phonenumbers.INTERNATIONAL),
+		Phno:       formattedPhone,
 		JID:        jid.String(),
 		FullName:   contact.FullName,
 		Short:      contact.FirstName,
@@ -115,18 +190,35 @@ func (a *Api) GetBusinessProfile(jidStr string) (map[string]any, error) {
 	if a.waClient.Store.ID == nil {
 		return nil, fmt.Errorf("not logged in")
 	}
-	jid, err := types.ParseJID(jidStr)
+	jid, err := normalizeUserJIDString(jidStr)
 	if err != nil {
-		return nil, err
+		// Missing/placeholder JID: nothing to look up. The UI treats an empty
+		// map as "no business profile", so this is a benign result.
+		return map[string]any{}, nil
 	}
-	profile, err := a.waClient.GetBusinessProfile(a.ctx, jid)
-	if err != nil {
-		return nil, err
-	}
-	result := map[string]any{
-		"jid": jidStr,
-	}
-	if profile != nil {
+	key := jid.String()
+
+	return businessProfileCache.getOrLoad(key, businessProfileCacheTTL, func() (map[string]any, error) {
+		profile, err := a.waClient.GetBusinessProfile(a.ctx, jid)
+		if err != nil {
+			if isRateLimitErr(err) {
+				logRateLimited("GetBusinessProfile")
+				// Brief no-data result prevents a burst of retries from
+				// provoking the same 429 again.
+				return map[string]any{}, nil
+			}
+			var missing *whatsmeow.ElementMissingError
+			if errors.As(err, &missing) || strings.Contains(err.Error(), "missing jid in business profile") {
+				// Not a business account, or the server omitted the jid
+				// attribute: expected for regular contacts, not a failure.
+				return map[string]any{}, nil
+			}
+			return nil, err
+		}
+		if profile == nil {
+			return map[string]any{}, nil
+		}
+		result := map[string]any{"jid": key}
 		if profile.Address != "" {
 			result["address"] = profile.Address
 		}
@@ -140,6 +232,6 @@ func (a *Api) GetBusinessProfile(jidStr string) (map[string]any, error) {
 			}
 			result["categories"] = cats
 		}
-	}
-	return result, nil
+		return result, nil
+	})
 }

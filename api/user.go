@@ -27,9 +27,9 @@ func (a *Api) GetProfile(jidStr string) (Contact, error) {
 		targetJID = *a.waClient.Store.ID
 	} else {
 		var err error
-		targetJID, err = types.ParseJID(jidStr)
+		targetJID, err = normalizeUserJIDString(jidStr)
 		if err != nil {
-			return Contact{}, fmt.Errorf("invalid JID: %w", err)
+			return Contact{}, fmt.Errorf("invalid user identifier: %w", err)
 		}
 	}
 

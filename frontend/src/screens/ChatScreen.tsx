@@ -1306,6 +1306,46 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     if (view !== "status") setView("status")
   }, [view, selectedChatId, selectChat])
 
+  // A group joined on another device is opened here rather than only in the
+  // event handler: ChatScreen owns the sidebar view, and switching views runs
+  // the reset effect above, which would otherwise clear the selection. The
+  // store intent carries a monotonic id, so even a second join to the chat
+  // that is already selected is handled. When the group list has not refreshed
+  // yet, a minimal ChatItem keeps the conversation open with its name.
+  const pendingGroupJoin = useUIStore(state => state.pendingGroupJoin)
+  const clearPendingGroupJoin = useUIStore(state => state.clearPendingGroupJoin)
+
+  useEffect(() => {
+    if (!pendingGroupJoin) return
+    const jid = pendingGroupJoin.chatJid
+    if (!jid) {
+      clearPendingGroupJoin()
+      return
+    }
+    if (view !== "chats") {
+      // Leave Status / Communities / Channels. Wait for the next render on
+      // the chats view to select, because the [view] effect resets selection.
+      setShowSearch(false)
+      setStoryGroup(null)
+      setSelectedCommunity(null)
+      setCommunityReturn(null)
+      setView("chats")
+      return
+    }
+    const chatStore = useChatStore.getState()
+    const existing = chatStore.getChat(jid)
+    const chat: ChatItem = existing ?? {
+      id: jid,
+      name: pendingGroupJoin.name || "Group",
+      subtitle: "",
+      type: jid.endsWith("@g.us") ? "group" : "contact",
+      avatar: pendingGroupJoin.avatar,
+    }
+    chatStore.selectChat(chat)
+    chatStore.clearUnreadCount(jid)
+    clearPendingGroupJoin()
+  }, [pendingGroupJoin, view, clearPendingGroupJoin])
+
   useEffect(() => {
     mountedRef.current = true
 

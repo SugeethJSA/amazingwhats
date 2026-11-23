@@ -20,14 +20,20 @@ export const useContactStore = create<ContactStore>()(
     contacts: {},
 
     getContactName: async jidAny => {
-      const userId = await GetJIDUser(jidAny)
-
-      const cached = get().contacts[userId]
-      if (cached) return cached.name
-
+      // Empty/placeholder identifiers are common while the contact store is
+      // repopulating after a resync. Skip the binding call entirely instead
+      // of producing a raw "Binding call failed" error.
+      if (!jidAny) return ""
+      let userId = ""
       try {
+        userId = await GetJIDUser(jidAny)
+        if (!userId) return ""
+
+        const cached = get().contacts[userId]
+        if (cached) return cached.name
+
         const contact = await GetContact(jidAny)
-        const displayName = contact.full_name || contact.push_name || userId
+        const displayName = contact?.full_name || contact?.push_name || userId
         const senderColor = await GetProfileColor(jidAny)
 
         set(state => {
@@ -44,15 +50,18 @@ export const useContactStore = create<ContactStore>()(
     },
 
     getContactColor: async jidAny => {
-      const userId = await GetJIDUser(jidAny)
-
-      const cached = get().contacts[userId]
-      if (cached) return cached.senderColor
-
+      if (!jidAny) return "#2b7fff"
+      let userId = ""
       try {
+        userId = await GetJIDUser(jidAny)
+        if (!userId) return "#2b7fff"
+
+        const cached = get().contacts[userId]
+        if (cached) return cached.senderColor
+
         const senderColor = await GetProfileColor(jidAny)
         const contact = await GetContact(jidAny)
-        const displayName = contact.full_name || contact.push_name || userId
+        const displayName = contact?.full_name || contact?.push_name || userId
 
         set(state => {
           state.contacts[userId] = {
@@ -71,13 +80,14 @@ export const useContactStore = create<ContactStore>()(
     // renders while scrolling a group chat don't fire a GetContact/GetJIDUser
     // RPC per message. One fetch per sender, then synchronous cache hits.
     getSenderInfo: async (jid: string) => {
+      if (!jid || !jid.trim()) return { name: "", color: "#2b7fff" }
       const cached = get().contacts[jid]
       if (cached) return { name: cached.name, color: cached.senderColor }
       try {
         const contact = await GetContact(jid as unknown as types.JID)
-        const name = contact.full_name
+        const name = contact?.full_name
           ? contact.full_name
-          : contact.push_name
+          : contact?.push_name
             ? "~ " + contact.push_name
             : ""
         const color = await GetProfileColor(jid)

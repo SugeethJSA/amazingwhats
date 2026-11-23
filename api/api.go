@@ -1123,6 +1123,22 @@ func (a *Api) mainEventHandler(evt any) {
 
 	case *events.JoinedGroup:
 		slog.Info(fmt.Sprintf("Joined group %s (%s)", v.GroupInfo.Name, v.JID), "source", "groups")
+		// Surface the join to the UI so it can show a toast and open the new
+		// group. The frontend treats every field as untrusted; keep the payload
+		// to plain strings it can sanitize (the invite notify string is a
+		// fallback for groups whose name was not present in the event).
+		groupName := v.GroupInfo.Name
+		if groupName == "" {
+			groupName = v.Notify
+		}
+		joinedPayload := map[string]any{
+			"jid":  v.JID.String(),
+			"name": groupName,
+		}
+		if !v.GroupInfo.TopicDeleted && v.GroupInfo.Topic != "" {
+			joinedPayload["topic"] = v.GroupInfo.Topic
+		}
+		a.app.Event.Emit("wa:group_joined", joinedPayload)
 		a.app.Event.Emit("wa:chat_list_refresh")
 
 	case *events.LabelEdit:

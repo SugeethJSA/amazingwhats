@@ -82,6 +82,14 @@ const cleanName = (value: string) => value.replace(/^~\s*/, "").trim()
 
 const digitsOnly = (value: string) => value.replace(/[^\d+]/g, "")
 
+/** Skip binding calls for empty/placeholder identifiers during resync. */
+const hasUsableJid = (value: string | null | undefined): value is string =>
+  !!value && value.trim().length > 0 && value.trim() !== "@s.whatsapp.net"
+
+/** Never surface raw backend throttling text to the user. */
+const isRateLimitError = (error: unknown): boolean =>
+  !!error && /rate-overlimit|status 429/i.test(error instanceof Error ? error.message : String(error))
+
 /**
  * Owns the target and every real contact action behind the popup. Callbacks are
  * referentially stable because MessageItem is memoized and the sheet is mounted
@@ -126,6 +134,9 @@ export function useContactActions(): UseContactActionsResult {
 
   const reportError = useCallback(
     (message: string, error?: unknown) => {
+      // 429s are already served as benign cached/empty results by the backend.
+      // If one still reaches here, stay silent rather than toast raw text.
+      if (isRateLimitError(error)) return
       if (error !== undefined) console.error(message, error)
       addNotification(message, { tone: "error", durationMs: 6000 })
     },
@@ -165,27 +176,30 @@ export function useContactActions(): UseContactActionsResult {
 
         // A group message sender can be an LID. Resolve the PN-canonical JID
         // once so every contact action addresses the same identity.
-        try {
-          const contact = await GetContact(next.jid as unknown as types.JID)
-          if (seq !== openSeqRef.current) return
-          if (contact?.jid) {
-            jid = contact.jid
-            resolvedJidRef.current = jid
-          }
-          if (contact) {
-            if (!phone) phone = contact.phno || ""
-            if (!name || name === phoneFromJID(next.jid) || name.startsWith("~")) {
-              name =
-                contact.full_name || (contact.push_name ? `~ ${contact.push_name}` : name) || name
+        // Empty/placeholder JIDs are skipped: expected during resync.
+        if (hasUsableJid(next.jid)) {
+          try {
+            const contact = await GetContact(next.jid as unknown as types.JID)
+            if (seq !== openSeqRef.current) return
+            if (contact?.jid) {
+              jid = contact.jid
+              resolvedJidRef.current = jid
             }
-            patch = {
-              jid,
-              phone: phone || undefined,
-              displayName: cleanName(name) || next.displayName,
+            if (contact) {
+              if (!phone) phone = contact.phno || ""
+              if (!name || name === phoneFromJID(next.jid) || name.startsWith("~")) {
+                name =
+                  contact.full_name || (contact.push_name ? `~ ${contact.push_name}` : name) || name
+              }
+              patch = {
+                jid,
+                phone: phone || undefined,
+                displayName: cleanName(name) || next.displayName,
+              }
             }
+          } catch (error) {
+            if (!isRateLimitError(error)) console.error("Contact lookup failed:", error)
           }
-        } catch (error) {
-          console.error("Contact lookup failed:", error)
         }
 
         // Message-sender opens carry no admin metadata. Look it up from the
@@ -266,7 +280,9 @@ export function useContactActions(): UseContactActionsResult {
     if (!target) return
     await runAction("message", async () => {
       try {
-        const contact = await GetContact(target.jid as unknown as types.JID).catch(() => null)
+        const contact = hasUsableJid(target.jid)
+          ? await GetContact(target.jid as unknown as types.JID).catch(() => null)
+          : null
         const jid = contact?.jid || resolvedJidRef.current || target.jid
         const state = useChatStore.getState()
         const existing = state.getChat(jid)
@@ -298,7 +314,9 @@ export function useContactActions(): UseContactActionsResult {
     if (!target) return
     await runAction("voice", async () => {
       try {
-        const contact = await GetContact(target.jid as unknown as types.JID).catch(() => null)
+        const contact = hasUsableJid(target.jid)
+          ? await GetContact(target.jid as unknown as types.JID).catch(() => null)
+          : null
         const jid = contact?.jid || resolvedJidRef.current || target.jid
         await MakeCall(jid)
         closeContactActions()
@@ -317,9 +335,11 @@ export function useContactActions(): UseContactActionsResult {
       setProfileBusy(true)
       try {
         const query = digitsOnly(target.phone || phoneFromJID(jid)) || jid
+        // One batched lookup per profile open; the backend dedupes/caches
+        // repeated JIDs so a burst of opens cannot trigger a 429.
         const [contact, infos] = await Promise.all([
-          GetProfile(jid).catch(() => null),
-          GetUserInfo([query]).catch(() => []),
+          hasUsableJid(jid) ? GetProfile(jid).catch(() => null) : null,
+          hasUsableJid(query) ? GetUserInfo([query]).catch(() => []) : [],
         ])
         if (seq !== openSeqRef.current) return
         const info = infos?.[0]
@@ -343,7 +363,9 @@ export function useContactActions(): UseContactActionsResult {
     if (!target) return
     await runAction("copy", async () => {
       try {
-        const contact = await GetContact(target.jid as unknown as types.JID).catch(() => null)
+        const contact = hasUsableJid(target.jid)
+          ? await GetContact(target.jid as unknown as types.JID).catch(() => null)
+          : null
         const number = digitsOnly(
           contact?.phno || target.phone || phoneFromJID(resolvedJidRef.current || target.jid) || "",
         )

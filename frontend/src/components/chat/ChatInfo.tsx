@@ -333,11 +333,11 @@ export function ChatInfo({
       } else {
         const info = await GetProfile(chatId)
         setContactInfo(info)
-        try {
+        // The backend returns an empty map for missing/non-business/rate-limited
+        // profiles, so no per-call try/catch (and no raw binding error) is needed.
+        if (chatId) {
           const biz = await GetBusinessProfile(chatId)
           if (biz && Object.keys(biz).length > 0) setBusinessInfo(biz)
-        } catch {
-          /* not a business */
         }
       }
     } catch (err) {
@@ -674,13 +674,23 @@ export function ChatInfo({
                     </div>
                     <button
                       onClick={async () => {
+                        // Prefer the canonical JID; fall back to the phone.
+                        // Never issue a query for an empty/placeholder value.
+                        const query = (contactInfo.jid || contactInfo.phno || "").trim()
+                        if (!query) {
+                          setUserInfo(null)
+                          return
+                        }
                         setUserInfoBusy(true)
                         try {
-                          const results = await GetUserInfo([contactInfo.phno])
-                          const info = results?.[0]
-                          setUserInfo(info)
+                          const results = await GetUserInfo([query])
+                          setUserInfo(results?.[0] ?? null)
                         } catch (e) {
-                          console.error("GetUserInfo failed:", e)
+                          // 429s are throttled into benign results by the backend;
+                          // never log raw rate-limit text from an expected case.
+                          if (!/rate-overlimit|status 429/i.test(String(e))) {
+                            console.error("GetUserInfo failed:", e)
+                          }
                         } finally {
                           setUserInfoBusy(false)
                         }
@@ -702,10 +712,12 @@ export function ChatInfo({
                     <p className="text-gray-900 dark:text-gray-100">{contactInfo.phno}</p>
                     <button
                       onClick={async () => {
+                        const phone = (contactInfo.phno || "").trim()
+                        if (!phone) return
                         setCheckBusy(true)
                         setWaCheck(null)
                         try {
-                          const results = await IsOnWhatsApp([contactInfo.phno])
+                          const results = await IsOnWhatsApp([phone])
                           if (results && results.length > 0) {
                             setWaCheck({
                               onWhatsApp: results[0].is_on_whatsapp,
@@ -713,7 +725,9 @@ export function ChatInfo({
                             })
                           }
                         } catch (err) {
-                          console.error("IsOnWhatsApp check failed:", err)
+                          if (!/rate-overlimit|status 429/i.test(String(err))) {
+                            console.error("IsOnWhatsApp check failed:", err)
+                          }
                         } finally {
                           setCheckBusy(false)
                         }

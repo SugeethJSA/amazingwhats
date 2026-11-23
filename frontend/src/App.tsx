@@ -447,11 +447,20 @@ function App() {
         </div>
       )}
       <Lightbox />
+      {/* Global transient toast stack. Bottom-left keeps security/identity
+          warnings over the chat-list column, away from the chat header and the
+          composer (which live at the top and bottom of the conversation pane).
+          z-[45] sits above the persistent chrome (conn-status 40, chat-info
+          30/40) but below every modal (z-50 and up) and the call overlay
+          (z-[9999]). bottom-20 clears the connection pill and the single-pane
+          composer. This mounts outside the screen switch, so the stack also
+          works on Settings and login. slice(-3) is a defensive second cap on
+          top of the store's own trim. */}
       <div
-        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
+        className="fixed bottom-20 left-4 z-[45] flex flex-col gap-2"
         style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
-        {notifications.map(notification => (
+        {notifications.slice(-3).map(notification => (
           <NotificationToast
             key={notification.id}
             notification={notification}
