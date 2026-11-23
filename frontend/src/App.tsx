@@ -107,6 +107,27 @@ function NotificationToast({
   )
 }
 
+type ConnectionTone = "online" | "connecting" | "offline"
+
+interface ConnectionView {
+  label: string
+  tone: ConnectionTone
+}
+
+/** Maps raw backend status strings to a short, stable, human-readable cue. */
+function connectionView(status: string): ConnectionView {
+  if (status === "logged_in" || status === "success") {
+    return { label: "Connected", tone: "online" }
+  }
+  if (status === "reconnecting") {
+    return { label: "Reconnecting…", tone: "connecting" }
+  }
+  if (status === "disconnected" || status.startsWith("error")) {
+    return { label: "Disconnected", tone: "offline" }
+  }
+  return { label: "Connecting…", tone: "connecting" }
+}
+
 function App() {
   const screen = useUIStore(state => state.screen)
   const setScreen = useUIStore(state => state.setScreen)
@@ -114,6 +135,7 @@ function App() {
   const loginStartedRef = useRef(false)
   const [status, setStatus] = useState<string>("waiting")
   const [historyProgress, setHistoryProgress] = useState<number | null>(null)
+  const connection = connectionView(status)
 
   const theme = useAppSettingsStore(state => state.theme)
   const loaded = useAppSettingsStore(state => state.loaded)
@@ -273,6 +295,32 @@ function App() {
       })
     })
 
+    // Background/startup update discovery. The EventsOn shim passes
+    // `event.data` straight to the callback, so the payload object arrives here
+    // directly. The callback stays synchronous (addNotification is sync), so no
+    // floating promise can reject inside the event handler.
+    const unsubUpdateAvailable = EventsOn(
+      "wa:update_available",
+      (data: { version?: string }) => {
+        const version = typeof data?.version === "string" ? data.version.trim() : ""
+        addNotification(
+          version
+            ? `Update v${version} is available — open Settings → Advanced to install.`
+            : "An update is available — open Settings → Advanced to install.",
+          { tone: "info", durationMs: 10000 },
+        )
+      },
+    )
+
+    // Update failures arrive as a short, user-safe static string from the
+    // backend; display it as-is, with a fallback for a malformed payload.
+    const unsubUpdateError = EventsOn("wa:update_error", (msg: string) => {
+      addNotification(
+        typeof msg === "string" && msg.trim() ? msg : "Could not check for updates.",
+        { tone: "error", durationMs: 6000 },
+      )
+    })
+
     // Register all status listeners before starting login. Existing sessions
     // can complete quickly enough to otherwise lose the "logged_in" event.
     if (!loginStartedRef.current) {
@@ -319,6 +367,8 @@ function App() {
       unsubDownload()
       unsubError()
       unsubIdentity()
+      unsubUpdateAvailable()
+      unsubUpdateError()
       unsubHistory()
     }
   }, [addNotification, removeNotification])
@@ -359,6 +409,20 @@ function App() {
           />
         ))}
       </div>
+
+      {/* Persistent, unobtrusive connection state for long-running sessions.
+          Toasts are the transient layer; this pill is always truthful. */}
+      {screen !== "login" && (
+        <div
+          className={`conn-status conn-status--${connection.tone}`}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span className="conn-status-dot" aria-hidden="true" />
+          <span>{connection.label}</span>
+        </div>
+      )}
 
       <main id="main-content" tabIndex={-1} className="relative">
         {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}

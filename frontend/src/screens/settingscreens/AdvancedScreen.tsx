@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   GetCustomCSS,
   SetCustomCSS,
@@ -7,6 +7,7 @@ import {
   Reinitialize,
   SetProxy,
   FetchStickerPack,
+  CheckForUpdates,
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 import ComponentColorSelector from "../../components/settings/ComponentColorSelector"
@@ -26,6 +27,7 @@ function CodeEditorCard({
   onSave,
   placeholder,
   saved,
+  dirty,
 }: {
   title: string
   description: string
@@ -34,6 +36,7 @@ function CodeEditorCard({
   onSave: () => void
   placeholder: string
   saved: boolean
+  dirty: boolean
 }) {
   return (
     <SettingsCard>
@@ -47,10 +50,15 @@ function CodeEditorCard({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           spellCheck={false}
-          className="h-40 w-full resize-y rounded-xl border border-black/[0.08] bg-light-secondary p-3 font-mono text-[13px] leading-relaxed text-light-text outline-none transition-all placeholder:text-light-muted focus:border-[#21c063] focus:ring-2 focus:ring-[#21c063]/20 dark:border-white/[0.1] dark:bg-dark-tertiary dark:text-dark-text dark:placeholder:text-dark-muted"
+          className="h-40 w-full resize-y rounded-xl border border-black/[0.08] bg-light-secondary p-3 font-mono text-[13px] leading-relaxed text-light-text outline-none transition-all placeholder:text-light-muted focus:border-[#21c063] focus:ring-2 focus:ring-[var(--color-focus-ring)] dark:border-white/[0.1] dark:bg-dark-tertiary dark:text-dark-text dark:placeholder:text-dark-muted"
         />
         <div className="flex items-center gap-3">
           <ActionButton onClick={onSave}>Save {title}</ActionButton>
+          {dirty && (
+            <span className="text-[12px] font-medium text-light-muted dark:text-dark-muted">
+              Unsaved changes
+            </span>
+          )}
           {saved && <StatusBanner tone="success">Applied and saved</StatusBanner>}
         </div>
       </div>
@@ -79,8 +87,12 @@ function SectionCard({
 }
 
 const AdvancedScreen = () => {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [customCSS, setCustomCSS] = useState("")
+  const [cssBaseline, setCssBaseline] = useState("")
   const [customJS, setCustomJS] = useState("")
+  const [jsBaseline, setJsBaseline] = useState("")
+  const [codeError, setCodeError] = useState<string | null>(null)
   const [proxyURL, setProxyURL] = useState("")
   const [proxyBusy, setProxyBusy] = useState(false)
   const [proxyResult, setProxyResult] = useState<string | null>(null)
@@ -90,11 +102,71 @@ const AdvancedScreen = () => {
   const [cssSaved, setCssSaved] = useState(false)
   const [jsSaved, setJsSaved] = useState(false)
   const [reloadMsg, setReloadMsg] = useState<string | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+
+  const cssDirty = customCSS !== cssBaseline
+  const jsDirty = customJS !== jsBaseline
+  const hasUnsavedCode = cssDirty || jsDirty
 
   useEffect(() => {
-    GetCustomCSS().then(setCustomCSS)
-    GetCustomJS().then(setCustomJS)
+    let cancelled = false
+    Promise.all([GetCustomCSS(), GetCustomJS()])
+      .then(([css, js]) => {
+        if (cancelled) return
+        setCustomCSS(css)
+        setCssBaseline(css)
+        setCustomJS(js)
+        setJsBaseline(js)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCodeError("Could not load your saved customizations. You can still edit and save below.")
+        }
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
+
+  useEffect(() => {
+    if (!codeError) return
+    const t = setTimeout(() => setCodeError(null), 5000)
+    return () => clearTimeout(t)
+  }, [codeError])
+
+  // beforeunload covers closing/reloading the window. Category changes and
+  // "Back to chats" are owned by the parent screen, so this capture-phase
+  // guard keeps unsaved editor text from being discarded silently.
+  useEffect(() => {
+    if (!hasUnsavedCode) return
+
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+
+    const onClickCapture = (e: MouseEvent) => {
+      if (!(e.target instanceof Element)) return
+      const button = e.target.closest("button")
+      // Save/Reload and other controls inside this screen handle their own flow.
+      if (!button || rootRef.current?.contains(button)) return
+      // Clearing the settings search does not navigate away.
+      if (button.getAttribute("aria-label") === "Clear search") return
+      if (
+        !window.confirm("You have unsaved changes in Custom CSS or Custom JS. Leave without saving?")
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+    document.addEventListener("click", onClickCapture, true)
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload)
+      document.removeEventListener("click", onClickCapture, true)
+    }
+  }, [hasUnsavedCode])
 
   useEffect(() => {
     if (!cssSaved) return
@@ -114,6 +186,12 @@ const AdvancedScreen = () => {
     return () => clearTimeout(t)
   }, [reloadMsg])
 
+  useEffect(() => {
+    if (!updateError) return
+    const t = setTimeout(() => setUpdateError(null), 5000)
+    return () => clearTimeout(t)
+  }, [updateError])
+
   const applyCustomCode = (code: string, id: string, tag: "style" | "script") => {
     const oldElement = document.getElementById(id)
     if (oldElement) oldElement.remove()
@@ -127,33 +205,76 @@ const AdvancedScreen = () => {
   }
 
   const handleSaveCSS = async () => {
-    await SetCustomCSS(customCSS)
-    applyCustomCode(customCSS, "custom-css", "style")
-    setCssSaved(true)
+    setCodeError(null)
+    try {
+      await SetCustomCSS(customCSS)
+      applyCustomCode(customCSS, "custom-css", "style")
+      setCssBaseline(customCSS)
+      setCssSaved(true)
+    } catch {
+      setCodeError("Could not save custom CSS. Your changes are still in the editor — please try again.")
+    }
   }
 
   const handleSaveJS = async () => {
-    await SetCustomJS(customJS)
-    applyCustomCode(customJS, "custom-js", "script")
-    setJsSaved(true)
+    setCodeError(null)
+    try {
+      await SetCustomJS(customJS)
+      applyCustomCode(customJS, "custom-js", "script")
+      setJsBaseline(customJS)
+      setJsSaved(true)
+    } catch {
+      setCodeError("Could not save custom JS. Your changes are still in the editor — please try again.")
+    }
   }
 
   const handleReloadCustom = async () => {
-    const [css, js] = await Promise.all([GetCustomCSS(), GetCustomJS()])
-    setCustomCSS(css)
-    setCustomJS(js)
-    applyCustomCode(css, "custom-css", "style")
-    applyCustomCode(js, "custom-js", "script")
-    setReloadMsg("Custom CSS and JS reloaded from disk")
+    if (
+      hasUnsavedCode &&
+      !window.confirm("Reloading will discard your unsaved CSS and JS edits. Continue?")
+    ) {
+      return
+    }
+    setCodeError(null)
+    try {
+      const [css, js] = await Promise.all([GetCustomCSS(), GetCustomJS()])
+      setCustomCSS(css)
+      setCssBaseline(css)
+      setCustomJS(js)
+      setJsBaseline(js)
+      applyCustomCode(css, "custom-css", "style")
+      applyCustomCode(js, "custom-js", "script")
+      setReloadMsg("Custom CSS and JS reloaded from disk")
+    } catch {
+      setCodeError("Could not reload customizations from disk. Your editor contents were left unchanged.")
+    }
   }
 
   const handleReinitialize = async () => {
-    await Reinitialize()
-    setReloadMsg("Connection re-initialized")
+    setCodeError(null)
+    try {
+      await Reinitialize()
+      setReloadMsg("Connection re-initialized")
+    } catch {
+      setCodeError("Could not re-initialize the connection. Your session is unchanged — please try again.")
+    }
+  }
+
+  const handleCheckForUpdates = () => {
+    setUpdateError(null)
+    // The binding starts the interactive update flow in the background and
+    // returns immediately; availability and failures are reported by the
+    // wa:update_available / wa:update_error toasts. Only a rejected binding
+    // call is handled here, with a fixed user-safe message.
+    CheckForUpdates().catch(() => {
+      setUpdateError("Could not start the update check. Please try again.")
+    })
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div ref={rootRef} className="flex flex-col gap-5">
+      {codeError && <StatusBanner tone="error">{codeError}</StatusBanner>}
+
       <ComponentColorSelector />
       <EaseVisualizer />
 
@@ -165,7 +286,16 @@ const AdvancedScreen = () => {
         onSave={handleSaveCSS}
         placeholder="/* Enter custom CSS here */"
         saved={cssSaved}
+        dirty={cssDirty}
       />
+
+      <p className="px-1 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
+        <span className="font-semibold text-light-text dark:text-dark-text">
+          Custom JS runs only in Whats4Linux, on this device.
+        </span>{" "}
+        It can change how the interface looks and behaves, but it is an unsupported experiment: a
+        bad script can break the UI until you remove it. Only paste code you understand and trust.
+      </p>
 
       <CodeEditorCard
         title="Custom JS"
@@ -175,6 +305,7 @@ const AdvancedScreen = () => {
         onSave={handleSaveJS}
         placeholder="// Enter custom JS here"
         saved={jsSaved}
+        dirty={jsDirty}
       />
 
       <SectionCard
@@ -186,6 +317,18 @@ const AdvancedScreen = () => {
             Reload CSS & JS
           </ActionButton>
           {reloadMsg && <StatusBanner tone="info">{reloadMsg}</StatusBanner>}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Updates"
+        description="Check for a newer version. If one is found, the updater window will guide you through installing it."
+      >
+        <div className="flex flex-col gap-2">
+          <ActionButton variant="neutral" onClick={handleCheckForUpdates}>
+            Check for updates
+          </ActionButton>
+          {updateError && <StatusBanner tone="error">{updateError}</StatusBanner>}
         </div>
       </SectionCard>
 
