@@ -468,7 +468,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       } catch (err) {
         if (captureTokenRef.current === token) console.error("[VoIP] camera read loop:", err)
       } finally {
-        if (captureTokenRef.current === token && mode === "screen" && activeCallIDRef.current === callID) {
+        if (
+          captureTokenRef.current === token &&
+          mode === "screen" &&
+          activeCallIDRef.current === callID
+        ) {
           handleScreenEnded(callID)
         }
       }
@@ -757,7 +761,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
           const decoder = new w.VideoDecoder({
             output: (frame: any) => {
               if (!frame) return
-              drawFrame(participantCanvasesRef.current.get(key) ?? null, frame, entry?.orientation ?? 0)
+              drawFrame(
+                participantCanvasesRef.current.get(key) ?? null,
+                frame,
+                entry?.orientation ?? 0,
+              )
               try {
                 frame.close?.()
               } catch {}
@@ -1093,12 +1101,18 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
   return (
     <div
-      className={standalone
-        ? "fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300"
-        : "fixed z-[9999] animate-in fade-in duration-300"}
-      style={standalone
-        ? undefined
-        : position ? { left: position.x, top: position.y } : { right: "1.5rem", bottom: "1.5rem" }}
+      className={
+        standalone
+          ? "fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          : "fixed z-[9999] animate-in fade-in duration-300"
+      }
+      style={
+        standalone
+          ? undefined
+          : position
+            ? { left: position.x, top: position.y }
+            : { right: "1.5rem", bottom: "1.5rem" }
+      }
     >
       <div
         role="dialog"
@@ -1168,7 +1182,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
               title="Peer microphone is off"
               aria-label="Peer microphone off"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
               </svg>
               Microphone off
@@ -1190,7 +1210,10 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
         {/* Remote video + participant tiles (D-ID CALL-002b) */}
         {!videoSupported && (
-          <p className="mb-3 text-center text-[10px] text-gray-500" title="Video requires WebCodecs">
+          <p
+            className="mb-3 text-center text-[10px] text-gray-500"
+            title="Video requires WebCodecs"
+          >
             Video requires WebCodecs
           </p>
         )}
@@ -1268,11 +1291,23 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
               title={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
             >
               {activeCall.muted ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
                 </svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
                 </svg>
               )}

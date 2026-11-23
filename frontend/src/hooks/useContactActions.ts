@@ -88,7 +88,8 @@ const hasUsableJid = (value: string | null | undefined): value is string =>
 
 /** Never surface raw backend throttling text to the user. */
 const isRateLimitError = (error: unknown): boolean =>
-  !!error && /rate-overlimit|status 429/i.test(error instanceof Error ? error.message : String(error))
+  !!error &&
+  /rate-overlimit|status 429/i.test(error instanceof Error ? error.message : String(error))
 
 /**
  * Owns the target and every real contact action behind the popup. Callbacks are
