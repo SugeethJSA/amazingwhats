@@ -1,9 +1,121 @@
 import { useEffect } from "react"
 import { EventsOn } from "../lib/wailsRuntime"
+import { htmlToPlainText, phoneFromJID, sanitizeHtml } from "../lib/utils"
+import type { ChatItem } from "../store/types"
 import { useMessageStore } from "../store/useMessageStore"
 import { useUIStore } from "../store/useUIStore"
 import { useChatStore } from "../store/useChatStore"
 import { useMuteStore } from "../store/useMuteStore"
+
+interface NotificationChatPayload {
+  chatJid?: string
+  name?: string
+  avatar?: string
+}
+
+interface NotificationReplyPayload extends NotificationChatPayload {
+  messageId?: string
+  senderJid?: string
+  text?: string
+}
+
+/** Strip markup and control characters from an untrusted display name. */
+function safeDisplayName(value: unknown): string {
+  if (typeof value !== "string") return ""
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80)
+}
+
+/**
+ * Backend avatars are data:image URLs or https profile-photo URLs. Anything
+ * else (a raw filesystem path or a JID) is dropped so it can never reach an
+ * <img src>; the chat row falls back to its generated avatar colour.
+ */
+function safeAvatarUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  const url = value.trim()
+  if (/^data:image\/(?:png|jpe?g|gif|webp|bmp);base64,[A-Za-z0-9+/=]+$/i.test(url)) return url
+  if (/^https?:\/\/[^\s"'<>]+$/i.test(url)) return url
+  return undefined
+}
+
+/** JIDs are store keys / RPC arguments, never display text. Reject paths and whitespace. */
+function safeJid(value: unknown): string {
+  if (typeof value !== "string") return ""
+  const jid = value.trim()
+  return jid.length <= 256 && /^[A-Za-z0-9._@-]+@[A-Za-z0-9.-]+$/.test(jid) ? jid : ""
+}
+
+/** Message ids are quoted only by id; keep them to a simple, bounded shape. */
+function safeId(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  const id = value.trim()
+  return /^[A-Za-z0-9._:-]{1,128}$/.test(id) ? id : undefined
+}
+
+/** Sanitize untrusted notification text, then flatten it for a textarea. */
+function notificationText(value: unknown): string {
+  if (typeof value !== "string") return ""
+  const clean = sanitizeHtml(value)
+  if (typeof document === "undefined") return clean.slice(0, 4000)
+  return htmlToPlainText(clean).slice(0, 4000)
+}
+
+/**
+ * Shared handler for both `wa:open_chat` and `wa:notification_reply`.
+ * `reply` is supplied only by the latter; state is always read via getState()
+ * because these listeners are registered once and must not see stale closures.
+ */
+function handleNotificationChatOpen(
+  payload: NotificationChatPayload | null | undefined,
+  reply?: NotificationReplyPayload | null,
+) {
+  if (!payload || typeof payload !== "object") return
+
+  const ui = useUIStore.getState()
+  // Pairing/login has no chat session to open into. Drop the action by design
+  // rather than queueing it across a login the user may abandon.
+  if (ui.screen === "login") return
+
+  const chatStore = useChatStore.getState()
+  const rawJid = typeof payload.chatJid === "string" ? payload.chatJid.trim() : ""
+  // An already-loaded chat is trusted by definition; an unknown id must look
+  // like a JID (no path separators, no whitespace, bounded length).
+  const chatJid = chatStore.getChat(rawJid) ? rawJid : safeJid(rawJid)
+  if (!chatJid) return
+
+  if (ui.screen === "settings") ui.setScreen("chats")
+
+  const existing = chatStore.getChat(chatJid)
+  const chat: ChatItem = existing ?? {
+    id: chatJid,
+    name:
+      safeDisplayName(payload.name) || phoneFromJID(chatJid) || chatJid.split("@")[0] || "Chat",
+    subtitle: "",
+    type: chatJid.endsWith("@g.us") ? "group" : "contact",
+    avatar: safeAvatarUrl(payload.avatar),
+  }
+
+  chatStore.selectChat(chat)
+  chatStore.clearUnreadCount(chatJid)
+
+  if (!reply || typeof reply !== "object") return
+  // Store the intent for ChatDetail. It is keyed by selectedChatId, so its
+  // [chatId] effects do not rerun when the notification targets the chat that
+  // is already open — this field is the change it can observe.
+  ui.setPendingNotificationReply({
+    chatJid,
+    messageId: safeId(reply.messageId),
+    senderJid: safeJid(reply.senderJid) || undefined,
+    name: safeDisplayName(reply.name) || undefined,
+    avatar: safeAvatarUrl(reply.avatar),
+    text: notificationText(reply.text),
+  })
+}
 
 export function useWailsEvents() {
   const addNotification = useUIStore(s => s.addNotification)
@@ -129,6 +241,20 @@ export function useWailsEvents() {
       },
     )
 
+    // 8. Desktop notification actions (open chat / quick reply). The backend
+    //    emits these from the notification action callback with untrusted
+    //    strings, so handleNotificationChatOpen sanitizes every display value.
+    const unsubOpenChat = EventsOn("wa:open_chat", (data: NotificationChatPayload) => {
+      handleNotificationChatOpen(data)
+    })
+
+    const unsubNotificationReply = EventsOn(
+      "wa:notification_reply",
+      (data: NotificationReplyPayload) => {
+        handleNotificationChatOpen(data, data)
+      },
+    )
+
     return () => {
       unsubReceipt()
       unsubChatPresence()
@@ -139,6 +265,8 @@ export function useWailsEvents() {
       unsubNewsletterLeft()
       unsubNewsletterUpdate()
       unsubLabelChat()
+      unsubOpenChat()
+      unsubNotificationReply()
     }
   }, [addNotification])
 }

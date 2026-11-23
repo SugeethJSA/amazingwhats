@@ -3,8 +3,11 @@ module github.com/lugvitc/whats4linux
 go 1.27.3
 
 require (
+	git.sr.ht/~jackmordaunt/go-toast v1.1.2
+	github.com/esiqveland/notify v0.13.3
 	github.com/gen2brain/beeep v0.11.2
 	github.com/gen2brain/malgo v0.11.25
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.53
 	github.com/nyaruka/phonenumbers v1.8.0
@@ -21,15 +24,12 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
-	git.sr.ht/~jackmordaunt/go-toast v1.1.2 // indirect
 	github.com/beeper/argo-go v1.1.2 // indirect
 	github.com/coder/websocket v1.8.15 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/elliotchance/orderedmap/v3 v3.1.0 // indirect
-	github.com/esiqveland/notify v0.13.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/jackmordaunt/icns/v3 v3.0.1 // indirect

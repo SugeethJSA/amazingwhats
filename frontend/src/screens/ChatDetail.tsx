@@ -127,6 +127,8 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const screen = useUIStore(s => s.screen)
   const focusMessageId = useUIStore(s => s.focusMessageId)
   const setFocusMessageId = useUIStore(s => s.setFocusMessageId)
+  const pendingNotificationReply = useUIStore(s => s.pendingNotificationReply)
+  const clearPendingNotificationReply = useUIStore(s => s.clearPendingNotificationReply)
 
   const enterIsSend = useAppSettingsStore(s => s.enterIsSend)
   const currentChat = useChatById(chatId)
@@ -306,6 +308,59 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     const pending = takePendingReply()
     if (pending) setReplyingTo(pending)
   }, [chatId])
+
+  // Desktop notification "Reply" actions land in a store-held intent. This
+  // component is keyed by selectedChatId, so when the notification targets the
+  // chat that is already open none of the [chatId] effects above rerun — the
+  // intent is the change this instance observes. No message is sent here: the
+  // user reviews the prefilled composer and presses Send.
+  useEffect(() => {
+    const intent = pendingNotificationReply
+    if (!intent) return
+    // Leave an intent for a different chat untouched. selectChat() from the
+    // event handler mounts the destination ChatDetail, which consumes it.
+    if (intent.chatJid !== chatId) return
+    const { messageId, senderJid, name, text } = intent
+    clearPendingNotificationReply()
+
+    if (messageId) {
+      // Backend quote lookup is chat-scoped. For a group, senderJid is just a
+      // participant and the id still belongs to this chat. For a 1:1, a sender
+      // from a clearly different chat means the id came from elsewhere, so omit
+      // the quote instead of staging a reply we cannot resolve. A @lid sender
+      // is an alternate identity for the same person, so it does not signal a
+      // different source chat.
+      const senderSignalsDifferentChat =
+        !!senderJid &&
+        !chatId.endsWith("@g.us") &&
+        !senderJid.endsWith("@lid") &&
+        senderJid !== chatId &&
+        senderJid.split("@")[0] !== chatId.split("@")[0]
+      if (!senderSignalsDifferentChat) {
+        setReplyingTo({
+          type: 0,
+          reply_to_message_id: messageId,
+          edited: false,
+          forwarded: false,
+          reactions: [],
+          Info: {
+            ID: messageId,
+            Timestamp: "",
+            IsFromMe: false,
+            PushName: name || "",
+            Sender: senderJid || "",
+            Chat: chatId,
+          },
+          Content: {},
+        })
+      }
+    }
+
+    setInputText(text ?? "")
+    // A settings → chats switch keeps this instance mounted, so the [chatId]
+    // focus effect does not fire. Focus the composer explicitly.
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [pendingNotificationReply, chatId, clearPendingNotificationReply])
 
   // Global keyboard shortcuts that act on the open chat. Registered only while
   // the chats screen is visible (this component stays mounted underneath the

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html"
 	"log"
 	"log/slog"
 	"os"
@@ -15,10 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gen2brain/beeep"
-
 	"github.com/lugvitc/whats4linux/internal/cache"
 	"github.com/lugvitc/whats4linux/internal/misc"
+	"github.com/lugvitc/whats4linux/internal/notify"
 	"github.com/lugvitc/whats4linux/internal/settings"
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/lugvitc/whats4linux/internal/wa"
@@ -291,26 +291,146 @@ func (a *Api) emitError(msg string) {
 // show plain text rather than markup.
 var htmlTagRE = regexp.MustCompile(`<[^>]*>`)
 
+// registerNotifyHandlerOnce keeps exactly one notification callback installed
+// for the process. api.New is called once by the app, but Wails tests may build
+// more than one service; the first registration owns the callback.
+var registerNotifyHandlerOnce sync.Once
+
 // SetWindowFocused is called by the frontend on window focus/blur so the
 // backend only raises notifications while the window is in the background.
 func (a *Api) SetWindowFocused(focused bool) {
 	a.windowFocused.Store(focused)
 }
 
+// notificationSenderJID resolves a LID sender to its phone number before any
+// contact lookup so the name shown in a notification matches the chat list.
+func (a *Api) notificationSenderJID(v *events.Message) types.JID {
+	sender := v.Info.Sender
+	if sender.IsEmpty() || a.waClient == nil || a.waClient.Store == nil {
+		return sender
+	}
+	return canonicalUserJID(a.ctx, a.waClient, sender)
+}
+
+// notificationChatName returns the group name for groups and the contact name
+// for direct chats. PushName alone is wrong for groups: it is the sender's
+// display name, not the conversation title.
+func (a *Api) notificationChatName(chatJID types.JID, sender types.JID, pushName string) string {
+	if chatJID.Server == types.GroupServer && a.cw != nil {
+		if g, err := a.cw.FetchGroup(chatJID.String()); err == nil && g != nil && g.Name != "" {
+			return g.Name
+		}
+	}
+	if !sender.IsEmpty() {
+		if name := a.contactNameForJID(sender); name != "" {
+			return name
+		}
+	}
+	if !chatJID.IsEmpty() && a.waClient != nil && a.waClient.Store != nil {
+		if name := a.contactNameForJID(chatJID); name != "" {
+			return name
+		}
+	}
+	if pushName != "" {
+		return pushName
+	}
+	return "New message"
+}
+
 // notifyIncoming raises a desktop notification for an incoming message when the
 // window isn't focused.
 func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
-	title := v.Info.PushName
-	if title == "" {
-		title = "New message"
-	}
-	body := strings.TrimSpace(htmlTagRE.ReplaceAllString(parsedHTML, ""))
+	chatJID := v.Info.Chat
+	sender := a.notificationSenderJID(v)
+	title := a.notificationChatName(chatJID, sender, v.Info.PushName)
+
+	// Strip markup and decode entities: the notification body must contain
+	// display text only, never raw backend/protobuf text.
+	body := strings.TrimSpace(html.UnescapeString(htmlTagRE.ReplaceAllString(parsedHTML, "")))
 	if body == "" {
 		body = "Sent you a message"
 	}
-	if err := beeep.Notify(title, body, ""); err != nil {
+	if chatJID.Server == types.GroupServer {
+		if name := a.contactNameForJID(sender); name != "" && name != title {
+			body = name + ": " + body
+		}
+	}
+
+	opts := notify.Options{
+		ChatJID:   chatJID.String(),
+		MessageID: v.Info.ID,
+		SenderJID: sender.String(),
+		Title:     title,
+		Body:      body,
+		Actions:   true,
+	}
+	if a.imageCache != nil {
+		if avatar, _, err := a.imageCache.ReadAvatarByJID(chatJID.String()); err == nil {
+			opts.Avatar = avatar
+		}
+	}
+	if a.messageStore != nil {
+		opts.Image = a.messageStore.GetThumbnail(v.Info.ID)
+	}
+
+	if err := notify.Notify(opts); err != nil {
+		// Log only the error, never the notification payload.
 		log.Println("notify failed:", err)
 	}
+}
+
+// handleNotificationAction restores the window, then emits the exact events
+// the frontend listens for. Lookup work happens before InvokeAsync so no disk
+// or network I/O runs on the UI thread.
+func (a *Api) handleNotificationAction(action, chatJID, messageID, text string) {
+	if a.app == nil || chatJID == "" {
+		return
+	}
+
+	name := "New message"
+	avatar := ""
+	if parsed, err := types.ParseJID(chatJID); err == nil {
+		lookup := parsed
+		if a.waClient != nil && a.waClient.Store != nil {
+			lookup = canonicalUserJID(a.ctx, a.waClient, parsed)
+		}
+		name = a.notificationChatName(parsed, lookup, "")
+	}
+	if a.imageCache != nil {
+		avatar, _ = a.GetCachedAvatar(chatJID, false)
+	}
+
+	senderJID := chatJID
+	if action == notify.ActionReply && a.messageStore != nil {
+		if msg, err := a.messageStore.GetMessageWithMediaByID(messageID); err == nil && msg != nil && !msg.Info.Sender.IsEmpty() {
+			senderJID = msg.Info.Sender.String()
+		}
+	}
+
+	application.InvokeAsync(func() {
+		if a.window != nil {
+			a.window.UnMinimise()
+			a.window.Show()
+			a.window.Focus()
+		}
+		switch action {
+		case notify.ActionOpen:
+			a.app.Event.Emit("wa:open_chat", map[string]any{
+				"chatJid": chatJID,
+				"name":    name,
+				"avatar":  avatar,
+			})
+		case notify.ActionReply:
+			a.app.Event.Emit("wa:notification_reply", map[string]any{
+				"chatJid":   chatJID,
+				"messageId": messageID,
+				"senderJid": senderJID,
+				"name":      name,
+				"avatar":    avatar,
+				"text":      text,
+			})
+		}
+	})
 }
 
 // New creates a new Api service with the Wails application and its main
@@ -319,6 +439,9 @@ func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
 func New(app *application.App, window *application.WebviewWindow) *Api {
 	a := &Api{app: app, window: window}
 	a.startWorkerPool()
+	registerNotifyHandlerOnce.Do(func() {
+		notify.SetActionHandler(a.handleNotificationAction)
+	})
 	return a
 }
 
@@ -507,6 +630,9 @@ func (a *Api) ServiceShutdown() error {
 
 func (a *Api) closeResources() error {
 	var closeErr error
+	// The Linux notifier owns a D-Bus session connection and signal loop;
+	// release it before tearing the rest of the services down.
+	closeErr = errors.Join(closeErr, notify.Close())
 	a.cleanupMeowcaller()
 	if a.messageStore != nil {
 		closeErr = errors.Join(closeErr, a.messageStore.Close())

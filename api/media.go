@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gen2brain/beeep"
+	"github.com/lugvitc/whats4linux/internal/notify"
 	"github.com/lugvitc/whats4linux/internal/store"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
 	"go.mau.fi/whatsmeow"
@@ -619,7 +619,7 @@ func (a *Api) DownloadImageToFile(messageID string) error {
 	}
 
 	a.app.Event.Emit("download:complete", filePath)
-	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
+	_ = notify.Notify(notify.Options{Title: notify.AppName, Body: "Downloaded: " + filePath})
 	playBeep()
 	return nil
 }
@@ -708,7 +708,7 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 	}
 
 	a.app.Event.Emit("download:complete", filePath)
-	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
+	_ = notify.Notify(notify.Options{Title: notify.AppName, Body: "Downloaded: " + filePath})
 	playBeep()
 	return nil
 }

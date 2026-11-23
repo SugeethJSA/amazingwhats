@@ -37,6 +37,30 @@ export interface Notification {
   durationMs?: number
 }
 
+/**
+ * A notification action ("Open chat" / "Reply") waiting to be consumed by the
+ * ChatDetail that owns the target chat.
+ *
+ * This lives in the store rather than in ChatDetail state because ChatDetail is
+ * keyed by `selectedChatId`: when the notification targets the chat that is
+ * already open, none of its `[chatId]` effects rerun. A store-held intent gives
+ * the mounted instance a change it can react to.
+ *
+ * Every string here is untrusted payload data. Producers sanitize it before
+ * writing; consumers must only use it as display text or as a store/RPC key,
+ * never as raw JID/path output.
+ */
+export interface NotificationReplyIntent {
+  /** Monotonic id so two identical, consecutive actions are not collapsed. */
+  id: number
+  chatJid: string
+  messageId?: string
+  senderJid?: string
+  name?: string
+  avatar?: string
+  text?: string
+}
+
 interface UIStore {
   screen: AppScreen
   setScreen: (screen: AppScreen) => void
@@ -63,10 +87,16 @@ interface UIStore {
   /** Message the consumer should jump to once its chat is mounted. */
   focusMessageId: string | null
   setFocusMessageId: (id: string | null) => void
+  /** Single shared intent for a notification "Reply" action. */
+  pendingNotificationReply: NotificationReplyIntent | null
+  setPendingNotificationReply: (intent: Omit<NotificationReplyIntent, "id">) => void
+  clearPendingNotificationReply: () => void
 }
 
 // Monotonic IDs avoid collisions when several toasts are created in one tick.
 let nextNotificationId = Date.now()
+// Separate from toast ids: identical quick replies must still be distinct.
+let nextReplyIntentId = 1
 
 export const useUIStore = create<UIStore>(set => ({
   screen: "login",
@@ -85,6 +115,11 @@ export const useUIStore = create<UIStore>(set => ({
 
   focusMessageId: null,
   setFocusMessageId: id => set({ focusMessageId: id }),
+
+  pendingNotificationReply: null,
+  setPendingNotificationReply: intent =>
+    set({ pendingNotificationReply: { ...intent, id: nextReplyIntentId++ } }),
+  clearPendingNotificationReply: () => set({ pendingNotificationReply: null }),
 
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: open => set({ sidebarOpen: open }),
