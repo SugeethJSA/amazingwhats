@@ -48,6 +48,10 @@ func TestNewClient(t *testing.T) {
 	is.True(cli.AutoTrustIdentity)
 	is.True(cli.SendReportingTokens)
 	is.NotNil(cli.AutoReconnectHook)
+	require.NotNil(t, cli.SocketConfig, "socket config must be set before Connect")
+	is.Len(cli.SocketConfig.RaceURLs, 2, "both WhatsApp Web endpoints must be raced")
+	is.Contains(cli.SocketConfig.RaceURLs[0], "web.whatsapp.com/ws/chat")
+	is.Contains(cli.SocketConfig.RaceURLs[1], ":5222/ws/chat")
 }
 
 func TestNewClient_DeviceStoreError(t *testing.T) {

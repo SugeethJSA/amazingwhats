@@ -8,6 +8,7 @@ import (
 	"github.com/lugvitc/whats4linux/internal/settings"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/socket"
 	"github.com/polymorfa/hypermeow/store/sqlstore"
 	waLog "github.com/polymorfa/hypermeow/util/log"
 )
@@ -19,6 +20,13 @@ func NewClient(ctx context.Context, container *sqlstore.Container) (*whatsmeow.C
 	}
 	clientLog := waLog.Stdout("Client", settings.GetLogLevel(), true)
 	cli := whatsmeow.NewClient(deviceStore, clientLog)
+	// HyperMeow: race both WhatsApp Web websocket endpoints (443 and 5222),
+	// matching the official web client. Some networks throttle one of them for
+	// long-lived upgrades; the first successful connection wins and the loser
+	// is closed with code 1000. Must be set before Connect.
+	cli.SocketConfig = &whatsmeow.SocketConfig{
+		RaceURLs: append([]string(nil), socket.RaceURLs...),
+	}
 	cli.EmitAppStateEventsOnFullSync = true
 	// Reconnect automatically on transient failures (network blips, server
 	// restarts). This is the primary recovery path. The app-level reconnectLoop
