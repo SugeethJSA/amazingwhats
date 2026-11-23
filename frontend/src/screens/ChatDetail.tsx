@@ -584,16 +584,31 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     [chatId, loadMoreMessages],
   )
 
+  // Read receipts are only meaningful for persisted messages. An optimistic
+  // bubble carries a temp-<ts>-<rand> ID that is not (yet) a database row;
+  // sending it to MarkRead makes the backend resolve it and log a "no rows"
+  // pair on every call. Keep the local payload for pending messages until the
+  // wa:new_message reconciliation replaces the temp ID with the real one.
+  // Keying on the set of real IDs (not the chatMessages array identity) also
+  // stops a burst of receipt/presence updates from re-sending the same read
+  // receipts dozens of times in a couple of seconds.
+  const readReceiptIds = useMemo(() => {
+    const ids = chatMessages
+      .map((m: Message) => m?.Info?.ID)
+      .filter((id): id is string => !!id && !id.startsWith("temp-"))
+    return Array.from(new Set(ids))
+  }, [chatMessages])
+  const readReceiptKey = readReceiptIds.join("\u0000")
+
   useEffect(() => {
-    if (isAtBottom) {
-      const messageIds = chatMessages.map((m: any) => m?.Info?.ID).filter((id: any) => !!id)
-      if (messageIds.length > 0) {
-        MarkRead(chatId, messageIds, "read-msg").catch(err => {
-          console.error("Failed to mark messages as read:", err)
-        })
-      }
-    }
-  }, [isAtBottom, chatId, chatMessages])
+    if (!isAtBottom || readReceiptIds.length === 0) return
+    MarkRead(chatId, readReceiptIds, "read-msg").catch(err => {
+      console.error("Failed to mark messages as read:", err)
+    })
+    // readReceiptIds is rebuilt whenever chatMessages changes; the joined key
+    // is the real dependency so object-only updates don't re-issue receipts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAtBottom, chatId, readReceiptKey])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value

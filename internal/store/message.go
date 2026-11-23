@@ -1018,8 +1018,28 @@ func (ms *MessageStore) UpdateMessageContent(messageID string, content *waE2E.Me
 	return nil
 }
 
+// IsOptimisticMessageID reports whether id is a client-generated optimistic
+// ("pending") message ID. The frontend creates these locally (temp-<ts>-<rand>)
+// and they never exist in messages.db: the real WhatsApp ID replaces them once
+// the send is confirmed via the clientTempId on wa:new_message. A store lookup
+// with such an ID is therefore an expected miss, not an error condition to log.
+func IsOptimisticMessageID(id string) bool {
+	return strings.HasPrefix(id, "temp-")
+}
+
+// ErrOptimisticMessage is returned by message lookups given a client-side
+// optimistic ID. It is a typed, expected "not persisted yet" result: callers
+// should skip the ID silently, and the store never logs it as an error.
+var ErrOptimisticMessage = errors.New("optimistic message is not persisted")
+
 // GetMessageWithMedia returns a message with its raw protobuf content for media download
 func (ms *MessageStore) GetMessageWithMedia(chatJID string, messageID string) (*ExtendedMessage, error) {
+	// An optimistic ID has no row by design. Return a typed sentinel without a
+	// DB round-trip and without the INFO log below; real missing rows and real
+	// DB failures still return/log their underlying error unchanged.
+	if IsOptimisticMessageID(messageID) {
+		return nil, ErrOptimisticMessage
+	}
 	var (
 		sender    string
 		timestamp int64
@@ -1114,6 +1134,9 @@ func (ms *MessageStore) GetMessageWithMedia(chatJID string, messageID string) (*
 
 // GetMessageWithMediaByID returns a message with its raw protobuf content for media download
 func (ms *MessageStore) GetMessageWithMediaByID(messageID string) (*ExtendedMessage, error) {
+	if IsOptimisticMessageID(messageID) {
+		return nil, ErrOptimisticMessage
+	}
 	var (
 		chat      string
 		sender    string

@@ -87,6 +87,11 @@ func (a *Api) GetChatList() ([]ChatElement, error) {
 	cmList := a.messageStore.GetChatList()
 	pinnedChats := a.messageStore.GetPinnedChats()
 	archivedChats := a.messageStore.GetArchivedChats()
+	// One batch query for all locally cached group metadata instead of a
+	// point-query (a.cw.FetchGroup) per group. After a reconnect/app-state
+	// sync some rows may be temporarily absent; that is an expected cache
+	// miss, not an error worth logging per group on every poll.
+	groupMeta := a.loadGroupMetaIndex()
 	ce := make([]ChatElement, len(cmList))
 	for i, cm := range cmList {
 		var fc Contact
@@ -95,21 +100,30 @@ func (a *Api) GetChatList() ([]ChatElement, error) {
 
 		if cm.JID.Server == types.GroupServer {
 			// Local-only on purpose: this runs at startup before the client
-			// has connected, so it must never touch the network. Empty names
-			// are healed asynchronously by repairGroupNames after Connected.
+			// has connected, so it must never touch the network. The name is
+			// the locally stored group subject from groupMeta; empty/missing
+			// names are healed asynchronously by repairGroupNames after
+			// Connected, never on this hot path.
+			jidString := cm.JID.String()
 			name := ""
-			if groupInfo, err := a.cw.FetchGroup(cm.JID.String()); err == nil {
-				name = groupInfo.Name
-				parentJID = groupInfo.ParentJID
-				parentName = groupInfo.ParentName
+			if g, ok := groupMeta.byJID[jidString]; ok {
+				name = g.Name
+				parentJID = g.ParentJID
+				parentName = g.ParentName
 				if parentName == "" && parentJID != "" {
-					parentName = a.cw.ParentCommunityName(parentJID)
+					parentName = groupMeta.parentName(parentJID)
 				}
 				isCommunityGroup = parentJID != ""
-				isCommunityParent = groupInfo.IsParent
-				isDefaultSub = groupInfo.IsDefaultSub
-			} else {
-				log.Println("GetChatList: group lookup failed, using fallback:", cm.JID.String(), err)
+				isCommunityParent = g.IsParent
+				isDefaultSub = g.IsDefaultSub
+				clearMissingGroup(jidString)
+			} else if noteMissingGroup(jidString) {
+				// Expected cache miss (e.g. right after a reconnect). Debug
+				// level and coalesced by the negative cache: no INFO line per
+				// group per frontend poll. Genuine DB errors are logged once
+				// in loadGroupMetaIndex.
+				slog.Debug("GetChatList: group metadata not cached locally yet, using JID fallback",
+					"jid", jidString, "source", "groups")
 			}
 			if name == "" {
 				// A single unknown/left group must not blank the whole chat

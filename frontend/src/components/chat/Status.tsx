@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   FetchMessagesPaged,
   GetCachedImage,
@@ -10,6 +11,7 @@ import { sanitizeHtml } from "../../lib/utils"
 
 const STATUS_JID = "status@broadcast"
 const STORY_MS = 5000
+const SEEN_KEY = "whats4linux.statusSeen"
 
 // Keyboard focus uses the shared --color-focus-ring token from style.css in
 // both the light status list and the dark story viewer. The token has a light
@@ -17,6 +19,29 @@ const STORY_MS = 5000
 const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
 const LIST_FOCUS_RING = FOCUS_RING
+
+// "New" is a per-sender, last-viewed watermark. It lives with the list so the
+// only status indicators in the app stay in the left chat-list pane — never in
+// the conversation pane and never as a toast over it.
+type SeenMap = Record<string, string>
+
+function readSeen(): SeenMap {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : {}
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as SeenMap) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeSeen(map: SeenMap) {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(map))
+  } catch {
+    /* private mode / quota: the badge simply resets next launch */
+  }
+}
 
 export interface StatusGroup {
   sender: string
@@ -32,6 +57,7 @@ function last<T>(a: T[]): T {
 export function StatusList({ onOpen }: { onOpen: (g: StatusGroup) => void }) {
   const [groups, setGroups] = useState<StatusGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [seen, setSeen] = useState<SeenMap>(readSeen)
   const getContactName = useContactStore(s => s.getContactName)
 
   useEffect(() => {
@@ -70,46 +96,76 @@ export function StatusList({ onOpen }: { onOpen: (g: StatusGroup) => void }) {
     }
   }, [getContactName])
 
+  const openGroup = (g: StatusGroup) => {
+    // Mark as seen in the same pane that showed the indicator, before the
+    // viewer opens. Nothing about this state is shared with the chat detail.
+    const watermark = last(g.items).Info.Timestamp
+    const next = { ...seen, [g.sender]: watermark }
+    setSeen(next)
+    writeSeen(next)
+    onOpen(g)
+  }
+
   if (loading)
     return (
-      <div className="p-6 text-center text-sm text-gray-700 dark:text-gray-200" role="status">
+      <div className="p-6 text-center text-sm text-light-text dark:text-dark-text" role="status">
         Loading status…
       </div>
     )
   if (groups.length === 0)
     return (
-      <div className="p-6 text-center text-sm text-gray-700 dark:text-gray-200">
+      <div className="p-6 text-center text-sm text-light-text dark:text-dark-text">
         No recent status updates
       </div>
     )
 
   return (
     <div>
-      {groups.map(g => (
-        <button
-          key={g.sender}
-          type="button"
-          onClick={() => onOpen(g)}
-          aria-label={`View ${g.name}'s status, ${g.items.length} update${g.items.length > 1 ? "s" : ""}`}
-          className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-dark-tertiary ${LIST_FOCUS_RING}`}
-        >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-green-500 text-lg font-medium text-green-700 dark:text-green-400">
-            {g.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-medium">{g.name}</div>
-            <div className="text-xs text-gray-600 dark:text-[#8696a0]">
-              {g.items.length} update{g.items.length > 1 ? "s" : ""}
-            </div>
-          </div>
-        </button>
-      ))}
+      {groups.map(g => {
+        const watermark = last(g.items).Info.Timestamp
+        const isNew = (seen[g.sender] ?? "") < watermark
+        return (
+          <button
+            key={g.sender}
+            type="button"
+            onClick={() => openGroup(g)}
+            aria-label={`View ${g.name}'s status, ${g.items.length} update${
+              g.items.length > 1 ? "s" : ""
+            }${isNew ? ", new" : ""}`}
+            className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-dark-tertiary ${LIST_FOCUS_RING}`}
+          >
+            <span
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-lg font-medium ${
+                isNew
+                  ? "border-green text-green-ink"
+                  : "border-light-tertiary text-light-muted dark:border-dark-border dark:text-dark-muted"
+              }`}
+            >
+              {g.name.charAt(0).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="truncate font-medium">{g.name}</span>
+                {isNew && (
+                  <span className="shrink-0 rounded bg-green-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-ink">
+                    New
+                  </span>
+                )}
+              </span>
+              <span className="block text-xs text-light-text dark:text-dark-muted">
+                {g.items.length} update{g.items.length > 1 ? "s" : ""}
+              </span>
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-// Full-screen story viewer: progress bars, auto-advance, tap/keyboard nav,
-// and explicit pause/stop controls for the auto-advancing progress.
+// Centred story viewer dialog: progress bars, auto-advance, tap/keyboard nav,
+// and explicit pause/stop controls for the auto-advancing progress. The dialog
+// is portalled to <body> so it is never a child of the conversation pane.
 export function StoryViewer({ group, onClose }: { group: StatusGroup; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
   const [mediaSrc, setMediaSrc] = useState<string | null>(null)
@@ -216,134 +272,148 @@ export function StoryViewer({ group, onClose }: { group: StatusGroup; onClose: (
 
   const isAdvancing = !paused && !stopped && kind !== "video"
 
-  return (
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-[9999] flex flex-col bg-black text-white"
-    >
-      <h2 id={titleId} className="sr-only">
-        {group.name}'s status
-      </h2>
-      <div className="flex gap-1 p-2" role="group" aria-label="Status progress">
-        {group.items.map((_, i) => (
-          <div key={i} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
-            {i < idx ? (
-              <div className="h-full w-full bg-white" />
-            ) : i === idx && kind !== "video" ? (
-              <div
-                key={`${idx}-${isAdvancing}`}
-                className="story-active-bar h-full bg-white"
-                style={{
-                  animationDuration: `${STORY_MS}ms`,
-                  animationPlayState: isAdvancing ? "running" : "paused",
-                }}
-              />
-            ) : i === idx ? (
-              <div className="h-full w-full bg-white/70" />
-            ) : null}
-          </div>
-        ))}
-      </div>
+  // Portal to <body>: the viewer is a transient dialog, not content of either
+  // pane. Portalling guarantees no status DOM can end up inside the right-hand
+  // conversation subtree (or be clipped by the resizable panel).
+  if (typeof document === "undefined") return null
 
-      <div className="flex items-center justify-between px-4 pb-2">
-        <div className="font-medium">{group.name}</div>
-        <div className="flex items-center gap-1">
-          {kind !== "video" && !stopped && (
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
+      onClick={event => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        data-status-viewer=""
+        className="flex max-h-[min(88vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-black text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+      >
+        <h2 id={titleId} className="sr-only">
+          {group.name}'s status
+        </h2>
+        <div className="flex gap-1 p-2" role="group" aria-label="Status progress">
+          {group.items.map((_, i) => (
+            <div key={i} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
+              {i < idx ? (
+                <div className="h-full w-full bg-white" />
+              ) : i === idx && kind !== "video" ? (
+                <div
+                  key={`${idx}-${isAdvancing}`}
+                  className="story-active-bar h-full bg-white"
+                  style={{
+                    animationDuration: `${STORY_MS}ms`,
+                    animationPlayState: isAdvancing ? "running" : "paused",
+                  }}
+                />
+              ) : i === idx ? (
+                <div className="h-full w-full bg-white/70" />
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between px-4 pb-2">
+          <div className="font-medium">{group.name}</div>
+          <div className="flex items-center gap-1">
+            {kind !== "video" && !stopped && (
+              <button
+                type="button"
+                onClick={() => setPaused(p => !p)}
+                aria-label={paused ? "Resume status" : "Pause status"}
+                className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+              >
+                {paused ? "Resume" : "Pause"}
+              </button>
+            )}
+            {!stopped ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setStopped(true)
+                  setPaused(false)
+                }}
+                aria-label="Stop auto-advancing status"
+                className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setStopped(false)
+                  setPaused(false)
+                }}
+                aria-label="Resume auto-advancing status"
+                className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+              >
+                Play
+              </button>
+            )}
             <button
+              ref={closeRef}
               type="button"
-              onClick={() => setPaused(p => !p)}
-              aria-label={paused ? "Resume status" : "Pause status"}
-              className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+              onClick={onClose}
+              aria-label="Close status viewer"
+              className={`rounded-lg px-2 py-1 text-2xl leading-none text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
             >
-              {paused ? "Resume" : "Pause"}
+              ×
             </button>
-          )}
-          {!stopped ? (
-            <button
-              type="button"
-              onClick={() => {
-                setStopped(true)
-                setPaused(false)
-              }}
-              aria-label="Stop auto-advancing status"
-              className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
-            >
-              Stop
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setStopped(false)
-                setPaused(false)
-              }}
-              aria-label="Resume auto-advancing status"
-              className={`rounded-lg px-2 py-1 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
-            >
-              Play
-            </button>
-          )}
+          </div>
+        </div>
+
+        <div className="relative flex flex-1 items-center justify-center overflow-hidden">
           <button
-            ref={closeRef}
             type="button"
-            onClick={onClose}
-            aria-label="Close status viewer"
-            className={`rounded-lg px-2 py-1 text-2xl leading-none text-white/80 transition-colors hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
-          >
-            ×
-          </button>
+            onClick={prev}
+            className={`absolute left-0 top-0 z-10 h-full w-1/3 ${FOCUS_RING}`}
+            aria-label="Previous status"
+          />
+          <button
+            type="button"
+            onClick={next}
+            className={`absolute right-0 top-0 z-10 h-full w-1/3 ${FOCUS_RING}`}
+            aria-label="Next status"
+          />
+
+          {kind === "text" && (
+            <div
+              className="max-w-lg px-8 text-center text-2xl leading-relaxed text-white [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(caption) }}
+            />
+          )}
+          {kind === "image" &&
+            (mediaSrc ? (
+              <img src={mediaSrc} alt="" className="max-h-full max-w-full object-contain" />
+            ) : (
+              <Spinner />
+            ))}
+          {kind === "video" &&
+            (mediaSrc ? (
+              <video
+                src={mediaSrc}
+                autoPlay
+                onEnded={next}
+                className="max-h-full max-w-full object-contain"
+              />
+            ) : (
+              <Spinner />
+            ))}
+
+          {kind !== "text" && caption && (
+            <div
+              className="pointer-events-none absolute bottom-6 left-0 right-0 px-8 text-center text-white [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(caption) }}
+            />
+          )}
         </div>
       </div>
-
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden">
-        <button
-          type="button"
-          onClick={prev}
-          className={`absolute left-0 top-0 z-10 h-full w-1/3 ${FOCUS_RING}`}
-          aria-label="Previous status"
-        />
-        <button
-          type="button"
-          onClick={next}
-          className={`absolute right-0 top-0 z-10 h-full w-1/3 ${FOCUS_RING}`}
-          aria-label="Next status"
-        />
-
-        {kind === "text" && (
-          <div
-            className="max-w-lg px-8 text-center text-2xl leading-relaxed text-white [&_a]:underline"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(caption) }}
-          />
-        )}
-        {kind === "image" &&
-          (mediaSrc ? (
-            <img src={mediaSrc} alt="" className="max-h-full max-w-full object-contain" />
-          ) : (
-            <Spinner />
-          ))}
-        {kind === "video" &&
-          (mediaSrc ? (
-            <video
-              src={mediaSrc}
-              autoPlay
-              onEnded={next}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
-            <Spinner />
-          ))}
-
-        {kind !== "text" && caption && (
-          <div
-            className="pointer-events-none absolute bottom-6 left-0 right-0 px-8 text-center text-white [&_a]:underline"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(caption) }}
-          />
-        )}
-      </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

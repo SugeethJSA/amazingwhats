@@ -21,8 +21,11 @@ func NewClient(ctx context.Context, container *sqlstore.Container) (*whatsmeow.C
 	cli := whatsmeow.NewClient(deviceStore, clientLog)
 	cli.EmitAppStateEventsOnFullSync = true
 	// Reconnect automatically on transient failures (network blips, server
-	// restarts). The app-level reconnectLoop in the API layer handles the
-	// cases where whatsmeow gives up.
+	// restarts). This is the primary recovery path. The app-level reconnectLoop
+	// in the API layer is only a fallback for when whatsmeow gives up: it
+	// yields immediately whenever IsConnected() is already true and is
+	// cancelled by a Connected event, so the two layers never fight over the
+	// same websocket.
 	cli.EnableAutoReconnect = true
 	// Trust identity changes without user confirmation, like WhatsApp Web
 	// does for paired devices. Avoids a hard failure when a contact changes

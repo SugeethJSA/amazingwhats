@@ -170,6 +170,10 @@ export function MessageItem({
   isAnnounceGroup = false,
 }: MessageItemProps) {
   const isFromMe = message.Info.IsFromMe
+  // Optimistic bubbles only exist in the frontend until wa:new_message
+  // reconciles them to a real WhatsApp ID. Their local payload is the source
+  // of truth while pending, so never send the temp ID to the backend.
+  const isPending = !!message.isPending
   const content = message.Content
   const isSticker = !!content?.stickerMessage
   const mediaBody =
@@ -222,6 +226,7 @@ export function MessageItem({
   }
 
   const handleMediaDownload = async () => {
+    if (isPending) return
     try {
       await DownloadMediaToFile(message.Info.ID)
     } catch (e) {
@@ -243,6 +248,7 @@ export function MessageItem({
   const myReaction = reactions.find(r => isMe(r.sender_id))?.emoji
 
   const sendReaction = (emoji: string) => {
+    if (isPending) return
     const finalEmoji = myReaction === emoji ? "" : emoji
     if (chatId.endsWith("@newsletter")) {
       const serverID = parseInt(message.Info.ID, 10) || 0
@@ -259,6 +265,7 @@ export function MessageItem({
   const isPinned = pinnedIds?.has(message.Info.ID) ?? false
 
   const handlePin = () => {
+    if (isPending) return
     SetMessagePinned(chatId, message.Info.Sender, message.Info.ID, isFromMe, !isPinned).catch(err =>
       console.error("Failed to toggle message pin:", err),
     )
@@ -268,6 +275,7 @@ export function MessageItem({
   const [editText, setEditText] = useState("")
 
   const handleEdit = () => {
+    if (isPending) return
     const text = content?.conversation || content?.extendedTextMessage?.text || ""
     setEditText(htmlToPlainText(text))
     setEditing(true)
@@ -289,6 +297,7 @@ export function MessageItem({
   }, [isFromMe, message.Info?.ID, content])
 
   const handleEditSubmit = async () => {
+    if (isPending) return
     const cleanText = htmlToPlainText(editText)
     if (!cleanText.trim()) return
     try {
@@ -305,10 +314,12 @@ export function MessageItem({
   const [pendingDelete, setPendingDelete] = useState(false)
   const deleteBusyRef = useRef(false)
 
-  const handleDelete = () => setPendingDelete(true)
+  const handleDelete = () => {
+    if (!isPending) setPendingDelete(true)
+  }
 
   const confirmDelete = async () => {
-    if (deleteBusyRef.current) return
+    if (isPending || deleteBusyRef.current) return
     deleteBusyRef.current = true
     setPendingDelete(false)
     const method = isFromMe ? RevokeMessage : DeleteForMe
@@ -332,13 +343,16 @@ export function MessageItem({
   }
 
   const handleStar = () => {
+    if (isPending) return
     StarMessage(chatId, message.Info.ID, true).catch((e: any) =>
       console.error("Star message failed:", e),
     )
   }
 
   const [forwardTarget, setForwardTarget] = useState<string | null>(null)
-  const handleForward = () => setForwardTarget(message.Info.ID)
+  const handleForward = () => {
+    if (!isPending) setForwardTarget(message.Info.ID)
+  }
   const [pollVoteOpen, setPollVoteOpen] = useState(false)
 
   // Restore the "Voted ✓" state for poll cards across restarts: the backend
@@ -353,7 +367,7 @@ export function MessageItem({
     false
   const [pollVotes, setPollVotes] = useState<PollVotesResult | null>(null)
   useEffect(() => {
-    if (!isPollCard || !message?.Info?.ID || !chatId) return
+    if (isPending || !isPollCard || !message?.Info?.ID || !chatId) return
     let live = true
     GetPollVotes(chatId, message.Info.ID)
       .then(res => {

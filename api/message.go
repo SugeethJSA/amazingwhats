@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -202,6 +203,13 @@ func buildQuotedMessage(msg *store.ExtendedMessage) *waE2E.Message {
 
 func (a *Api) buildQuotedContext(chatJID types.JID, quotedMessageID string) (*waE2E.ContextInfo, error) {
 	if quotedMessageID == "" {
+		return nil, nil
+	}
+	// A reply to an optimistic (still-pending) bubble has a temp ID that is not
+	// a database row. The frontend already carries the local quoted payload, so
+	// omit the protocol quote instead of failing the whole send or logging a
+	// bogus "no rows" miss for a message that simply isn't sent yet.
+	if store.IsOptimisticMessageID(quotedMessageID) {
 		return nil, nil
 	}
 
@@ -602,6 +610,12 @@ func (a *Api) ForwardMessage(sourceJID, messageID, targetJID string) error {
 	if a.waClient.Store.ID == nil {
 		return fmt.Errorf("client not logged in")
 	}
+	// Optimistic bubbles exist only in the frontend until the send is confirmed.
+	// There is nothing to download or re-upload yet, so fail early with an
+	// actionable message instead of resolving a temp ID against the DB.
+	if store.IsOptimisticMessageID(messageID) {
+		return fmt.Errorf("message is still sending and cannot be forwarded yet")
+	}
 
 	source, err := types.ParseJID(sourceJID)
 	if err != nil {
@@ -731,8 +745,21 @@ func (a *Api) MarkRead(chatJID string, messageIDs []string, Type string) error {
 	}
 	if Type == "read-msg" {
 		for _, msgID := range messageIDs {
+			// Optimistic temp IDs are local-only bubbles: no store row and no
+			// WhatsApp message to acknowledge yet. Skipping them here is what
+			// stops the repeated INFO-log pair ("Failed to get message" +
+			// "GetMessageWithMedia error") for a pending send.
+			if store.IsOptimisticMessageID(msgID) {
+				continue
+			}
 			msg, err := a.messageStore.GetMessageWithMedia(chatJID, msgID)
 			if err != nil {
+				// Belt and braces: never log an expected optimistic miss even if
+				// one reaches the store through another path.
+				if errors.Is(err, store.ErrOptimisticMessage) {
+					continue
+				}
+				// Genuine failures and genuinely missing real IDs still log.
 				log.Printf("Failed to get message %s: %v", msgID, err)
 				continue
 			}
@@ -934,6 +961,11 @@ func (a *Api) SendShareContact(chatJID, displayName, phone string) (string, erro
 // edit, revoke or delete-for-me (D-AUD-005a). It mirrors the incoming path in
 // api.go, which also emits the refreshed decoded message.
 func (a *Api) emitRefreshedMessage(chatJID, messageID string) {
+	// No stored row exists for a pending bubble; there is nothing to refresh
+	// until wa:new_message reconciles it to the real ID.
+	if store.IsOptimisticMessageID(messageID) {
+		return
+	}
 	msg, err := a.messageStore.GetDecodedMessage(chatJID, messageID)
 	if err != nil || msg == nil {
 		return

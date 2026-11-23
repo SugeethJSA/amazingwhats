@@ -22,8 +22,6 @@ import (
 	"github.com/lugvitc/whats4linux/internal/settings"
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/lugvitc/whats4linux/internal/wa"
-	"github.com/purpshell/meowcaller"
-	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/appstate"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
@@ -31,6 +29,8 @@ import (
 	"github.com/polymorfa/hypermeow/types"
 	"github.com/polymorfa/hypermeow/types/events"
 	waLog "github.com/polymorfa/hypermeow/util/log"
+	"github.com/purpshell/meowcaller"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // knownBuildTypes are the only trailing suffixes NormalizeUpdateVersion strips.
@@ -98,6 +98,18 @@ type Api struct {
 	windowFocused       atomic.Bool
 	groupRepairInFlight atomic.Bool
 	appStateResync      atomic.Bool
+
+	// reconnectMu guards the single app-level reconnect loop slot. whatsmeow
+	// already auto-reconnects, so at most one app-level fallback loop may be
+	// active and a Connected event supersedes it.
+	reconnectMu     sync.Mutex
+	reconnectGen    uint64
+	reconnectActive bool
+	reconnectCancel context.CancelFunc
+	// reconnectStatus is true while a "reconnecting" status has been emitted
+	// and not yet settled by a connected/disconnected transition.
+	reconnectStatus atomic.Bool
+
 	// updaterReady is set by cmd/run.go only after the GitHub provider and the
 	// Wails updater are both configured. Every Updater call is guarded by it so
 	// an uninitialised updater is never touched (offline/dev init failure).
@@ -229,12 +241,11 @@ func (a *Api) resyncAppState() {
 	}
 }
 
-// reconnectLoop is started as a background goroutine after an unexpected
-// disconnect. It waits a few seconds, then tries to reconnect with
-// exponential backoff. Successful reconnect triggers the Connected event,
-// which re-runs group init, app-state resync, LID migration, etc.
-// Stops when the app shuts down (isShuttingDown returns true) or after
-// maxAttempts failed tries.
+// reconnectLoop is started as a background task after an unexpected
+// disconnect. whatsmeow already auto-reconnects on its own, so this loop is a
+// fallback that only runs while the socket is genuinely down: each attempt
+// checks IsConnected() first, and a Connected event supersedes the loop.
+// Stops on logout/shutdown or after maxAttempts failed tries.
 func (a *Api) reconnectLoop() {
 	// After a logout the device store is deleted (Store.ID == nil). Never
 	// start (or keep) a reconnect loop against deleted credentials.
@@ -242,15 +253,38 @@ func (a *Api) reconnectLoop() {
 	clientAtStart := a.waClient
 	loggedOut := clientAtStart == nil || clientAtStart.Store.ID == nil
 	a.lifecycleMu.Unlock()
-	if loggedOut {
+	if loggedOut || a.isShuttingDown() {
 		return
 	}
 
-	a.app.Event.Emit("wa:status", "reconnecting")
+	loopCtx, gen, cancel, ok := a.beginReconnectLoop()
+	if !ok {
+		return // another loop already owns the reconnect slot
+	}
+	outcome := reconnectAborted
+	defer func() { a.finishReconnectLoop(gen, cancel, outcome) }()
+
+	// The task waited in the worker queue; whatsmeow may have reconnected in
+	// the meantime. Don't announce or retry a reconnect that isn't needed.
+	if a.clientIsConnected() {
+		outcome = reconnectConnected
+		return
+	}
+	if a.reconnectStatus.CompareAndSwap(false, true) {
+		a.app.Event.Emit("wa:status", "reconnecting")
+	}
+
 	backoff := 2 * time.Second
-	maxBackoff := 30 * time.Second
+	const maxBackoff = 30 * time.Second
 	for i := range 8 {
 		select {
+		case <-loopCtx.Done():
+			// A Connected event, logout or shutdown cancelled us. Only claim
+			// success when the socket really is back.
+			if a.clientIsConnected() {
+				outcome = reconnectConnected
+			}
+			return
 		case <-a.ctx.Done():
 			return
 		case <-time.After(backoff):
@@ -265,9 +299,33 @@ func (a *Api) reconnectLoop() {
 			a.loginMu.Unlock()
 			return
 		}
+		// whatsmeow's auto-reconnect can land at any moment. Connect() against
+		// a live socket only returns "websocket is already connected" and burns
+		// an attempt, so yield to the live connection instead.
+		if client.IsConnected() {
+			a.loginMu.Unlock()
+			slog.Info("Client already connected — stopping reconnect loop", "source", "reconnect")
+			outcome = reconnectConnected
+			return
+		}
+		select {
+		case <-loopCtx.Done():
+			a.loginMu.Unlock()
+			if a.clientIsConnected() {
+				outcome = reconnectConnected
+			}
+			return
+		default:
+		}
 		err := client.Connect()
 		a.loginMu.Unlock()
 		if err != nil {
+			if client.IsConnected() {
+				// Auto-reconnect won the race while Connect() was in flight.
+				slog.Info("Auto-reconnect won the race — stopping reconnect loop", "source", "reconnect")
+				outcome = reconnectConnected
+				return
+			}
 			slog.Warn(fmt.Sprintf("Attempt %d failed: %v", i+1, err), "source", "reconnect")
 			if backoff < maxBackoff {
 				backoff = time.Duration(float64(backoff) * 1.5)
@@ -275,11 +333,107 @@ func (a *Api) reconnectLoop() {
 			continue
 		}
 		slog.Info("Reconnect successful", "source", "reconnect")
+		outcome = reconnectConnected
 		return
 	}
 	slog.Error("All attempts exhausted — staying disconnected", "source", "reconnect")
-	a.app.Event.Emit("wa:status", "disconnected")
-	a.app.Event.Emit("wa:error", "Could not reconnect to WhatsApp after 8 attempts.")
+	outcome = reconnectExhausted
+}
+
+// reconnectOutcome describes how a reconnect loop ended so the pending
+// "reconnecting" status can be settled exactly once.
+type reconnectOutcome uint8
+
+const (
+	// reconnectAborted is a silent settlement: logout/shutdown/superseded all
+	// emit their own status, so no extra "disconnected" toast is wanted.
+	reconnectAborted reconnectOutcome = iota
+	reconnectConnected
+	reconnectExhausted
+)
+
+// beginReconnectLoop claims the single app-level reconnect slot. A second
+// caller gets ok=false and must not run a loop. The returned context is
+// cancelled by a Connected event (supersedeReconnectLoop), by shutdown, or by
+// finishReconnectLoop.
+func (a *Api) beginReconnectLoop() (context.Context, uint64, context.CancelFunc, bool) {
+	if a.isShuttingDown() {
+		return nil, 0, nil, false
+	}
+	a.reconnectMu.Lock()
+	defer a.reconnectMu.Unlock()
+	if a.reconnectActive {
+		return nil, 0, nil, false
+	}
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.reconnectGen++
+	a.reconnectActive = true
+	a.reconnectCancel = cancel
+	return ctx, a.reconnectGen, cancel, true
+}
+
+// finishReconnectLoop releases the slot only if this generation still owns it,
+// then settles the pending "reconnecting" status once. A superseded loop owns
+// nothing, so it cannot clobber the status of the loop that replaced it.
+func (a *Api) finishReconnectLoop(gen uint64, cancel context.CancelFunc, outcome reconnectOutcome) {
+	cancel()
+	a.reconnectMu.Lock()
+	owns := a.reconnectActive && a.reconnectGen == gen
+	if owns {
+		a.reconnectActive = false
+		a.reconnectCancel = nil
+	}
+	a.reconnectMu.Unlock()
+	if !owns || !a.reconnectStatus.CompareAndSwap(true, false) {
+		return
+	}
+	switch outcome {
+	case reconnectConnected:
+		// "logged_in" is the connected status the frontend uses to dismiss the
+		// reconnecting toast (it accepts "success" as well).
+		a.app.Event.Emit("wa:status", "logged_in")
+	case reconnectExhausted:
+		a.app.Event.Emit("wa:status", "disconnected")
+		a.app.Event.Emit("wa:error", "Could not reconnect to WhatsApp after 8 attempts.")
+	}
+	// reconnectAborted clears the flag above but emits nothing: logout /
+	// shutdown already emit their own status.
+}
+
+// supersedeReconnectLoop cancels any running loop and frees the slot. Called
+// when a Connected event shows whatsmeow already restored the connection.
+func (a *Api) supersedeReconnectLoop() {
+	a.reconnectMu.Lock()
+	cancel := a.reconnectCancel
+	a.reconnectCancel = nil
+	a.reconnectActive = false
+	a.reconnectMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// emitConnectedStatus settles a pending reconnect status when a Connected
+// event arrives without the app-level loop having finished yet.
+func (a *Api) emitConnectedStatus() {
+	if a.reconnectStatus.CompareAndSwap(true, false) {
+		a.app.Event.Emit("wa:status", "logged_in")
+	}
+}
+
+// clearReconnectStatus drops a pending reconnect status without emitting a new
+// one; used on logout/shutdown where another status event explains the state.
+func (a *Api) clearReconnectStatus() {
+	a.reconnectStatus.Store(false)
+}
+
+// clientIsConnected reports whether the current whatsmeow client owns a live
+// websocket. Safe to call from any goroutine.
+func (a *Api) clientIsConnected() bool {
+	a.lifecycleMu.Lock()
+	client := a.waClient
+	a.lifecycleMu.Unlock()
+	return client != nil && client.IsConnected()
 }
 
 func (a *Api) emitError(msg string) {
@@ -582,6 +736,10 @@ func (a *Api) clearLoginState() {
 
 func (a *Api) ServiceShutdown() error {
 	a.stopConnectionHealthCheck()
+	// Release any reconnect loop waiting out its backoff so shutdown never
+	// blocks on it; the status is settled by the final logged_out/close path.
+	a.supersedeReconnectLoop()
+	a.clearReconnectStatus()
 
 	a.taskMu.Lock()
 	a.shuttingDown = true
@@ -1001,6 +1159,12 @@ func (a *Api) mainEventHandler(evt any) {
 		a.handleMuteEvent(v.JID, muted, v.Action.GetMuteEndTimestamp())
 
 	case *events.Connected:
+		// whatsmeow may have reconnected on its own (or our loop succeeded)
+		// while the app-level loop was still backing off. Settle the status
+		// first, then cancel the loop so it cannot keep retrying over a live
+		// websocket. No status is emitted when no reconnect was pending.
+		a.emitConnectedStatus()
+		a.supersedeReconnectLoop()
 		// For new logins, there might be a problem where the whatsmeow client
 		// gets a 515 code which gets resolved internally by auto-reconnecting
 		// in a separate goroutine. In that case, the Initialise call below for
@@ -1127,6 +1291,8 @@ func (a *Api) mainEventHandler(evt any) {
 		slog.Warn("Logged out from another device", "source", "connection")
 		// Same teardown as an explicit Logout(): no health checks, no pending
 		// login, no reconnect against a session that no longer exists.
+		a.supersedeReconnectLoop()
+		a.clearReconnectStatus()
 		a.stopConnectionHealthCheck()
 		a.clearLoginState()
 		a.app.Event.Emit("wa:logged_out")           // legacy listeners

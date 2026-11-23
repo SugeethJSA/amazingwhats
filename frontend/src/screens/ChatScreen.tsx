@@ -1287,11 +1287,24 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     selectChat(null)
     setSelectedCommunity(null)
     setCommunityReturn(null)
+    setStoryGroup(null)
+    setShowSearch(false)
     setChats([])
     // Status / communities have their own data paths.
     if (view === "chats" || view === "channels") fetchChats()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
+
+  // Notification "Open" actions call chatStore.selectChat() directly in
+  // useWailsEvents.ts, bypassing the sidebar. A status/broadcast JID (or any
+  // chat opened while Status is active) must not open in the conversation
+  // pane — route it back to the Status tab in the chat-list pane instead.
+  useEffect(() => {
+    const isBroadcast = !!selectedChatId && selectedChatId.endsWith("@broadcast")
+    if (view !== "status" && !isBroadcast) return
+    if (selectedChatId) selectChat(null)
+    if (view !== "status") setView("status")
+  }, [view, selectedChatId, selectChat])
 
   useEffect(() => {
     mountedRef.current = true
@@ -1404,7 +1417,18 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             {(["chats", "communities", "channels", "status"] as const).map(v => (
               <button
                 key={v}
-                onClick={() => setView(v)}
+                onClick={() => {
+                  if (v === view) return
+                  // The sidebar tab owns the panes. Clear the previous view in
+                  // the same event so no chat/search result can flash in the
+                  // conversation pane while the status list mounts.
+                  setShowSearch(false)
+                  setStoryGroup(null)
+                  selectChat(null)
+                  setSelectedCommunity(null)
+                  setCommunityReturn(null)
+                  setView(v)
+                }}
                 aria-pressed={view === v}
                 className={clsx(
                   "rounded-full border px-3 py-1 text-sm capitalize transition-colors shrink-0",
@@ -1514,6 +1538,12 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     </div>
   )
 
+  // The right pane is a conversation surface only. Status lives entirely in
+  // the list pane (and its viewer is a portalled dialog), so even a stale or
+  // externally selected chat must never put status content here.
+  const showConversation =
+    !!selectedChatId && view !== "status" && !selectedChatId.endsWith("@broadcast")
+
   const detailPane = (
     <div
       className={clsx(
@@ -1521,7 +1551,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         selectedCommunity ? "bg-light-secondary dark:bg-dark-bg" : "bg-[#efeae2] dark:bg-dark-bg",
       )}
     >
-      {selectedChatId ? (
+      {showConversation ? (
         <ChatDetail
           key={selectedChatId}
           chatId={selectedChatId}
