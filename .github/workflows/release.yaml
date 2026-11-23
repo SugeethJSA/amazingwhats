@@ -69,7 +69,7 @@ jobs:
            binary: Whats4Linux-Linux-amd64.AppImage
            artifact: whats4linux-linux-amd64
             # Sole updater-matching asset for this platform.
-            updater_asset: Whats4Linux-Linux-amd64.AppImage
+           updater_asset: Whats4Linux-Linux-amd64.AppImage
            linux: true
 
          - os: windows-latest
@@ -77,7 +77,7 @@ jobs:
            binary: whats4linux-windows.exe
            artifact: whats4linux-windows-amd64
             # Only this ZIP matches the updater; the raw exe above has no arch token.
-            updater_asset: whats4linux-windows-amd64.zip
+           updater_asset: whats4linux-windows-amd64.zip
            linux: false
 
          - os: macos-latest
@@ -85,7 +85,7 @@ jobs:
            binary: whats4linux-darwin
            artifact: whats4linux-macos-amd64
             # Only this ZIP matches the updater; the raw bundle has no arch token.
-            updater_asset: whats4linux-darwin-amd64.zip
+           updater_asset: whats4linux-darwin-amd64.zip
            linux: false
 
     runs-on: ${{ matrix.os }}
