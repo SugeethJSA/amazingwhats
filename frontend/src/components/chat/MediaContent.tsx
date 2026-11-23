@@ -7,6 +7,7 @@ import {
   GetImageThumbnail,
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { useUIStore } from "../../store"
+import { useLightboxContext } from "../../store/lightboxContext"
 import type { Message, MediaMessageContent } from "../../store/types"
 import { LRUCache } from "../../lib/lruCache"
 
@@ -222,6 +223,26 @@ export function MediaContent({
   const gifLoopsRef = useRef(0)
   const placeholderRef = useRef<HTMLDivElement | null>(null)
   const openLightbox = useUIStore(s => s.openLightbox)
+
+  // Publish the message context before the legacy byte-only lightbox opens, so
+  // the viewer can show sender/caption and offer real message actions.
+  const openViewer = (src: string, kind: "image" | "video", message: Message, chatId: string) => {
+    const info = message.Info
+    const body = message.Content?.imageMessage ?? message.Content?.videoMessage
+    useLightboxContext.getState().setLightboxMessage({
+      messageId: info?.ID || null,
+      chatJid: chatId || info?.Chat || null,
+      senderJid: info?.Sender || null,
+      pushName: info?.PushName || null,
+      timestamp: info?.Timestamp || null,
+      caption: body?.caption || null,
+      isFromMe: Boolean(info?.IsFromMe),
+      starred: false,
+      pinned: false,
+    })
+    openLightbox(src, kind)
+  }
+
   const handleDownloadRef = useRef<(() => Promise<string | null>) | null>(null)
 
   // Reserve the final layout box before the media loads. Only images and GIF
@@ -290,7 +311,7 @@ export function MediaContent({
   const videoDataRef = useRef<string>("")
   const openVideo = async () => {
     if (videoDataRef.current) {
-      openLightbox(videoDataRef.current, "video")
+      openViewer(videoDataRef.current, "video", message, chatId)
       return
     }
     if (loadingRef.current) return
@@ -301,7 +322,7 @@ export function MediaContent({
         DownloadMedia(chatId, message.Info.ID),
       )
       videoDataRef.current = dataUrl
-      openLightbox(dataUrl, "video")
+      openViewer(dataUrl, "video", message, chatId)
     } catch {
     } finally {
       loadingRef.current = false
@@ -441,7 +462,7 @@ export function MediaContent({
             alt="media"
             onClick={() => {
               onImageClick?.(mediaSrc)
-              openLightbox(mediaSrc)
+              openViewer(mediaSrc, "image", message, chatId)
             }}
           />
           {type === "image" && showDownloadButton && onDownload && (
@@ -467,7 +488,7 @@ export function MediaContent({
           src={mediaSrc}
           onClick={() => {
             onImageClick?.(mediaSrc)
-            openLightbox(mediaSrc)
+            openViewer(mediaSrc, "image", message, chatId)
           }}
           className="block min-w-75 max-w-82.5 max-h-100 rounded-lg object-cover cursor-pointer"
           style={reservedBox ?? GIF_FALLBACK_BOX}
