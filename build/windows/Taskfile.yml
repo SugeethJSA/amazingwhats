@@ -42,14 +42,30 @@ tasks:
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
 
-  package:
-    summary: Production build (installer packaging remains in the release workflow)
+  package:installer:
+    summary: Builds the per-user NSIS installer from the production exe (D-PKG-002)
+    # Task runs from the repository root; NSIS chdirs to the .nsi folder, so
+    # APP_EXE and the OutFile path are relative to build/windows/installer/
+    # (../../.. = repo root). The installer therefore lands in the repo-root
+    # bin/ dir, alongside the portable exe.
+    # Depends on build so makensis always sees a fresh production binary.
     deps:
       - task: build
         vars:
           PRODUCTION: "true"
     cmds:
-      - echo "Binary built at {{.BIN_DIR}}/{{.APP_NAME}}.exe"
+      - makensis /DAPP_EXE=..\..\..\bin\whats4linux.exe build/windows/installer/installer.nsi
+      # Fail loudly if makensis silently skipped/produced nothing. The path is
+      # the real repo-root bin/ output (Task's execution dir is the repo root).
+      - cmd: powershell -NoProfile -Command "if (-not (Test-Path -LiteralPath '{{.BIN_DIR}}/whats4linux-setup.exe' -PathType Leaf)) { Write-Error 'makensis did not produce bin/whats4linux-setup.exe'; exit 1 }; Write-Host 'Installer built at {{.BIN_DIR}}/whats4linux-setup.exe'"
+        platforms: [windows]
+      - cmd: test -f {{.BIN_DIR}}/whats4linux-setup.exe && echo "Installer built at {{.BIN_DIR}}/whats4linux-setup.exe"
+        platforms: [linux, darwin]
+
+  package:
+    summary: Production build + Windows installer (portable exe stays in bin/)
+    deps:
+      - task: package:installer
 
   run:
     cmds:
