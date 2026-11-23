@@ -32,7 +32,7 @@ function parseJID(jid: string): { user: string; server: string } {
   return { user: jid.slice(0, at), server: jid.slice(at + 1) }
 }
 
-export function CallOverlay() {
+function CallOverlayContent() {
   const [activeCall, setActiveCall] = useState<CallState | null>(null)
   const [callDuration, setCallDuration] = useState(0)
   const [showStats, setShowStats] = useState(false)
@@ -602,4 +602,14 @@ export function CallOverlay() {
       )}
     </div>
   )
+}
+
+// The dedicated call window loads the same SPA with ?call_window=1. Render the
+// overlay only there so the main window stays free of the call UI. This wrapper
+// deliberately has no hooks, so App.tsx can keep mounting <CallOverlay />
+// unconditionally without risking a conditional-hook violation.
+export function CallOverlay() {
+  if (typeof window === "undefined") return null
+  if (new URLSearchParams(window.location.search).get("call_window") !== "1") return null
+  return <CallOverlayContent />
 }

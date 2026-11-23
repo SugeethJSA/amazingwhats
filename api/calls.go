@@ -98,6 +98,9 @@ func (a *Api) initMeowcaller() {
 		}
 		callsMu.Unlock()
 		if ac != nil && a.ctx != nil {
+			// Reveal the dedicated call window before telling the frontend about
+			// the call so its listeners are mounted on a visible webview.
+			showCallWindow()
 			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":   offer.CallID,
 				"peerJID":  peerJID,
@@ -158,6 +161,8 @@ func (a *Api) initMeowcaller() {
 					"callID": call.ID(),
 					"reason": reason,
 				})
+				// The call is over: retire the dedicated call window.
+				hideCallWindow()
 			}
 		})
 
@@ -166,6 +171,7 @@ func (a *Api) initMeowcaller() {
 		// installed. Use the snapshotted isGroup value rather than reading the
 		// shared ActiveCall outside callsMu. (D-AUD-004d, D-AUD-004f)
 		if a.ctx != nil && !isGroup {
+			showCallWindow()
 			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":  call.ID(),
 				"peerJID": call.Peer().String(),
@@ -300,6 +306,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 				"callID": call.ID(),
 				"reason": reason,
 			})
+			hideCallWindow()
 		}
 	})
 
@@ -361,6 +368,7 @@ func (a *Api) trackOutgoingCall(call *meowcaller.Call, peerJID, groupJID string,
 	// observe a call it cannot control (end/accept callbacks already exist).
 	// (D-AUD-004d)
 	if a.ctx != nil {
+		showCallWindow()
 		a.app.Event.Emit("call:outgoing", map[string]any{
 			"callID":   call.ID(),
 			"peerJID":  peerJID,
@@ -417,6 +425,9 @@ func (a *Api) RejectCall(callID string) error {
 	if err := callData.Call.Reject(); err != nil {
 		log.Printf("[Calls] Failed to reject call %s: %v", callID, err)
 	}
+	// Reject terminates the call without an OnEnd/call:ended event, so retire
+	// the dedicated call window here as well.
+	hideCallWindow()
 	return nil
 }
 
@@ -602,5 +613,8 @@ func (a *Api) EndCall(callID string) error {
 	if err := callData.Call.Hangup(); err != nil {
 		log.Printf("[Calls] Failed to hangup call %s: %v", callID, err)
 	}
+	// Hangup will also fire OnEnd (and emit call:ended), but the call was
+	// already removed from activeCalls above, so hide explicitly here too.
+	hideCallWindow()
 	return nil
 }

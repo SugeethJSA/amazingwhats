@@ -94,6 +94,21 @@ func run(assets fs.FS) cli.ActionFunc {
 		api := apiPkg.New(app, window)
 		app.RegisterService(application.NewService(api))
 
+		// D-ID WIN-001: one dedicated, hidden call window owns the call UI.
+		// It loads the same SPA with a ?call_window=1 query param, so no extra
+		// frontend bundle is needed. The api package toggles its visibility
+		// when call events fire. This window is intentionally separate from
+		// the single-instance/tray restore path used for the main window.
+		callWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
+			Title:       "Whats4Linux Call",
+			URL:         "/?call_window=1",
+			Width:       420,
+			Height:      560,
+			AlwaysOnTop: true,
+			Hidden:      true,
+		})
+		apiPkg.SetCallWindow(callWindow)
+
 		// Inbuilt update checker. The Wails v3 updater is wired with a GitHub
 		// Releases provider; digest verification is handled by the provider via
 		// the SHA256SUMS sidecar asset. No CheckInterval is set — checks are
