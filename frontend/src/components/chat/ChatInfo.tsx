@@ -884,8 +884,7 @@ export function ChatInfo({
                             groupJid: chatId,
                             participantIsAdmin: !!participant.is_admin,
                             canManage:
-                              isAdmin &&
-                              userPart(participant.contact.jid) !== userPart(myJid),
+                              isAdmin && userPart(participant.contact.jid) !== userPart(myJid),
                             onGroupChanged: loadInfo,
                           },
                           anchor,

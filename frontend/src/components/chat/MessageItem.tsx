@@ -715,11 +715,7 @@ export function MessageItem({
           !isFromMe &&
           isGroup &&
           (firstInGroup ? (
-            <SenderAvatar
-              jid={message.Info.Sender}
-              name={senderName}
-              onOpen={openSenderActions}
-            />
+            <SenderAvatar jid={message.Info.Sender} name={senderName} onOpen={openSenderActions} />
           ) : (
             <div className="w-7 ml-3 shrink-0" />
           ))}

@@ -204,9 +204,7 @@ export function ContactActionSheet({
     if (!open) return
     const previouslyFocused = document.activeElement as HTMLElement | null
     const focusTimer = window.setTimeout(() => {
-      sheetRef.current
-        ?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')
-        ?.focus()
+      sheetRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
     }, 0)
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -335,9 +333,7 @@ export function ContactActionSheet({
             <p className="mt-1 break-words text-gray-700 dark:text-gray-300">“{profile.about}”</p>
           )}
           {profile.verifiedName && (
-            <p className="mt-1 truncate text-gray-700 dark:text-gray-300">
-              {profile.verifiedName}
-            </p>
+            <p className="mt-1 truncate text-gray-700 dark:text-gray-300">{profile.verifiedName}</p>
           )}
           {typeof profile.devices === "number" && (
             <p className="mt-1 text-gray-600 dark:text-dark-muted">

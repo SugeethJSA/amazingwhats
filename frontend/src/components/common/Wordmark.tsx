@@ -30,9 +30,7 @@ export default function Wordmark({
         src={chatMark}
         alt=""
         aria-hidden="true"
-        className={`flex-shrink-0 ${
-          markClassName || (compact ? "h-5 w-5" : "h-7 w-7")
-        }`}
+        className={`flex-shrink-0 ${markClassName || (compact ? "h-5 w-5" : "h-7 w-7")}`}
       />
       <span
         aria-hidden="true"
