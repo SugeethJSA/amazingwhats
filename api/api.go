@@ -33,6 +33,46 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 )
 
+// knownBuildTypes are the only trailing suffixes NormalizeUpdateVersion strips.
+// They come from main.go's default ("unclassified"), the release workflows
+// ("release", "nightly"), and the BuildArgs.BuildType doc ("debug", "snapshot").
+// "production" and "dev" are included for build profiles that stamp them.
+// Any other suffix is part of the version (e.g. the "beta.1" in "1.2.3-beta.1")
+// and is deliberately preserved.
+var knownBuildTypes = []string{"production", "release", "nightly", "dev", "debug", "snapshot", "unclassified"}
+
+// NormalizeUpdateVersion converts a build-time version string into the release
+// tag form expected by updater.Config.CurrentVersion (no "v" prefix, no build
+// type suffix). cmd.GetApp builds ctx.App.Version as "<version>-<buildType>",
+// so only a *known* trailing build type is removed; a semver prerelease such as
+// "1.2.3-beta.1" survives intact. Development identifiers map to "0.0.0" so a
+// dev build is treated as older than any published release.
+func NormalizeUpdateVersion(raw string) string {
+	v := strings.TrimSpace(raw)
+	for _, buildType := range knownBuildTypes {
+		if suffix := "-" + buildType; strings.HasSuffix(v, suffix) {
+			v = strings.TrimSuffix(v, suffix)
+			break
+		}
+	}
+	v = strings.TrimPrefix(v, "v")
+	if v == "" || v == "dev" {
+		return "0.0.0"
+	}
+	return v
+}
+
+// MarkUpdaterReady records that the GitHub provider and the Wails updater were
+// both initialised successfully. It is deliberately a package-level function
+// rather than a method on Api: Wails binds every exported method of a service
+// to the frontend, and this must not be callable from JavaScript. Called only
+// from cmd/run.go.
+func MarkUpdaterReady(a *Api) {
+	if a != nil {
+		a.updaterReady.Store(true)
+	}
+}
+
 // Api struct
 type Api struct {
 	ctx                 context.Context
@@ -58,6 +98,10 @@ type Api struct {
 	windowFocused       atomic.Bool
 	groupRepairInFlight atomic.Bool
 	appStateResync      atomic.Bool
+	// updaterReady is set by cmd/run.go only after the GitHub provider and the
+	// Wails updater are both configured. Every Updater call is guarded by it so
+	// an uninitialised updater is never touched (offline/dev init failure).
+	updaterReady atomic.Bool
 
 	taskCh         chan func()
 	workerWg       sync.WaitGroup
@@ -554,9 +598,55 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	// Initialize VoIP extension
 	a.initMeowcaller()
+
+	// Silent, lightweight update check on startup. This never downloads and
+	// never opens an update window: Check() only queries the provider. Network
+	// failures are logged and swallowed so the app still starts offline. The
+	// updater emits its own wails:updater:* events for the frontend; this
+	// custom event carries just the discovered version. Frontend listeners for
+	// these events are added in D-PKG-004. The ServiceStartup ctx is cancelled
+	// on shutdown, so this cannot hold up ServiceShutdown.
+	a.startBackground(func() {
+		if !a.updaterReady.Load() {
+			slog.Warn("Skipping startup update check: updater is not configured", "source", "updater")
+			return
+		}
+		rel, err := a.app.Updater.Check(ctx)
+		if err != nil {
+			slog.Warn(fmt.Sprintf("Startup update check failed: %v", err), "source", "updater")
+			return
+		}
+		if rel == nil {
+			return
+		}
+		a.app.Event.Emit("wa:update_available", map[string]any{
+			"version": rel.Version,
+		})
+	})
+
 	// Startup failures are surfaced by failStartup through the existing
 	// startupErr/Login path. Returning an error here would abort app.Run and
 	// cause ServiceShutdown to run against a half-built service.
+	return nil
+}
+
+// CheckForUpdates starts the interactive update flow in the background so the
+// UI thread is never blocked. The Wails updater opens its own update window.
+// Failures are logged and surfaced as a short wa:update_error event; the call
+// returns immediately. Frontend listeners for these events are added in
+// D-PKG-004.
+func (a *Api) CheckForUpdates() error {
+	if !a.updaterReady.Load() {
+		slog.Warn("Update check requested but updater is not configured", "source", "updater")
+		a.app.Event.Emit("wa:update_error", "Updates are unavailable in this build.")
+		return nil
+	}
+	go func() {
+		if err := a.app.Updater.CheckAndInstall(context.Background()); err != nil {
+			slog.Warn(fmt.Sprintf("Update check failed: %v", err), "source", "updater")
+			a.app.Event.Emit("wa:update_error", "Could not check for updates.")
+		}
+	}()
 	return nil
 }
 

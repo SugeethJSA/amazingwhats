@@ -11,6 +11,8 @@ import (
 	"github.com/lugvitc/whats4linux/internal/tray"
 	"github.com/urfave/cli"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/updater"
+	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
 // assetHandler keeps the /cached-image/ route (and its path-traversal guard)
@@ -30,7 +32,7 @@ func assetHandler(assets fs.FS) http.Handler {
 }
 
 func run(assets fs.FS) cli.ActionFunc {
-	return func(_ *cli.Context) error {
+	return func(ctx *cli.Context) error {
 		// v3 service lifecycle: the Api service loads and closes the settings
 		// file in ServiceStartup / ServiceShutdown so the handle stays open for
 		// the whole application lifetime.
@@ -91,6 +93,30 @@ func run(assets fs.FS) cli.ActionFunc {
 
 		api := apiPkg.New(app, window)
 		app.RegisterService(application.NewService(api))
+
+		// Inbuilt update checker. The Wails v3 updater is wired with a GitHub
+		// Releases provider; digest verification is handled by the provider via
+		// the SHA256SUMS sidecar asset. No CheckInterval is set — checks are
+		// manual (CheckForUpdates) plus one silent startup check, so no window
+		// ever pops up unexpectedly. Provider/init failures are non-fatal: log
+		// them and let the app run normally offline and in dev builds. The
+		// service is only marked ready when BOTH steps succeed, so no code path
+		// ever calls Updater.Check on an uninitialised updater.
+		currentVersion := apiPkg.NormalizeUpdateVersion(ctx.App.Version)
+		provider, err := github.New(github.Config{
+			Repository:    "SugeethJSA/amazingwhats",
+			ChecksumAsset: "SHA256SUMS",
+		})
+		if err != nil {
+			app.Logger.Warn("updater: GitHub provider unavailable", "error", err)
+		} else if err := app.Updater.Init(updater.Config{
+			CurrentVersion: currentVersion,
+			Providers:      []updater.Provider{provider},
+		}); err != nil {
+			app.Logger.Warn("updater: init failed", "error", err)
+		} else {
+			apiPkg.MarkUpdaterReady(api)
+		}
 
 		// The tray lives in-process now; build it once the window and service
 		// exist so every menu action has a target.
