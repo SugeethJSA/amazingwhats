@@ -4,7 +4,7 @@ import { SendPoll } from "../../../bindings/github.com/lugvitc/whats4linux/api/a
 const MAX_OPTIONS = 12
 
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
 
 export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () => void }) {
   const [question, setQuestion] = useState("")
@@ -85,7 +85,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
   const inputCls =
     "w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none " +
     "placeholder:text-gray-600 dark:placeholder:text-gray-400 " +
-    "focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 " +
+    "focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] " +
     "text-light-text dark:text-dark-text"
 
   return (

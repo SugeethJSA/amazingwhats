@@ -183,7 +183,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <div className="w-full max-w-3xl overflow-y-auto px-6 py-6 lg:px-10">
           <button
             onClick={() => setNestedScreen(null)}
-            className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-light-muted transition-colors hover:bg-black/[0.04] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:bg-white/[0.06] dark:hover:text-dark-text"
+            className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-light-muted transition-colors hover:bg-black/[0.04] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:text-dark-muted dark:hover:bg-white/[0.06] dark:hover:text-dark-text"
           >
             <ChevronBack />
             Back
@@ -270,7 +270,7 @@ function Sidebar({
           <button
             onClick={onBack}
             aria-label="Back to chats"
-            className="rounded-xl p-2 text-light-muted transition-colors hover:bg-black/[0.05] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:bg-white/[0.07] dark:hover:text-dark-text"
+            className="rounded-xl p-2 text-light-muted transition-colors hover:bg-black/[0.05] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:text-dark-muted dark:hover:bg-white/[0.07] dark:hover:text-dark-text"
             title="Back to chats"
           >
             <BackIcon />
@@ -293,7 +293,7 @@ function Sidebar({
             <button
               onClick={() => onSearchChange("")}
               aria-label="Clear search"
-              className="rounded-md p-0.5 text-light-muted transition-colors hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:text-dark-text"
+              className="rounded-md p-0.5 text-light-muted transition-colors hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:text-dark-muted dark:hover:text-dark-text"
               title="Clear search"
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -383,7 +383,7 @@ function SettingsMenuItem({
       onClick={onClick}
       className={clsx(
         "mx-2 my-0.5 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)]",
         isSelected ? "bg-[#21c063]/10" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
       )}
     >

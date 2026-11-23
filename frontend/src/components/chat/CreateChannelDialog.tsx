@@ -6,7 +6,7 @@ interface CreateChannelDialogProps {
 }
 
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
 
 export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
   const [name, setName] = useState("")
@@ -102,7 +102,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
         <input
           id="channel-name"
           autoFocus
-          className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-light-text dark:text-dark-text"
+          className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-light-text dark:text-dark-text"
           value={name}
           onChange={event => setName(event.target.value)}
           placeholder="Channel name"
@@ -115,7 +115,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
         </label>
         <textarea
           id="channel-description"
-          className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 text-light-text dark:text-dark-text resize-none"
+          className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:placeholder:text-gray-400 text-light-text dark:text-dark-text resize-none"
           rows={3}
           value={description}
           onChange={event => setDescription(event.target.value)}

@@ -4,7 +4,7 @@ import {
   SearchMessages,
   GetSearchSuggestions,
 } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import { useMessageStore } from "../store"
+import { useMessageStore, useUIStore } from "../store"
 import { htmlToPlainText } from "../lib/utils"
 import { GoBackIcon } from "../assets/svgs/header_icons"
 
@@ -50,7 +50,7 @@ const MORE_FILTERS: readonly FilterOption[] = [
 const PAGE_SIZE = 30
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137a43] dark:focus-visible:outline-[#21c063]"
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
 
 /** Never surface a raw binding error to the user. */
 function friendlySearchError(err: unknown): string {
@@ -75,6 +75,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const setActiveChatId = useMessageStore(s => s.setActiveChatId)
+  const setFocusMessageId = useUIStore(s => s.setFocusMessageId)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const suggestionRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -152,6 +153,9 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
   }
 
   const handleResultClick = (r: SearchResult) => {
+    // Ask the target conversation to jump to this message before handing over
+    // the active chat and closing the search pane.
+    setFocusMessageId?.(r.message_id)
     setActiveChatId(r.chat_jid)
     onClose()
   }

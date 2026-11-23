@@ -27,6 +27,7 @@ colors:
   chat-wallpaper: "#efeae2"
   action-ink: "#0a1014"
   danger: "#ef4444"
+  warning: "#f0a500"
   link-blue: "#53bdeb"
 typography:
   body:
@@ -143,7 +144,7 @@ The palette is a single vivid green living on two neutral canvases — near-blac
 
 ### Primary
 
-- **Signal Green** (#21c063): The accent of record. Presence dots, unread-badge glow, the selected-chat left edge, the active sidebar-tab underline, links, mentions, blockquote rules, and primary button fills.
+- **Signal Green** (#21c063): The accent of record. Presence dots, unread-badge glow, the selected-chat tint and inset ring, the active sidebar-tab underline, links, mentions, blockquote rules, and primary button fills.
 - **Signal Green Deep** (#1b9a58): The darker voice of the accent for success text, deep ambient orbs, and hover-adjacent emphasis.
 - **Signal Green Hover** (#1ea952): The primary button's pressed-on state, used only on hover.
 
@@ -168,6 +169,7 @@ The palette is a single vivid green living on two neutral canvases — near-blac
 - **Chat Wallpaper** (#efeae2): The faint tiled chat backdrop, carrying a low-opacity repeat texture in both themes.
 - **Action Ink** (#0a1014): The near-black label on green primary buttons and unread badges.
 - **Danger** (#ef4444): Destructive actions and error toasts; always paired with a tinted background rather than a solid field.
+- **Warning** (#f0a500): Reserved for transient warning cues — the warning toast's left edge and the reconnecting indicator dot. Never a large field or a second accent.
 
 ### Named Rules
 
@@ -218,7 +220,7 @@ Flat by default. Hierarchy is built from tonal surface steps and 1px alpha borde
 
 ## Shapes
 
-Soft but not pillowy. Pills and circles own the 9999px radius: avatars, presence dots, the search field, the toggle knob, icon buttons, and the send control. Cards and message bubbles use 16px; buttons, inputs, toasts, and icon tiles use 12px; message sub-cards use 10px; poll options and inline code use 8px. A selected chat row carries a 3px Signal Green left edge with padding adjusted to compensate; the active sidebar tab uses a 2px, 20px-wide green underline. Borders are alpha hairlines, never solid mid-greys, and clipping is used deliberately for avatar stacks and media thumbnails.
+Soft but not pillowy. Pills and circles own the 9999px radius: avatars, presence dots, the search field, the toggle knob, icon buttons, and the send control. Cards and message bubbles use 16px; buttons, inputs, toasts, and icon tiles use 12px; message sub-cards use 10px; poll options and inline code use 8px. A selected chat row carries a green tint plus a 1px full inset ring (`box-shadow: inset 0 0 0 1px var(--color-green)`), so row geometry and padding stay unchanged; the active sidebar tab uses a 2px, 20px-wide green underline. Borders are alpha hairlines, never solid mid-greys, and clipping is used deliberately for avatar stacks and media thumbnails.
 
 ## Components
 
@@ -227,7 +229,7 @@ Soft but not pillowy. Pills and circles own the 9999px radius: avatars, presence
 - **Shape:** 12px radius, 8px vertical and 16px horizontal padding, 14px semibold label.
 - **Primary:** Signal Green fill with Action Ink text; hover moves to Signal Green Hover; disabled drops to 40% opacity and a not-allowed cursor.
 - **Neutral / Ghost / Danger:** neutral uses a 5% fill that lifts on hover; ghost is text-only until hover; danger uses Danger with white text. All share the same geometry.
-- **Focus:** the system's form fields use a 2px ring at 20% accent opacity; action buttons rely on the platform focus ring.
+- **Focus:** the only focus cue is the global `:focus-visible` baseline — a 2px outline in `--color-focus-ring` with a 2px offset — shared by every control in both themes. Components do not define local rings.
 
 ### Chips
 
@@ -245,17 +247,17 @@ Soft but not pillowy. Pills and circles own the 9999px radius: avatars, presence
 ### Inputs / Fields
 
 - **Style:** 12px radius, hairline border, 8px vertical and 12px horizontal padding, 14px text. The chat composer is a full-width pill using the tertiary surface fill.
-- **Focus:** border shifts to Signal Green with a 2px 20%-opacity ring; outline is suppressed in favour of that ring.
+- **Focus:** the hairline border stays put; the shared `:focus-visible` outline is the focus cue. Do not suppress it or add a second ring.
 - **Error / Disabled:** error states use Danger text on a 10% fill; disabled controls drop opacity rather than changing hue.
 
 ### Navigation
 
-- **Style:** 12px-radius chat rows with a 3px green left edge when selected; a 2px, 20px green underline marks the active sidebar tab.
+- **Style:** 12px-radius chat rows with a green tint and a full 1px inset ring when selected; a 2px, 20px green underline marks the active sidebar tab.
 - **States:** hover lifts rows by 3–4% surface tint; icon buttons are circular with a matching hover fill.
 
 ### Toggle (signature component)
 
-A 48×28px pill with a 20px knob that travels 20px on GSAP with an elastic ease over 600ms — the longest motion in the system. The track crossfades between Signal Green and the closed grey over 300ms. It is the one place where a spring is deliberate.
+A 48×28px pill with a 20px knob that travels 20px on GSAP with an elastic ease over 600ms — the longest motion in the system. The track crossfades between Signal Green and the closed grey over 300ms. It is the one place where a spring is deliberate. Under `prefers-reduced-motion: reduce` the knob snaps instantly and `aria-checked` carries the state.
 
 ### Chat Bubble (signature component)
 
@@ -263,7 +265,11 @@ A 16px-radius bubble capped at 85% width (65% at `lg`), with 12px horizontal pad
 
 ### Toast (signature component)
 
-A 12px-radius, 220ms slide-up panel with a 3px coloured left border encoding tone — muted, green, red, or amber — and a heavy shadow that marks it as transient.
+A 12px-radius, 220ms slide-up panel with a 3px coloured left border encoding tone — muted, green, red, or amber — and a heavy shadow that marks it as transient. Its dismiss control is a 24×24px circular hit target.
+
+### Connection status
+
+A compact, fixed pill in the lower-left of the chats and settings surfaces shows the live connection state — Connected, Connecting…, Reconnecting…, or Disconnected — with a small status dot and a text label. It stays present for the whole signed-in session; toasts remain the transient layer. The surface is flat (paper/light or elevated dark), the label uses the primary text token, and the dot uses the status tones. The label is the accessible state (`role="status"`); the dot is decorative.
 
 ### Named Rules
 
@@ -286,5 +292,6 @@ A 12px-radius, 220ms slide-up panel with a 3px coloured left border encoding ton
 - **Don't** add resting shadows to cards, rows, or panels; see The Quiet Layer Rule.
 - **Don't** introduce a second typeface outside inline code; see The Single-Voice Rule.
 - **Don't** let a new colour ship with only one theme's value.
-- **Don't** exceed the established motion budget; the toggle's spring is the sole exception.
+- **Don't** exceed the established motion budget; the toggle's spring is the sole exception (and it snaps under reduced motion).
 - **Don't** set one-off colours in components when a token belongs in `@theme`.
+- **Don't** add a component-local focus ring; the global `:focus-visible` outline is the single cue.

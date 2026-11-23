@@ -4,7 +4,7 @@ import { useUIStore } from "../store"
 
 const ZOOM_LEVELS = [1, 1.5, 2] as const
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
 
 // Full-screen image viewer. Escape closes; +/= zooms in, - zooms out, 0 resets,
 // and Enter toggles zoom (the keyboard equivalent of clicking the image).

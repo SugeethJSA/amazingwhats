@@ -9,7 +9,7 @@ interface InviteLinkDialogProps {
 const INVITE_URL_PREFIX = "https://chat.whatsapp.com/"
 
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
 
 function extractInviteCode(input: string): string {
   const trimmed = input.trim()
@@ -134,7 +134,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="https://chat.whatsapp.com/... or invite code"
-          className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400 ${FOCUS_RING}`}
+          className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400 ${FOCUS_RING}`}
         />
         {error && (
           <p role="alert" className="mb-3 text-sm text-[#b42318] dark:text-[#fca5a5]">

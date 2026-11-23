@@ -60,6 +60,7 @@ import {
   ResizableHandle,
 } from "../components/common/resizable"
 import { MessageSearchScreen } from "./MessageSearchScreen"
+import ConfirmDialog from "@/components/common/ConfirmDialog"
 
 /**
  * Tracks a CSS media query. Below the `md` breakpoint the chat shell must not
@@ -91,7 +92,7 @@ interface HeaderProps {
 
 const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
-    <h1 className="text-xl font-bold text-light-text dark:text-white">WhatsApp</h1>
+    <h1 className="text-xl font-bold text-light-text dark:text-white">Whats4Linux</h1>
     <div className="flex items-center gap-1 text-gray-600 dark:text-[#8696a0]">
       <button
         title="Search Messages"
@@ -144,7 +145,7 @@ const SearchBar = ({
         type="text"
         placeholder={placeholder}
         aria-label={placeholder}
-        className="bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
+        className="bg-transparent border-none text-sm w-full text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -285,100 +286,126 @@ interface ChatListItemContentProps {
   isSelected: boolean
   onSelect: (chat: ChatItem) => void
   onContextMenu: (e: React.MouseEvent, chat: ChatItem) => void
+  onMenuTrigger: (e: React.MouseEvent, chat: ChatItem) => void
+  isMenuOpen: boolean
 }
 
 // Pure presentational component - memoized to prevent unnecessary re-renders
 const ChatListItemContent = memo(
-  ({ chat, muted, isSelected, onSelect, onContextMenu }: ChatListItemContentProps) => {
+  ({
+    chat,
+    muted,
+    isSelected,
+    onSelect,
+    onContextMenu,
+    onMenuTrigger,
+    isMenuOpen,
+  }: ChatListItemContentProps) => {
     const theme = useAppSettingsStore(s => s.theme)
     const dark = theme === "dark"
     const isCommunityChat = Boolean(chat.isCommunityGroup && chat.communityJid)
     const communityName = isCommunityChat ? chat.communityName || "Community" : null
 
     return (
-      <button
-        type="button"
-        onClick={() => onSelect(chat)}
-        onContextMenu={e => onContextMenu(e, chat)}
-        aria-current={isSelected ? "true" : undefined}
-        aria-label={`${chat.name}${chat.unreadCount ? `, ${chat.unreadCount} unread` : ""}`}
+      <div
         className={clsx(
-          "flex w-[calc(100%_-_1rem)] items-center px-3 py-3 mx-2 my-1 cursor-pointer rounded-xl border border-transparent text-left transition-colors duration-150",
+          "group mx-2 my-1 flex w-[calc(100%_-_1rem)] items-center rounded-xl border border-transparent transition-colors duration-150",
           "hover:bg-gray-100/80 dark:hover:bg-white/5",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/40",
           isSelected && "border-[#21c063]/40 bg-[#21c063]/10 dark:bg-[#21c063]/10",
         )}
       >
-        {isCommunityChat ? (
-          <CommunityStackedAvatar
-            communityAvatar={chat.communityAvatar}
-            groupAvatar={chat.avatar}
-            communityName={chat.communityName || ""}
-            groupName={chat.name}
-            communityJid={chat.communityJid}
-            dark={dark}
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full mr-4 shrink-0 overflow-hidden flex items-center justify-center">
-            <MemoizedChatAvatar
-              avatar={chat.avatar}
-              type={chat.type}
-              name={chat.name}
-              jid={chat.id}
+        <button
+          type="button"
+          onClick={() => onSelect(chat)}
+          onContextMenu={e => onContextMenu(e, chat)}
+          aria-current={isSelected ? "true" : undefined}
+          aria-label={`${chat.name}${chat.unreadCount ? `, ${chat.unreadCount} unread` : ""}`}
+          className="flex min-w-0 flex-1 items-center px-3 py-3 text-left"
+        >
+          {isCommunityChat ? (
+            <CommunityStackedAvatar
+              communityAvatar={chat.communityAvatar}
+              groupAvatar={chat.avatar}
+              communityName={chat.communityName || ""}
+              groupName={chat.name}
+              communityJid={chat.communityJid}
               dark={dark}
             />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          {communityName && (
-            <div className="text-[13px] leading-snug text-gray-600 dark:text-[#8696a0] truncate">
-              {communityName}
-            </div>
-          )}
-          <div className="flex justify-between items-baseline mb-1">
-            <h3 className="text-light-text dark:text-dark-text font-medium truncate">
-              {chat.name}
-            </h3>
-            <div className="flex items-center gap-1 shrink-0">
-              {muted && (
-                <span className="text-gray-600 dark:text-[#8696a0]">
-                  <MutedBellIcon />
-                </span>
-              )}
-              <span
-                className={clsx(
-                  "text-xs",
-                  chat.unreadCount
-                    ? "font-medium text-[#14663c] dark:text-[#21c063]"
-                    : "text-gray-600 dark:text-[#8696a0]",
-                )}
-              >
-                {formatChatTimestamp(chat.timestamp)}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 text-sm text-gray-600 dark:text-[#8696a0] truncate [&_p]:inline [&_p]:m-0 ">
-              {chat.isFromMe && (
-                <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>
-              )}
-              {chat.sender && chat.type === "group" && !chat.isFromMe && (
-                <span className="mr-1">{chat.sender}: </span>
-              )}
-              <span
-                className="[&_br]:hidden no-formatting"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(chat.subtitle) }}
+          ) : (
+            <div className="w-12 h-12 rounded-full mr-4 shrink-0 overflow-hidden flex items-center justify-center">
+              <MemoizedChatAvatar
+                avatar={chat.avatar}
+                type={chat.type}
+                name={chat.name}
+                jid={chat.id}
+                dark={dark}
               />
             </div>
-            {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-[#8696a0]" />}
-            {chat.unreadCount ? (
-              <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#21c063] text-[#0a1014] text-xs font-semibold">
-                {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-              </span>
-            ) : null}
+          )}
+          <div className="flex-1 min-w-0">
+            {communityName && (
+              <div className="text-[13px] leading-snug text-gray-600 dark:text-[#8696a0] truncate">
+                {communityName}
+              </div>
+            )}
+            <div className="flex justify-between items-baseline mb-1">
+              <h3 className="text-light-text dark:text-dark-text font-medium truncate">
+                {chat.name}
+              </h3>
+              <div className="flex items-center gap-1 shrink-0">
+                {muted && (
+                  <span className="text-gray-600 dark:text-[#8696a0]">
+                    <MutedBellIcon />
+                  </span>
+                )}
+                <span
+                  className={clsx(
+                    "text-xs",
+                    chat.unreadCount
+                      ? "font-medium text-[#14663c] dark:text-[#21c063]"
+                      : "text-gray-600 dark:text-[#8696a0]",
+                  )}
+                >
+                  {formatChatTimestamp(chat.timestamp)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 text-sm text-gray-600 dark:text-[#8696a0] truncate [&_p]:inline [&_p]:m-0 ">
+                {chat.isFromMe && (
+                  <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>
+                )}
+                {chat.sender && chat.type === "group" && !chat.isFromMe && (
+                  <span className="mr-1">{chat.sender}: </span>
+                )}
+                <span
+                  className="[&_br]:hidden no-formatting"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(chat.subtitle) }}
+                />
+              </div>
+              {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-[#8696a0]" />}
+              {chat.unreadCount ? (
+                <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#21c063] text-[#0a1014] text-xs font-semibold">
+                  {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                </span>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={e => onMenuTrigger(e, chat)}
+          aria-label={`More options for ${chat.name}`}
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
+          className={clsx(
+            "mr-1 flex shrink-0 items-center justify-center rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-[#8696a0] dark:hover:bg-white/10",
+            "opacity-70 group-hover:opacity-100",
+          )}
+        >
+          <MenuIcon />
+        </button>
+      </div>
     )
   },
 )
@@ -390,27 +417,33 @@ interface ChatListItemProps {
   isSelected: boolean
   onSelect: (chat: ChatItem) => void
   onContextMenu: (e: React.MouseEvent, chat: ChatItem) => void
+  onMenuTrigger: (e: React.MouseEvent, chat: ChatItem) => void
+  isMenuOpen: boolean
 }
 
 // Container component that subscribes to specific chat data
-const ChatListItem = memo(({ chatId, isSelected, onSelect, onContextMenu }: ChatListItemProps) => {
-  // This hook only triggers re-render when THIS specific chat changes
-  const chat = useChatById(chatId)
-  // Boolean selector - only re-renders when THIS chat's muted flag flips
-  const muted = useChatMuted(chatId)
+const ChatListItem = memo(
+  ({ chatId, isSelected, onSelect, onContextMenu, onMenuTrigger, isMenuOpen }: ChatListItemProps) => {
+    // This hook only triggers re-render when THIS specific chat changes
+    const chat = useChatById(chatId)
+    // Boolean selector - only re-renders when THIS chat's muted flag flips
+    const muted = useChatMuted(chatId)
 
-  if (!chat) return null
+    if (!chat) return null
 
-  return (
-    <ChatListItemContent
-      chat={chat}
-      muted={muted}
-      isSelected={isSelected}
-      onSelect={onSelect}
-      onContextMenu={onContextMenu}
-    />
-  )
-})
+    return (
+      <ChatListItemContent
+        chat={chat}
+        muted={muted}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onContextMenu={onContextMenu}
+        onMenuTrigger={onMenuTrigger}
+        isMenuOpen={isMenuOpen}
+      />
+    )
+  },
+)
 
 ChatListItem.displayName = "ChatListItem"
 
@@ -450,6 +483,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<api.ChatElement[]>([])
   const [searching, setSearching] = useState(false)
+  const [pendingUnsubscribe, setPendingUnsubscribe] = useState<string | null>(null)
 
   const handleSubscribe = async (jid?: string) => {
     const target = (jid || input).trim()
@@ -461,22 +495,26 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
       await SubscribeNewsletter(target)
       setSuccess("Subscribed successfully!")
       setTimeout(onClose, 1500)
-    } catch (e: any) {
-      setError(e?.message || "Failed to subscribe")
+    } catch {
+      // Never surface a raw backend error: it can contain internal JIDs.
+      setError("Couldn't subscribe to that channel. Check the JID or invite code and try again.")
     } finally {
       setBusy(false)
     }
   }
 
-  const handleUnsubscribe = async (jid: string) => {
-    if (!confirm("Unsubscribe from this channel?")) return
+  const confirmUnsubscribe = async () => {
+    if (!pendingUnsubscribe) return
+    const jid = pendingUnsubscribe
+    setPendingUnsubscribe(null)
     setBusy(true)
     setError("")
     try {
       await UnsubscribeNewsletter(jid)
       setSuccess("Unsubscribed!")
-    } catch (e: any) {
-      setError(e?.message || "Failed to unsubscribe")
+    } catch {
+      // Never surface a raw backend error: it can contain internal JIDs.
+      setError("Couldn't leave that channel. Check your connection and try again.")
     } finally {
       setBusy(false)
     }
@@ -503,103 +541,118 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
   }, [searchQuery])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={e => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
+    <>
       <div
-        className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] flex flex-col p-6 shadow-xl"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        onClick={e => {
+          if (e.target === e.currentTarget) onClose()
+        }}
       >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Subscribe to Channel
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-[#8696a0] mb-4">
-          Enter a newsletter JID or search for channels.
-        </p>
-        <input
-          autoFocus
-          value={input}
-          onChange={e => {
-            setInput(e.target.value)
-            setError("")
-            setSuccess("")
-          }}
-          onKeyDown={e => {
-            if (e.key === "Enter") handleSubscribe()
-            if (e.key === "Escape") onClose()
-          }}
-          placeholder="Newsletter JID or invite code"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
-        />
+        <div
+          className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] flex flex-col p-6 shadow-xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Subscribe to Channel
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-[#8696a0] mb-4">
+            Enter a newsletter JID or search for channels.
+          </p>
+          <input
+            autoFocus
+            value={input}
+            onChange={e => {
+              setInput(e.target.value)
+              setError("")
+              setSuccess("")
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter") handleSubscribe()
+              if (e.key === "Escape") onClose()
+            }}
+            placeholder="Newsletter JID or invite code"
+            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3"
+          />
 
-        {/* Search newsletters */}
-        <input
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search channels..."
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
-        />
+          {/* Search newsletters */}
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search channels..."
+            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3"
+          />
 
-        {searching && (
-          <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>
-        )}
+          {searching && (
+            <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>
+          )}
 
-        {searchResults.length > 0 && (
-          <div className="flex-1 overflow-y-auto max-h-40 mb-3 border border-gray-200 dark:border-dark-border rounded-lg">
-            {searchResults.map(ch => (
-              <div
-                key={ch.jid}
-                className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">
-                    {ch.full_name || ch.push_name || ch.jid}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">{ch.jid}</p>
+          {searchResults.length > 0 && (
+            <div className="flex-1 overflow-y-auto max-h-40 mb-3 border border-gray-200 dark:border-dark-border rounded-lg">
+              {searchResults.map(ch => (
+                <div
+                  key={ch.jid}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-white/5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">
+                      {ch.full_name || ch.push_name || ch.jid}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">{ch.jid}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0 ml-2">
+                    <button
+                      onClick={() => handleSubscribe(ch.jid)}
+                      disabled={busy}
+                      className="text-xs px-2 py-1 rounded bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
+                    >
+                      Subscribe
+                    </button>
+                    <button
+                      onClick={() => setPendingUnsubscribe(ch.jid)}
+                      disabled={busy}
+                      className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50"
+                    >
+                      Unsub
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1 shrink-0 ml-2">
-                  <button
-                    onClick={() => handleSubscribe(ch.jid)}
-                    disabled={busy}
-                    className="text-xs px-2 py-1 rounded bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
-                  >
-                    Subscribe
-                  </button>
-                  <button
-                    onClick={() => handleUnsubscribe(ch.jid)}
-                    disabled={busy}
-                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50"
-                  >
-                    Unsub
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <p className="mb-3 text-sm text-[var(--color-danger-ink)]">{error}</p>
+          )}
+          {success && <p className="mb-3 text-sm text-[var(--color-green-ink)]">{success}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleSubscribe()}
+              disabled={busy || !input.trim()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
+            >
+              {busy ? "Subscribing..." : "Subscribe"}
+            </button>
           </div>
-        )}
-
-        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
-        {success && <p className="text-sm text-[#21c063] mb-3">{success}</p>}
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => handleSubscribe()}
-            disabled={busy || !input.trim()}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50"
-          >
-            {busy ? "Subscribing..." : "Subscribe"}
-          </button>
         </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={pendingUnsubscribe !== null}
+        title="Leave this channel?"
+        description="You will stop receiving updates from it. You can subscribe again any time."
+        confirmLabel="Leave channel"
+        cancelLabel="Keep subscribed"
+        tone="danger"
+        onConfirm={confirmUnsubscribe}
+        onCancel={() => setPendingUnsubscribe(null)}
+      />
+    </>
   )
 }
 
@@ -615,13 +668,13 @@ const WelcomeScreen = () => (
       className="text-3xl font-semibold mb-4 relative z-10 text-light-text dark:text-dark-text"
       style={{ letterSpacing: "-0.02em" }}
     >
-      WhatsApp for Linux
+      Whats4Linux
     </h1>
 
     <p className="relative z-10 text-sm leading-relaxed text-gray-600 dark:text-[#8696a0]">
       Send and receive messages without keeping your phone online.
       <br />
-      Use WhatsApp on up to 4 linked devices and 1 phone.
+      Use your WhatsApp account on up to 4 linked devices and 1 phone.
     </p>
   </div>
 )
@@ -807,25 +860,109 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     }
   }, [setSelfAvatar])
 
-  const [chatMenu, setChatMenu] = useState<{ x: number; y: number; chat: ChatItem } | null>(null)
+  type ChatMenuState = { x: number; y: number; chat: ChatItem }
 
-  const handleChatContextMenu = useCallback((e: React.MouseEvent, chat: ChatItem) => {
-    e.preventDefault()
-    setChatMenu({ x: e.clientX, y: e.clientY, chat })
+  const [chatMenu, setChatMenu] = useState<ChatMenuState | null>(null)
+  const chatMenuRef = useRef<HTMLDivElement | null>(null)
+  const chatMenuTriggerRef = useRef<HTMLElement | null>(null)
+
+  const openChatMenu = useCallback(
+    (x: number, y: number, chat: ChatItem, trigger: HTMLElement | null) => {
+      chatMenuTriggerRef.current = trigger
+      setChatMenu({ x, y, chat })
+    },
+    [],
+  )
+
+  // Outside clicks and action choices simply dismiss the menu.
+  const dismissChatMenu = useCallback(() => {
+    setChatMenu(null)
+    chatMenuTriggerRef.current = null
   }, [])
+
+  // Keyboard dismissal returns focus to whatever opened the menu.
+  const closeChatMenu = useCallback(() => {
+    const trigger = chatMenuTriggerRef.current
+    dismissChatMenu()
+    if (trigger?.isConnected) trigger.focus()
+  }, [dismissChatMenu])
+
+  const handleChatContextMenu = useCallback(
+    (e: React.MouseEvent, chat: ChatItem) => {
+      e.preventDefault()
+      openChatMenu(e.clientX, e.clientY, chat, (e.currentTarget as HTMLElement) ?? null)
+    },
+    [openChatMenu],
+  )
+
+  // Keyboard-accessible path: a labelled options button on every chat row.
+  const handleChatMenuTrigger = useCallback(
+    (e: React.MouseEvent, chat: ChatItem) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const rect = e.currentTarget.getBoundingClientRect()
+      openChatMenu(
+        Math.min(rect.left, window.innerWidth - 208),
+        rect.bottom + 4,
+        chat,
+        e.currentTarget as HTMLElement,
+      )
+    },
+    [openChatMenu],
+  )
+
+  // Put focus on the first item when the menu opens so arrow keys work at once.
+  useEffect(() => {
+    if (!chatMenu) return
+    chatMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+  }, [chatMenu])
+
+  const handleChatMenuKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!chatMenu) return
+      const items = Array.from(
+        chatMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+      )
+      if (items.length === 0) return
+      const current = items.indexOf(document.activeElement as HTMLElement)
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault()
+          items[(current + 1) % items.length]?.focus()
+          break
+        case "ArrowUp":
+          e.preventDefault()
+          items[(current - 1 + items.length) % items.length]?.focus()
+          break
+        case "Home":
+          e.preventDefault()
+          items[0]?.focus()
+          break
+        case "End":
+          e.preventDefault()
+          items[items.length - 1]?.focus()
+          break
+        case "Escape":
+          e.preventDefault()
+          e.stopPropagation()
+          closeChatMenu()
+          break
+      }
+    },
+    [chatMenu, closeChatMenu],
+  )
 
   // Dismiss the chat context menu on any click outside it.
   useEffect(() => {
     if (!chatMenu) return
-    const close = () => setChatMenu(null)
-    document.addEventListener("click", close)
-    return () => document.removeEventListener("click", close)
-  }, [chatMenu])
+    document.addEventListener("click", dismissChatMenu)
+    return () => document.removeEventListener("click", dismissChatMenu)
+  }, [chatMenu, dismissChatMenu])
 
   const handleTogglePin = useCallback(async () => {
     if (!chatMenu) return
     const { chat } = chatMenu
-    setChatMenu(null)
+    closeChatMenu()
     const store = useChatStore.getState()
     // Optimistic: flip locally and re-sort; backend refresh confirms.
     store.updateSingleChat(chat.id, { pinned: !chat.pinned })
@@ -837,7 +974,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       store.updateSingleChat(chat.id, { pinned: chat.pinned })
       store.resortChats()
     }
-  }, [chatMenu])
+  }, [chatMenu, closeChatMenu])
 
   // Leave the archived view automatically when the last chat is unarchived,
   // and when switching to Channels/Status tabs.
@@ -856,7 +993,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return
       if (chatMenu) {
-        setChatMenu(null)
+        closeChatMenu()
         return
       }
       if (useChatStore.getState().selectedChatId) return
@@ -868,12 +1005,12 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [showArchived, chatMenu, selectedCommunity])
+  }, [showArchived, chatMenu, selectedCommunity, closeChatMenu])
 
   const handleToggleArchive = useCallback(async () => {
     if (!chatMenu) return
     const { chat } = chatMenu
-    setChatMenu(null)
+    closeChatMenu()
     const store = useChatStore.getState()
     store.updateSingleChat(chat.id, { archived: !chat.archived })
     try {
@@ -882,13 +1019,21 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       console.error("Failed to toggle chat archive:", err)
       store.updateSingleChat(chat.id, { archived: chat.archived })
     }
-  }, [chatMenu])
+  }, [chatMenu, closeChatMenu])
 
-  const handleDeleteChat = useCallback(async () => {
+  const [pendingDeleteChat, setPendingDeleteChat] = useState<ChatItem | null>(null)
+
+  const handleDeleteChat = useCallback(() => {
     if (!chatMenu) return
     const { chat } = chatMenu
-    if (!confirm(`Delete ${chat.name || "this chat"}?`)) return
-    setChatMenu(null)
+    closeChatMenu()
+    setPendingDeleteChat(chat)
+  }, [chatMenu, closeChatMenu])
+
+  const confirmDeleteChat = useCallback(async () => {
+    const chat = pendingDeleteChat
+    setPendingDeleteChat(null)
+    if (!chat) return
     const store = useChatStore.getState()
     try {
       await DeleteChat(chat.id)
@@ -896,19 +1041,19 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     } catch (err) {
       console.error("Failed to delete chat:", err)
     }
-  }, [chatMenu])
+  }, [pendingDeleteChat])
 
   const handleMarkAsRead = useCallback(async () => {
     if (!chatMenu) return
     const { chat } = chatMenu
-    setChatMenu(null)
+    closeChatMenu()
     try {
       await MarkChatAsRead(chat.id, true)
       useChatStore.getState().clearUnreadCount(chat.id)
     } catch (err) {
       console.error("Failed to mark chat as read:", err)
     }
-  }, [chatMenu])
+  }, [chatMenu, closeChatMenu])
 
   // Global keyboard shortcuts that operate on the chat list / active chat.
   // Registered only while the chats screen is the visible one (the component
@@ -991,11 +1136,12 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         const id = st.selectedChatId
         const chat = id ? st.getChat(id) : undefined
         if (!chat) return
-        setChatMenu({
-          x: Math.round(window.innerWidth / 2) - 100,
-          y: Math.round(window.innerHeight / 2) - 120,
+        openChatMenu(
+          Math.round(window.innerWidth / 2) - 100,
+          Math.round(window.innerHeight / 2) - 120,
           chat,
-        })
+          (document.activeElement as HTMLElement) ?? null,
+        )
       }),
       registerShortcut("block-chat", () => {
         const st = useChatStore.getState()
@@ -1019,7 +1165,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     )
 
     return () => unregs.forEach(unreg => unreg())
-  }, [screen, handleChatSelect, getChat, setShowSearch, setShowCreateGroup, setChatMenu])
+  }, [screen, handleChatSelect, getChat, setShowSearch, setShowCreateGroup, openChatMenu])
 
   const [chatLabelId, setChatLabelId] = useState("")
   const [storyGroup, setStoryGroup] = useState<StatusGroup | null>(null)
@@ -1282,6 +1428,8 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                   isSelected={selectedChatId === chatId}
                   onSelect={handleChatSelect}
                   onContextMenu={handleChatContextMenu}
+                  onMenuTrigger={handleChatMenuTrigger}
+                  isMenuOpen={chatMenu?.chat.id === chatId}
                 />
               ))
             )}
@@ -1326,40 +1474,56 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     <div className="flex h-screen bg-light-secondary dark:bg-dark-bg overflow-hidden">
       {chatMenu && (
         <div
+          ref={chatMenuRef}
           className="fixed z-50 min-w-36 rounded-lg border border-gray-200 dark:border-dark-border bg-white py-1 shadow-lg dark:border-white/10 dark:bg-dark-secondary"
           style={{ top: chatMenu.y, left: chatMenu.x }}
+          onKeyDown={handleChatMenuKeyDown}
         >
-          <button
-            onClick={handleTogglePin}
-            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5"
-          >
-            {chatMenu.chat.pinned ? "Unpin chat" : "Pin chat"}
-          </button>
-          <button
-            onClick={handleToggleArchive}
-            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5"
-          >
-            {chatMenu.chat.archived ? "Unarchive chat" : "Archive chat"}
-          </button>
-          {(chatMenu.chat.unreadCount ?? 0) > 0 && (
+          <div role="menu" aria-label={`Actions for ${chatMenu.chat.name}`}>
             <button
-              onClick={handleMarkAsRead}
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={handleTogglePin}
               className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5"
             >
-              Mark as read
+              {chatMenu.chat.pinned ? "Unpin chat" : "Pin chat"}
             </button>
-          )}
-          <button
-            onClick={handleDeleteChat}
-            className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-white/5"
-          >
-            Delete chat
-          </button>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={handleToggleArchive}
+              className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5"
+            >
+              {chatMenu.chat.archived ? "Unarchive chat" : "Archive chat"}
+            </button>
+            {(chatMenu.chat.unreadCount ?? 0) > 0 && (
+              <button
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                onClick={handleMarkAsRead}
+                className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5"
+              >
+                Mark as read
+              </button>
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={handleDeleteChat}
+              className="w-full px-4 py-2 text-left text-sm text-[var(--color-danger-ink)] hover:bg-gray-100 dark:hover:bg-white/5"
+            >
+              Delete chat
+            </button>
+          </div>
           <div className="border-t border-gray-200 dark:border-dark-border" />
           <div className="px-4 py-2">
             <div className="flex gap-1">
               <input
-                className="flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs outline-none focus:border-[#21c063] text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
+                className="flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
                 value={chatLabelId}
                 onChange={e => setChatLabelId(e.target.value)}
                 placeholder="Label ID"
@@ -1367,6 +1531,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                 onClick={e => e.stopPropagation()}
               />
               <button
+                type="button"
                 onClick={async () => {
                   if (!chatLabelId.trim() || !chatMenu) return
                   try {
@@ -1375,7 +1540,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                     console.error("Failed to label chat:", e)
                   }
                   setChatLabelId("")
-                  setChatMenu(null)
+                  closeChatMenu()
                 }}
                 className="rounded bg-[#21c063] px-2 py-1 text-xs font-medium text-[#0a1014]"
               >
@@ -1407,6 +1572,17 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         <SubscribeChannelDialog onClose={() => setShowSubscribeChannel(false)} />
       )}
       {showCreateChannel && <CreateChannelDialog onClose={() => setShowCreateChannel(false)} />}
+
+      <ConfirmDialog
+        open={pendingDeleteChat !== null}
+        title={`Delete chat with ${pendingDeleteChat?.name || "this contact"}?`}
+        description="This removes the chat and its local message history from this device. It cannot be undone; the conversation on the other device is unaffected."
+        confirmLabel="Delete chat"
+        cancelLabel="Keep chat"
+        tone="danger"
+        onConfirm={confirmDeleteChat}
+        onCancel={() => setPendingDeleteChat(null)}
+      />
     </div>
   )
 }

@@ -22,7 +22,8 @@ const shortcuts: Shortcut[] = [
   { name: "New chat", shortcut: ["Ctrl", "Alt", "N"], category: "Chats" },
   { name: "New group", shortcut: ["Ctrl", "Shift", "N"], category: "Search" },
   { name: "Search chats", shortcut: ["Ctrl", "Alt", "/"], category: "Search" },
-  { name: "Search in chat", shortcut: ["Ctrl", "Shift", "F"], category: "Search" },
+  // Ctrl+Shift+F is a second binding for the same global message search above;
+  // it is deliberately not listed as a separate "Search in chat" feature.
   { name: "Open chat info", shortcut: ["Alt", "I"], category: "Messaging" },
   { name: "Reply", shortcut: ["Alt", "R"], category: "Messaging" },
   { name: "Reply privately", shortcut: ["Ctrl", "Alt", "R"], category: "Messaging" },

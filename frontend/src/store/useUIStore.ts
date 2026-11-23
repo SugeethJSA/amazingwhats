@@ -60,6 +60,9 @@ interface UIStore {
   lightboxKind: "image" | "video"
   openLightbox: (src: string, kind?: "image" | "video") => void
   closeLightbox: () => void
+  /** Message the consumer should jump to once its chat is mounted. */
+  focusMessageId: string | null
+  setFocusMessageId: (id: string | null) => void
 }
 
 // Monotonic IDs avoid collisions when several toasts are created in one tick.
@@ -79,6 +82,9 @@ export const useUIStore = create<UIStore>(set => ({
   lightboxKind: "image",
   openLightbox: (src, kind = "image") => set({ lightboxSrc: src, lightboxKind: kind }),
   closeLightbox: () => set({ lightboxSrc: null }),
+
+  focusMessageId: null,
+  setFocusMessageId: id => set({ focusMessageId: id }),
 
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: open => set({ sidebarOpen: open }),

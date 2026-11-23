@@ -123,6 +123,8 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const addNotification = useUIStore(s => s.addNotification)
   const removeNotification = useUIStore(s => s.removeNotification)
   const screen = useUIStore(s => s.screen)
+  const focusMessageId = useUIStore(s => s.focusMessageId)
+  const setFocusMessageId = useUIStore(s => s.setFocusMessageId)
 
   const enterIsSend = useAppSettingsStore(s => s.enterIsSend)
   const currentChat = useChatById(chatId)
@@ -147,9 +149,15 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [initialLoad, setInitialLoad] = useState(true)
   const [isReady, setIsReady] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
+
+  // One source of truth for the scroll-to-latest affordance: GSAP, keyboard
+  // tab order and visibility all follow it, so a faded-out button cannot stay
+  // focusable or clickable.
+  const scrollButtonVisible = !isAtBottom && isReady && !loadError
 
   const messageListRef = useRef<MessageListHandle>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -165,6 +173,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const loadMorePromiseRef = useRef<Promise<Message[]> | null>(null)
   const initialLoadPromiseRef = useRef<Promise<void> | null>(null)
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusRequestRef = useRef<string | null>(null)
 
   const easeShowRef = useRef(getEase("DropDown", "open"))
   const easeHideRef = useRef(getEase("DropDown", "close"))
@@ -370,6 +379,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     async (generation: number) => {
       setInitialLoad(true)
       setIsReady(false)
+      setLoadError(false)
       const beforeRequest = new Map(
         (useMessageStore.getState().messages[chatId] || []).map(message => [
           message.Info?.ID,
@@ -413,10 +423,23 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         if (requestGenerationRef.current !== generation) return
         console.error("Initial load failed:", err)
         setInitialLoad(false)
+        setLoadError(true)
+        // This is terminal for the attempt: stop the spinner and uncover the
+        // panel so the error state and the composer stay reachable.
+        setIsReady(true)
       }
     },
     [chatId, setMessages],
   )
+
+  const retryInitialLoad = useCallback(() => {
+    const generation = requestGenerationRef.current
+    const request = loadInitialMessages(generation)
+    initialLoadPromiseRef.current = request
+    void request.finally(() => {
+      if (initialLoadPromiseRef.current === request) initialLoadPromiseRef.current = null
+    })
+  }, [loadInitialMessages])
 
   const loadMoreMessages = useCallback((): Promise<Message[]> => {
     if (loadMorePromiseRef.current) return loadMorePromiseRef.current
@@ -847,6 +870,40 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     }
   }, [chatId, loadInitialMessages, setActiveChatId])
 
+  // A search result sets a shared focus request, then switches to this chat.
+  // Take it immediately so no other conversation can consume it, then reuse
+  // the quote-click path to wait for history, paginate if needed, scroll and
+  // highlight the target.
+  useEffect(() => {
+    if (!focusMessageId) return
+    const target = focusMessageId
+    const generation = requestGenerationRef.current
+    focusRequestRef.current = target
+    setFocusMessageId?.(null)
+
+    void (async () => {
+      await handleQuotedClick(target)
+      // The generation check also covers unmount/chat change: a stale request
+      // can never scroll or highlight in a conversation it wasn't meant for.
+      if (requestGenerationRef.current !== generation) return
+      if (focusRequestRef.current === target) focusRequestRef.current = null
+    })()
+  }, [focusMessageId, handleQuotedClick, setFocusMessageId])
+
+  // On chat change or unmount, drop a request this instance still owns so a
+  // stale message id can never highlight something in the next conversation.
+  useEffect(() => {
+    return () => {
+      const owned = focusRequestRef.current
+      focusRequestRef.current = null
+      if (!owned) return
+      const current = useUIStore.getState()
+      if (current.focusMessageId === owned) {
+        current.setFocusMessageId?.(null)
+      }
+    }
+  }, [chatId])
+
   useEffect(() => {
     // New messages from events still use the old Message format for real-time updates
     // They will be compatible due to the Info and Content structure
@@ -916,20 +973,12 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   useGSAP(() => {
     if (!scrollButtonRef.current) return
 
-    if (isAtBottom) {
-      gsap.to(scrollButtonRef.current, {
-        opacity: 0,
-        duration: 0.3,
-        ease: easeHideRef.current,
-      })
-    } else {
-      gsap.to(scrollButtonRef.current, {
-        opacity: 1,
-        duration: 0.3,
-        ease: easeShowRef.current,
-      })
-    }
-  }, [isAtBottom])
+    gsap.to(scrollButtonRef.current, {
+      opacity: scrollButtonVisible ? 1 : 0,
+      duration: 0.3,
+      ease: scrollButtonVisible ? easeShowRef.current : easeHideRef.current,
+    })
+  }, [scrollButtonVisible])
 
   return (
     <div className="flex h-full min-w-0">
@@ -973,7 +1022,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               handleQuotedClick(target.message_id)
             }}
             aria-label={`Pinned message, ${pinnedMessages.length} total. Activate to jump to the next one.`}
-            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/70 dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
+            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)] dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
           >
             <svg
               viewBox="0 0 24 24"
@@ -1013,12 +1062,52 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             </div>
           )}
 
+          {loadError && isReady && !initialLoad && (
+            <div
+              role="alert"
+              className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-[#efeae2] px-6 text-center dark:bg-dark-bg"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="28"
+                height="28"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                aria-hidden="true"
+                className="shrink-0 text-[#5a6670] dark:text-dark-muted"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7.5v5.5M12 16.5h.01" />
+              </svg>
+              <div>
+                <p className="text-base font-semibold text-light-text dark:text-dark-text">
+                  Couldn't load messages
+                </p>
+                <p className="mt-1 max-w-sm text-sm text-[#5a6670] dark:text-dark-muted">
+                  We couldn't load this conversation. Check your connection and try again.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={retryInitialLoad}
+                className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-light-text hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-white/10 dark:bg-dark-secondary dark:text-dark-text dark:hover:bg-white/5"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           <button
             ref={scrollButtonRef}
             type="button"
             onClick={() => scrollToBottom(false)}
             aria-label="Scroll to latest message"
-            className="absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 dark:hover:bg-[#2a3942]"
+            aria-hidden={!scrollButtonVisible}
+            tabIndex={scrollButtonVisible ? 0 : -1}
+            style={{ visibility: scrollButtonVisible ? "visible" : "hidden" }}
+            className="absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-[#2a3942]"
           >
             <svg
               viewBox="0 0 24 24"
@@ -1057,29 +1146,46 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           <div
             role="status"
             aria-live="polite"
-            className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-sm text-[#b42318] dark:text-[#fca5a5]"
+            className="mx-3 mb-2 rounded-xl border border-[#ef4444]/30 bg-[var(--color-danger-tint)] text-[var(--color-danger-ink)]"
           >
-            <span className="min-w-0 flex-1 truncate">
-              <span className="font-semibold">
-                Not sent{failedSends.length > 1 ? ` (${failedSends.length})` : ""}:
-              </span>{" "}
-              {failedSends[failedSends.length - 1].preview}
-            </span>
-            <button
-              type="button"
-              onClick={() => retrySend(failedSends[failedSends.length - 1].tempId)}
-              className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4444]/70"
-            >
-              Retry
-            </button>
-            <button
-              type="button"
-              onClick={() => dismissFailedSend(failedSends[failedSends.length - 1].tempId)}
-              aria-label="Dismiss failed message"
-              className="shrink-0 rounded p-1 text-lg leading-none hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4444]/70"
-            >
-              ×
-            </button>
+            <p className="px-3 pt-2 text-xs font-semibold">
+              Not sent ({failedSends.length}). Retry or dismiss each message.
+            </p>
+            <ul className="max-h-24 overflow-y-auto px-1 pb-1">
+              {failedSends.map(f => (
+                <li key={f.tempId} className="flex items-center gap-2 rounded-lg px-2 py-1">
+                  <span className="min-w-0 flex-1 truncate text-sm" title={f.preview}>
+                    {f.preview}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => retrySend(f.tempId)}
+                    className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dismissFailedSend(f.tempId)}
+                    aria-label={`Dismiss unsent message: ${f.preview}`}
+                    className="shrink-0 rounded p-1 hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 4l8 8M12 4l-8 8" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

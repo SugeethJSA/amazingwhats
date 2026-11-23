@@ -43,7 +43,12 @@ export function ChatHeader({
           </button>
         )}
 
-        <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={onInfoClick}>
+        <button
+          type="button"
+          onClick={onInfoClick}
+          aria-label={`Open chat info for ${chatName}`}
+          className="flex items-center gap-3 min-w-0 rounded-xl text-left"
+        >
           {/* Avatar with presence dot */}
           <div className="relative shrink-0">
             <div
@@ -88,7 +93,7 @@ export function ChatHeader({
               </div>
             ) : null}
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Header action buttons */}

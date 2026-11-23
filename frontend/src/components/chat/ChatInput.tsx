@@ -71,8 +71,23 @@ interface IconButtonProps {
   ref?: React.RefObject<HTMLButtonElement>
 }
 
+// One keyboard-focus treatment for this file. The outline, offset and colour
+// all come from the shared --color-focus-ring token declared in style.css;
+// no component-local green ring.
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
+// Contact names are inserted into a RegExp for mention highlighting. Escape
+// regex metacharacters so a name like " Ada (work) [admin]" cannot throw.
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+const formatFileSize = (bytes: number) => {
+  if (!bytes) return "0 B"
+  const k = 1024
+  const sizes = ["B", "KB", "MB", "GB", "TB"]
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1)
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i]
+}
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ onClick, title, children }, ref) => (
@@ -112,7 +127,7 @@ const FilePreview = ({ file, fileType, onRemove, gifEnabled, onToggleGif }: File
         )}
       </div>
       <span className="text-xs text-light-muted dark:text-dark-muted">
-        {(file.size / 1024).toFixed(2)} KB
+        {formatFileSize(file.size)}
       </span>
     </div>
     {(fileType === "video" || fileType === "gif") && onToggleGif && (
@@ -201,6 +216,9 @@ export function ChatInput({
 }: ChatInputProps) {
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([])
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
+  // The attach menu collapses its two least-used actions into a "More" level,
+  // so no single decision point shows more than four choices.
+  const [attachSubmenuOpen, setAttachSubmenuOpen] = useState(false)
   const [pollOpen, setPollOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
@@ -231,18 +249,49 @@ export function ChatInput({
 
   // The attach menu needs its own Escape handler; the chat-level handler would
   // otherwise close the whole conversation while the menu is still open.
+  // Escape backs out of the "More" level first, then closes and returns focus
+  // to the trigger. Arrow/Home/End navigation is handled on the menu element.
   useEffect(() => {
     if (!attachMenuOpen) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        event.stopPropagation()
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      event.stopPropagation()
+      if (attachSubmenuOpen) {
+        setAttachSubmenuOpen(false)
+      } else {
         setAttachMenuOpen(false)
+        attachButtonRef.current?.focus()
       }
     }
     document.addEventListener("keydown", onKey, true)
     return () => document.removeEventListener("keydown", onKey, true)
-  }, [attachMenuOpen])
+  }, [attachMenuOpen, attachSubmenuOpen])
+
+  // Move focus into the menu when it opens and into the "More" level when that
+  // opens. Returning from the submenu restores focus to its trigger button.
+  const submenuWasOpenRef = useRef(false)
+  useEffect(() => {
+    if (!attachMenuOpen) {
+      submenuWasOpenRef.current = false
+      return
+    }
+    const frame = requestAnimationFrame(() => {
+      if (attachSubmenuOpen) {
+        submenuWasOpenRef.current = true
+        attachMenuRef.current
+          ?.querySelector<HTMLElement>('[data-attach-level="sub"]')
+          ?.focus()
+      } else if (submenuWasOpenRef.current) {
+        attachMoreButtonRef.current?.focus()
+      } else {
+        attachMenuRef.current
+          ?.querySelector<HTMLElement>('[data-attach-level="primary"]')
+          ?.focus()
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [attachMenuOpen, attachSubmenuOpen])
 
   // Location dialog: focus the first field on open, Escape closes, Tab stays in
   // the dialog, and focus returns to the attachment trigger on close.
@@ -288,6 +337,45 @@ export function ChatInput({
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const attachButtonRef = useRef<HTMLButtonElement>(null)
+  const attachMenuRef = useRef<HTMLDivElement>(null)
+  const attachMoreButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Backdrop click / Escape-equivalent dismissal: close both levels and put
+  // focus back where it came from. Item actions manage their own focus (they
+  // open a dialog or a file picker), so they close without this restoration.
+  const dismissAttachMenu = () => {
+    setAttachMenuOpen(false)
+    setAttachSubmenuOpen(false)
+    attachButtonRef.current?.focus()
+  }
+
+  // Standard menu roving-focus: arrows wrap, Home/End jump to the extremes.
+  // Escape is handled at the document level so it also works if focus ever
+  // leaves the menu.
+  const onAttachMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const container = attachMenuRef.current
+    if (!container) return
+    if (
+      event.key !== "ArrowDown" &&
+      event.key !== "ArrowUp" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return
+    }
+    const items = Array.from(
+      container.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'),
+    )
+    if (items.length === 0) return
+    event.preventDefault()
+    const current = items.indexOf(document.activeElement as HTMLElement)
+    let next: number
+    if (event.key === "Home") next = 0
+    else if (event.key === "End") next = items.length - 1
+    else if (event.key === "ArrowDown") next = current < 0 ? 0 : (current + 1) % items.length
+    else next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length
+    items[next]?.focus()
+  }
 
   const handleScroll = () => {
     if (textareaRef.current && backdropRef.current) {
@@ -309,13 +397,15 @@ export function ChatInput({
     })
     if (mentionNames.length === 0) return inputText
 
-    const pattern = new RegExp(`(${mentionNames.join("|")})`, "g")
+    // Escape each name before building the alternation: an unescaped "(" or
+    // "[" in a contact name would throw and take down the composer render.
+    const pattern = new RegExp(`(${mentionNames.map(escapeRegExp).join("|")})`, "g")
     const parts = inputText.split(pattern)
 
     return parts.map((part, index) => {
       if (mentionNames.includes(part)) {
         return (
-          <span key={index} className="text-green-500">
+          <span key={index} className="text-(--color-green-ink)">
             {part}
           </span>
         )
@@ -574,7 +664,7 @@ export function ChatInput({
       {/* Main input row: rounded pill (emoji left, attach right) with the
           send button as a separate circle outside, WhatsApp-style. */}
       <div className="flex items-end gap-2">
-        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors focus-within:border-[#21c063]/70 focus-within:ring-2 focus-within:ring-[#21c063]/20 dark:border-white/10 dark:bg-dark-secondary dark:focus-within:border-[#21c063]/50 dark:focus-within:bg-dark-elevated">
+        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors focus-within:border-(--color-focus-ring) focus-within:ring-2 focus-within:ring-(--color-focus-ring) dark:border-white/10 dark:bg-dark-secondary dark:focus-within:border-(--color-focus-ring) dark:focus-within:bg-dark-elevated">
           {/* Emoji Button */}
           <IconButton ref={emojiButtonRef} onClick={onToggleEmojiPicker} title="Emoji">
             <EmojiIcon />
@@ -664,88 +754,164 @@ export function ChatInput({
             </IconButton>
             {attachMenuOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setAttachMenuOpen(false)} />
+                <div className="fixed inset-0 z-40" onClick={dismissAttachMenu} />
                 <div
+                  ref={attachMenuRef}
                   role="menu"
-                  aria-label="Attach options"
+                  aria-label={attachSubmenuOpen ? "More attach options" : "Attach options"}
+                  onKeyDown={onAttachMenuKeyDown}
                   className="absolute bottom-12 right-0 z-50 w-56 rounded-2xl bg-white py-3 shadow-xl dark:bg-dark-elevated border border-gray-100 dark:border-dark-border"
                 >
-                  {(
-                    [
-                      {
-                        label: "Photos & videos",
-                        icon: <PhotosIcon />,
-                        color: "text-blue-500",
-                        act: () => {
-                          setFileAccept("image/*,video/*")
-                          setTimeout(() => fileInputRef.current?.click(), 0)
+                  {attachSubmenuOpen ? (
+                    <>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-attach-level="sub"
+                        onClick={() => setAttachSubmenuOpen(false)}
+                        className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="20"
+                          height="20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                          className="text-light-text dark:text-dark-text"
+                        >
+                          <path d="M15.41 16.59 10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z" />
+                        </svg>
+                        <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                          Back
+                        </span>
+                      </button>
+                      {[
+                        {
+                          label: "Contact",
+                          icon: <ContactIcon />,
+                          color: "text-yellow-500",
+                          act: () => setContactOpen(true),
                         },
-                      },
-                      {
-                        label: "Document",
-                        icon: <DocumentIcon />,
-                        color: "text-[#21c063]",
-                        act: async () => {
-                          // Use the native GTK picker (no MIME filter) — the
-                          // webview input with accept="*/*" offers no
-                          // selectable files on some desktops.
-                          try {
-                            const picked = await PickAttachmentFile()
-                            if (!picked?.base64) return
-                            const binary = atob(picked.base64)
-                            const bytes = new Uint8Array(binary.length)
-                            for (let i = 0; i < binary.length; i++) {
-                              bytes[i] = binary.charCodeAt(i)
+                        {
+                          label: "Location",
+                          icon: <LocationIcon />,
+                          color: "text-red-500",
+                          act: () => setLocationOpen(true),
+                        },
+                      ].map(item => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          role="menuitem"
+                          data-attach-level="sub"
+                          onClick={() => {
+                            setAttachMenuOpen(false)
+                            setAttachSubmenuOpen(false)
+                            item.act()
+                          }}
+                          className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                        >
+                          <span className={clsx("flex items-center justify-center", item.color)}>
+                            {item.icon}
+                          </span>
+                          <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                            {item.label}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {[
+                        {
+                          label: "Photos & videos",
+                          icon: <PhotosIcon />,
+                          color: "text-blue-500",
+                          act: () => {
+                            setFileAccept("image/*,video/*")
+                            setTimeout(() => fileInputRef.current?.click(), 0)
+                          },
+                        },
+                        {
+                          label: "Document",
+                          icon: <DocumentIcon />,
+                          color: "text-[#21c063]",
+                          act: async () => {
+                            // Use the native GTK picker (no MIME filter) — the
+                            // webview input with accept="*/*" offers no
+                            // selectable files on some desktops.
+                            try {
+                              const picked = await PickAttachmentFile()
+                              if (!picked?.base64) return
+                              const binary = atob(picked.base64)
+                              const bytes = new Uint8Array(binary.length)
+                              for (let i = 0; i < binary.length; i++) {
+                                bytes[i] = binary.charCodeAt(i)
+                              }
+                              const file = new File([bytes], picked.name, {
+                                type: picked.mimetype || "application/octet-stream",
+                              })
+                              onFileSelect({
+                                target: { files: [file] },
+                              } as unknown as React.ChangeEvent<HTMLInputElement>)
+                            } catch (err) {
+                              console.error("Failed to pick file:", err)
                             }
-                            const file = new File([bytes], picked.name, {
-                              type: picked.mimetype || "application/octet-stream",
-                            })
-                            onFileSelect({
-                              target: { files: [file] },
-                            } as unknown as React.ChangeEvent<HTMLInputElement>)
-                          } catch (err) {
-                            console.error("Failed to pick file:", err)
-                          }
+                          },
                         },
-                      },
-                      {
-                        label: "Poll",
-                        icon: <PollIcon />,
-                        color: "text-purple-500",
-                        act: () => setPollOpen(true),
-                      },
-                      {
-                        label: "Contact",
-                        icon: <ContactIcon />,
-                        color: "text-yellow-500",
-                        act: () => setContactOpen(true),
-                      },
-                      {
-                        label: "Location",
-                        icon: <LocationIcon />,
-                        color: "text-red-500",
-                        act: () => setLocationOpen(true),
-                      },
-                    ] as const
-                  ).map(item => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAttachMenuOpen(false)
-                        item.act()
-                      }}
-                      className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
-                    >
-                      <span className={clsx("flex items-center justify-center", item.color)}>
-                        {item.icon}
-                      </span>
-                      <span className="text-sm font-medium text-light-text dark:text-dark-text">
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
+                        {
+                          label: "Poll",
+                          icon: <PollIcon />,
+                          color: "text-purple-500",
+                          act: () => setPollOpen(true),
+                        },
+                      ].map(item => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          role="menuitem"
+                          data-attach-level="primary"
+                          onClick={() => {
+                            setAttachMenuOpen(false)
+                            setAttachSubmenuOpen(false)
+                            item.act()
+                          }}
+                          className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                        >
+                          <span className={clsx("flex items-center justify-center", item.color)}>
+                            {item.icon}
+                          </span>
+                          <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                            {item.label}
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        ref={attachMoreButtonRef}
+                        type="button"
+                        role="menuitem"
+                        data-attach-level="primary"
+                        aria-haspopup="menu"
+                        aria-expanded={attachSubmenuOpen}
+                        onClick={() => setAttachSubmenuOpen(true)}
+                        className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="20"
+                          height="20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                          className="text-light-text dark:text-dark-text"
+                        >
+                          <path d="M9.29 6.71a1 1 0 0 1 1.42 0l5.58 5.59a1 1 0 0 1 0 1.4l-5.58 5.59a1 1 0 1 1-1.42-1.42L14.17 12 9.29 7.12a1 1 0 0 1 0-1.41z" />
+                        </svg>
+                        <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                          More
+                        </span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -816,7 +982,7 @@ export function ChatInput({
                 id="location-lat"
                 ref={locationLatRef}
                 inputMode="decimal"
-                className="mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Latitude (e.g. 37.7749)"
                 value={latInput}
                 onChange={event => {
@@ -833,7 +999,7 @@ export function ChatInput({
               <input
                 id="location-lng"
                 inputMode="decimal"
-                className="mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                className={`mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Longitude (e.g. -122.4194)"
                 value={lngInput}
                 onChange={event => {
@@ -849,7 +1015,7 @@ export function ChatInput({
               </label>
               <input
                 id="location-place"
-                className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                className={`mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 focus:border-(--color-focus-ring) dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100 ${FOCUS_RING}`}
                 placeholder="Place name (optional)"
                 value={placeName}
                 onChange={event => setPlaceName(event.target.value)}

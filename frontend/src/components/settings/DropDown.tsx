@@ -165,7 +165,7 @@ const DropDown = ({
         onKeyDown={onTriggerKeyDown}
         className={clsx(
           "flex min-h-9 w-full items-center justify-between rounded-md border p-2 text-left transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
           "bg-dropdown-bg hover:bg-dropdown-hover-bg text-dropdown-text dark:bg-dropdown-dark-bg dark:hover:bg-dropdown-dark-hover-bg dark:text-dropdown-dark-text",
           "border-dropdown-border dark:border-dropdown-dark-border",
         )}
@@ -205,7 +205,7 @@ const DropDown = ({
               onKeyDown={event => onOptionKeyDown(event, index)}
               className={clsx(
                 "flex min-h-9 w-full items-center rounded-md px-2 py-2 text-left transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)]",
                 "hover:bg-dropdown-element-hover-bg dark:hover:bg-dropdown-element-dark-hover-bg text-dropdown-element-text dark:text-dropdown-element-dark-text",
                 selectedElement === element &&
                   "bg-dropdown-element-hover-bg dark:bg-dropdown-element-dark-hover-bg",

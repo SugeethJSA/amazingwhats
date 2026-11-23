@@ -11,10 +11,12 @@ import { sanitizeHtml } from "../../lib/utils"
 const STATUS_JID = "status@broadcast"
 const STORY_MS = 5000
 
+// Keyboard focus uses the shared --color-focus-ring token from style.css in
+// both the light status list and the dark story viewer. The token has a light
+// and a dark expression, so no component-local green or white ring is needed.
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-const LIST_FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+const LIST_FOCUS_RING = FOCUS_RING
 
 export interface StatusGroup {
   sender: string

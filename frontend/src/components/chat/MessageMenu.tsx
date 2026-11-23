@@ -91,7 +91,7 @@ const labelIcon = () => (
 )
 
 const MENU_ITEM_BASE =
-  "flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:hover:bg-dark-tertiary dark:focus-visible:bg-dark-tertiary disabled:cursor-not-allowed disabled:opacity-50"
+  "flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-dark-tertiary dark:focus-visible:bg-dark-tertiary disabled:cursor-not-allowed disabled:opacity-50"
 
 const menuItemClass = (tone: "default" | "danger" = "default") =>
   clsx(
@@ -365,7 +365,7 @@ export function MessageMenu({
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         aria-controls={menuId}
-        className="rounded-lg p-1 opacity-0 transition-opacity duration-200 hover:bg-black/5 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:hover:bg-white/10"
+        className="rounded-lg p-1 opacity-0 transition-opacity duration-200 hover:bg-black/5 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-white/10"
       >
         <MenuArrowIcon />
       </button>
@@ -536,7 +536,7 @@ export function MessageMenu({
                         autoFocus
                         list={labelListId}
                         aria-label="Label ID or saved label name"
-                        className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/40 dark:border-dark-border dark:text-gray-100"
+                        className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100"
                         value={labelId}
                         onChange={event => setLabelId(event.target.value)}
                         placeholder="Label ID or saved name"
@@ -555,7 +555,7 @@ export function MessageMenu({
                     </div>
                     <input
                       aria-label="Label name (optional)"
-                      className="mt-2 w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/40 dark:border-dark-border dark:text-gray-100"
+                      className="mt-2 w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs text-gray-900 outline-none focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-dark-border dark:text-gray-100"
                       value={labelName}
                       onChange={event => setLabelName(event.target.value)}
                       placeholder="Name for this label (optional)"

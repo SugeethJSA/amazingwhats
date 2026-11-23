@@ -39,6 +39,25 @@ import { LRUCache } from "../../lib/lruCache"
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
 
+// One keyboard-focus treatment for this file, driven by the shared
+// --color-focus-ring token from style.css (never a component-local green).
+const FOCUS_RING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+
+// whatsmeow receipt types arrive as strings on message.receiptStatus. Map the
+// known ones to the tick meaning so screen readers and tooltips get the real
+// state, even though the blue-tick glyph itself looks the same in each state.
+const READ_RECEIPTS = new Set(["read", "reads", "read_self", "read-self", "played"])
+const DELIVERED_RECEIPTS = new Set(["delivered", "delivery", "received"])
+
+function receiptLabel(message: Message): string {
+  if (message.isPending) return "Sending"
+  const status = (message.receiptStatus ?? "").toLowerCase()
+  if (READ_RECEIPTS.has(status)) return "Read"
+  if (DELIVERED_RECEIPTS.has(status)) return "Delivered"
+  return "Sent"
+}
+
 type NotificationOptions = {
   tone?: "info" | "success" | "error" | "warning"
   action?: { label: string; onClick: () => void }
@@ -376,7 +395,12 @@ export function MessageItem({
       {message.edited && <span className="italic">Edited</span>}
       <span>{timeStr}</span>
       {isFromMe && (
-        <span className="transition-colors duration-300">
+        <span
+          role="img"
+          aria-label={`Message ${receiptLabel(message).toLowerCase()}`}
+          title={`Message ${receiptLabel(message).toLowerCase()}`}
+          className="transition-colors duration-300"
+        >
           {isPending ? <ClockPendingIcon /> : <BlueTickIcon />}
         </span>
       )}
@@ -400,7 +424,7 @@ export function MessageItem({
                 value={editText}
                 onChange={e => setEditText(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleEditSubmit()}
-                className="flex-1 bg-transparent border border-gray-400 dark:border-gray-600 rounded px-2 py-1 text-sm outline-none"
+                className={`flex-1 bg-transparent border border-gray-400 dark:border-gray-600 rounded px-2 py-1 text-sm ${FOCUS_RING}`}
                 autoFocus
               />
               <button
@@ -561,7 +585,8 @@ export function MessageItem({
             <button
               onClick={handleMediaDownload}
               title="Download Document"
-              className="p-2 border border-gray-300 dark:border-gray-600 rounded-full"
+              aria-label="Download document"
+              className={`p-2 border border-gray-300 dark:border-gray-600 rounded-full ${FOCUS_RING}`}
             >
               <DownloadIcon />
             </button>
@@ -693,7 +718,8 @@ export function MessageItem({
             aria-expanded={showReactionPicker}
             title="React"
             className={clsx(
-              "absolute bottom-1 z-20 rounded-full bg-white p-1 text-sm leading-none opacity-0 shadow transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:bg-dark-tertiary",
+              "absolute bottom-1 z-20 rounded-full bg-white p-1 text-sm leading-none opacity-0 shadow transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 dark:bg-dark-tertiary",
+              FOCUS_RING,
               isFromMe ? "-left-9" : "-right-9",
             )}
           >
@@ -813,7 +839,8 @@ export function MessageItem({
                 setShowFullEmoji(false)
               }}
               className={clsx(
-                "absolute -bottom-3 z-9999 cursor-pointer rounded-full transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60",
+                "absolute -bottom-3 z-9999 cursor-pointer rounded-full transition-transform duration-150 hover:-translate-y-0.5",
+                FOCUS_RING,
                 isFromMe ? "right-2" : "left-2",
               )}
             >

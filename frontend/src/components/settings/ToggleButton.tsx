@@ -27,10 +27,19 @@ const ToggleButton = ({
   })
 
   useGSAP(() => {
-    if (!circleRef.current) return
+    const knob = circleRef.current
+    if (!knob) return
 
-    gsap.to(circleRef.current, {
-      x: isEnabled ? 20 : 0,
+    const x = isEnabled ? 20 : 0
+    // Reduced motion: snap the knob and let aria-checked carry the state.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.killTweensOf(knob)
+      gsap.set(knob, { x })
+      return
+    }
+
+    gsap.to(knob, {
+      x,
       duration: 0.6,
       ease: easeRef.current,
       overwrite: "auto",
@@ -47,7 +56,6 @@ const ToggleButton = ({
       onClick={onToggle}
       className={clsx(
         "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full px-1 transition-colors duration-300",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
         disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
         isEnabled
           ? "bg-toggle-bg dark:bg-toggle-dark-bg"

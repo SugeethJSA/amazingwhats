@@ -2,6 +2,9 @@ import { SettingsCard, ChevronIcon, SettingsSection } from "../../components/set
 
 const ISSUE_URL = "https://github.com/SugeethJSA/amazingwhats/issues/new"
 
+const CODE_CLS =
+  "rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[12px] text-light-text dark:bg-white/[0.06] dark:text-dark-text"
+
 const LinksIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
     <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
@@ -41,7 +44,7 @@ function LinkRow({
     <button
       type="button"
       onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
-      className="flex min-h-14 w-full cursor-pointer items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50 dark:hover:bg-white/[0.04]"
+      className="flex min-h-14 w-full cursor-pointer items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-white/[0.04]"
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-light-muted dark:bg-white/[0.06] dark:text-dark-muted">
         {icon}
@@ -62,6 +65,54 @@ function LinkRow({
 const HelpAndFeedback = () => {
   return (
     <div className="flex flex-col gap-6">
+      <SettingsSection title="About Whats4Linux">
+        <SettingsCard className="p-5">
+          <div className="space-y-3 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
+            <p>
+              <strong className="font-semibold text-light-text dark:text-dark-text">
+                Local by default.
+              </strong>{" "}
+              Your messages and media stay on this device. Whats4Linux has no telemetry and sends no
+              analytics anywhere.
+            </p>
+            <p>
+              <strong className="font-semibold text-light-text dark:text-dark-text">
+                Official multi-device protocol.
+              </strong>{" "}
+              The app connects directly to WhatsApp's multi-device protocol through a native backend.
+              It is an independent client, not a browser wrapper around WhatsApp Web.
+            </p>
+            <p>
+              <strong className="font-semibold text-light-text dark:text-dark-text">
+                Where your data lives.
+              </strong>{" "}
+              Everything is kept locally in a <code className={CODE_CLS}>whats4linux</code> folder
+              inside your operating system's user config directory — for example{" "}
+              <code className={CODE_CLS}>~/.config/whats4linux</code> on Linux. That includes the
+              local SQLite databases and the media cache. Removing that folder removes local data, so
+              back it up first if you rely on it.
+            </p>
+            <p>
+              <strong className="font-semibold text-light-text dark:text-dark-text">
+                Custom CSS and JS.
+              </strong>{" "}
+              Advanced settings let you inject your own styles and scripts to change how the
+              interface looks and behaves. They run only in this app, on this device, and are
+              unsupported experiments — a bad script can break the UI until you remove it.
+            </p>
+            <p>
+              <strong className="font-semibold text-light-text dark:text-dark-text">
+                First-party help.
+              </strong>{" "}
+              For questions about Whats4Linux itself, use "Report a problem" below to open an issue
+              on the project's own tracker. The Meta/WhatsApp links here are external sites operated
+              by WhatsApp; they cover the account, pairing, and encryption side of the network, not
+              this application.
+            </p>
+          </div>
+        </SettingsCard>
+      </SettingsSection>
+
       <SettingsSection title="Help resources">
         <SettingsCard>
           <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
@@ -121,7 +172,7 @@ const HelpAndFeedback = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-light-text dark:text-dark-text">
-              whats4linux
+              Whats4Linux
             </div>
             <div className="text-[13px] text-light-muted dark:text-dark-muted">
               Unofficial desktop client powered by the WhatsApp protocol
