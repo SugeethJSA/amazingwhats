@@ -11,5 +11,8 @@ Repo clean on `master` at `4c88aa3`; no existing `docs/`; source inventory captu
 **[3 | 2026-11-23] DONE_VERIFIED → DOC-001 — mother (vocabulary + quickstart)**
 `gate_DOC001b` GREEN; Critic PASS (3 minor label/order nits noted). Commit `4035987`.
 
+**[5 | 2026-11-23] DONE_VERIFIED → DOC-003 — mother (Go backend walkthrough)**
+`gate_DOC003b` GREEN after fixing a factual error on reaction return values; Critic re-audit PASS. Commit `c60940d`.
+
 **[4 | 2026-11-23] DONE_VERIFIED → DOC-002 — mother (architecture)**
 `gate_DOC002` GREEN; Critic PASS (one evidence-gap nit on D2-D5 citations, non-blocking). Commit `330e37e`.
