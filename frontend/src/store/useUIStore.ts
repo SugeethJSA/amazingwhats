@@ -15,6 +15,28 @@ interface OnlineState {
 
 export type AppScreen = "login" | "chats" | "settings"
 
+export type NotificationTone = "info" | "success" | "error" | "warning"
+
+export interface NotificationAction {
+  label: string
+  onClick: () => void
+}
+
+export interface NotificationOptions {
+  tone?: NotificationTone
+  action?: NotificationAction
+  /** When omitted the toast stays until dismissed explicitly. */
+  durationMs?: number
+}
+
+export interface Notification {
+  id: number
+  message: string
+  tone: NotificationTone
+  action?: NotificationAction
+  durationMs?: number
+}
+
 interface UIStore {
   screen: AppScreen
   setScreen: (screen: AppScreen) => void
@@ -23,14 +45,15 @@ interface UIStore {
   chatInfoOpen: boolean
   typingIndicators: Record<string, TypingState>
   onlineStatus: Record<string, OnlineState>
-  notifications: Array<{ id: number; message: string }>
+  notifications: Notification[]
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
   setShowEmojiPicker: (show: boolean) => void
   setChatInfoOpen: (open: boolean) => void
   setTypingIndicator: (chatId: string, isTyping: boolean) => void
   setOnlineStatus: (userId: string, isOnline: boolean) => void
-  addNotification: (message: string) => number
+  /** Backward compatible: `addNotification(message)` still works. */
+  addNotification: (message: string, options?: NotificationOptions) => number
   removeNotification: (id: number) => void
   evictStale: () => void
   lightboxSrc: string | null
@@ -38,6 +61,9 @@ interface UIStore {
   openLightbox: (src: string, kind?: "image" | "video") => void
   closeLightbox: () => void
 }
+
+// Monotonic IDs avoid collisions when several toasts are created in one tick.
+let nextNotificationId = Date.now()
 
 export const useUIStore = create<UIStore>(set => ({
   screen: "login",
@@ -90,10 +116,17 @@ export const useUIStore = create<UIStore>(set => ({
       }
     }),
 
-  addNotification: message => {
-    const id = Date.now()
+  addNotification: (message, options = {}) => {
+    const id = nextNotificationId++
+    const notification: Notification = {
+      id,
+      message,
+      tone: options.tone ?? "info",
+      ...(options.action ? { action: options.action } : {}),
+      ...(typeof options.durationMs === "number" ? { durationMs: options.durationMs } : {}),
+    }
     set(state => ({
-      notifications: [...state.notifications, { id, message }].slice(-50),
+      notifications: [...state.notifications, notification].slice(-50),
     }))
     return id
   },

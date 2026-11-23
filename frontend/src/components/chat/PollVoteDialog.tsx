@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { SendPollVote } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
 interface PollVoteDialogProps {
@@ -9,6 +9,9 @@ interface PollVoteDialogProps {
   onClose: () => void
   onVote?: () => void
 }
+
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
 
 export function PollVoteDialog({
   chatId,
@@ -22,6 +25,51 @@ export function PollVoteDialog({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
+
+  const titleId = useId()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const firstOptionRef = useRef<HTMLButtonElement>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(
+    typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null,
+  )
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    firstOptionRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        event.stopPropagation()
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== "Tab" || !panelRef.current) return
+      const focusables = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => {
+      document.removeEventListener("keydown", onKey, true)
+      if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus()
+    }
+  }, [])
 
   const toggle = (i: number) => {
     setSelected(prev => {
@@ -42,7 +90,8 @@ export function PollVoteDialog({
       setDone(true)
       onVote?.()
     } catch (err) {
-      setError(String(err))
+      console.error("Failed to submit vote:", err)
+      setError("Could not submit your vote. Please try again.")
     } finally {
       setSending(false)
     }
@@ -51,26 +100,39 @@ export function PollVoteDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
+      onClick={event => {
+        if (event.target === event.currentTarget) onClose()
+      }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="w-[360px] max-w-[90vw] rounded-xl bg-white p-4 shadow-xl dark:bg-dark-secondary"
-        onClick={e => e.stopPropagation()}
+        onClick={event => event.stopPropagation()}
       >
-        <h3 className="mb-3 text-lg font-medium text-light-text dark:text-dark-text">Vote</h3>
-        <p className="text-sm text-gray-900 dark:text-gray-100 mb-3 font-medium">{question}</p>
+        <h3 id={titleId} className="mb-3 text-lg font-medium text-light-text dark:text-dark-text">
+          Vote
+        </h3>
+        <p className="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">{question}</p>
         {done ? (
-          <p className="text-sm text-green-600 dark:text-green-400 mb-3">Vote submitted!</p>
+          <p role="status" className="mb-3 text-sm text-[#1b9a58] dark:text-[#21c063]">
+            Vote submitted!
+          </p>
         ) : (
-          <div className="flex flex-col gap-2 mb-3">
+          <div className="mb-3 flex flex-col gap-2" role="group" aria-label="Poll options">
             {options.map((opt, i) => (
               <button
                 key={i}
+                ref={i === 0 ? firstOptionRef : undefined}
+                type="button"
                 onClick={() => toggle(i)}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                aria-pressed={selected.has(i)}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${FOCUS_RING} ${
                   selected.has(i)
-                    ? "border-[#21c063] bg-[#21c063]/10 text-[#21c063]"
-                    : "border-gray-300 dark:border-dark-border text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary"
+                    ? "border-[#21c063] bg-[#21c063]/10 text-[#1b9a58] dark:text-[#21c063]"
+                    : "border-gray-300 text-gray-900 hover:bg-gray-100 dark:border-dark-border dark:text-gray-100 dark:hover:bg-dark-tertiary"
                 }`}
               >
                 {opt}
@@ -78,19 +140,26 @@ export function PollVoteDialog({
             ))}
           </div>
         )}
-        {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+        {error && (
+          <p role="alert" className="mb-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5"
+            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
           >
             {done ? "Close" : "Cancel"}
           </button>
           {!done && (
             <button
+              type="button"
               onClick={vote}
               disabled={selected.size === 0 || sending}
-              className="rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] disabled:opacity-50"
+              aria-busy={sending}
+              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
             >
               {sending ? "Voting…" : "Vote"}
             </button>

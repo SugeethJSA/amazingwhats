@@ -16,6 +16,19 @@ import {
   ChevronIcon,
 } from "../../components/settings/ui-kit"
 
+/** Show a person or phone number, never a raw WhatsApp protocol identifier. */
+function contactLabel(
+  result: { jid?: string; push_name?: string; verified_name?: string } | null,
+): string {
+  if (!result) return "Contact resolved"
+  const verified = result.verified_name?.trim()
+  const push = result.push_name?.trim()
+  if (verified) return push && push !== verified ? `${verified} (${push})` : verified
+  if (push) return push
+  const local = (result.jid ?? "").split("@")[0].split(":")[0].replace(/\D/g, "")
+  return local ? `+${local}` : "Contact resolved"
+}
+
 function CardSection({
   title,
   description,
@@ -185,7 +198,7 @@ const AccountSettingsScreen = ({ onNavigate }: { onNavigate?: (anchor: ReactNode
                 const result = await ResolveContactQRLink(resolveCode.trim())
                 setResolveResult({
                   tone: "success",
-                  text: `JID: ${result.jid}${result.push_name ? ` · ${result.push_name}` : ""}`,
+                  text: `${contactLabel(result)} — contact link resolved`,
                 })
               } catch {
                 setResolveResult({ tone: "error", text: "Failed to resolve QR code" })
@@ -221,7 +234,7 @@ const AccountSettingsScreen = ({ onNavigate }: { onNavigate?: (anchor: ReactNode
                 const result = await ResolveBusinessMessageLink(bizLinkCode.trim())
                 setBizLinkResult({
                   tone: "success",
-                  text: `JID: ${result.jid}${result.push_name ? ` · ${result.push_name}` : ""}${result.verified_name ? ` ✓ ${result.verified_name}` : ""}`,
+                  text: `${contactLabel(result)} — business link resolved`,
                 })
               } catch {
                 setBizLinkResult({ tone: "error", text: "Failed to resolve link" })
@@ -241,8 +254,8 @@ const AccountSettingsScreen = ({ onNavigate }: { onNavigate?: (anchor: ReactNode
       <SettingsCard>
         <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
           <LinkRow
-            title="How to delete my account"
-            description="Learn how to permanently delete your WhatsApp account"
+            title="How to delete my account (opens external site)"
+            description="Read WhatsApp's official instructions for deleting an account"
             href="https://faq.whatsapp.com/2138577903196467/?cms_platform=android&lang=en"
           />
           <LinkRow

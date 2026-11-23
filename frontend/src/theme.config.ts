@@ -1,25 +1,25 @@
 export const THEME = {
   DropDown: {
-    "dropdown text": "#000000",
-    "dropdown dark text": "#ffffff",
+    "dropdown text": "#111b21",
+    "dropdown dark text": "#e9edef",
 
     "dropdown bg": "#ffffff",
-    "dropdown dark bg": "#0d0d0d",
+    "dropdown dark bg": "#233138",
 
-    "dropdown hover bg": "#f5f5f5",
-    "dropdown dark hover bg": "#3a3a3a",
+    "dropdown hover bg": "#f5f6f6",
+    "dropdown dark hover bg": "#2a3942",
 
-    "dropdown element text": "#000000",
-    "dropdown element dark text": "#ffffff",
+    "dropdown element text": "#111b21",
+    "dropdown element dark text": "#e9edef",
 
     "dropdown element bg": "#ffffff",
-    "dropdown element dark bg": "#0d0d0d",
+    "dropdown element dark bg": "#233138",
 
-    "dropdown element hover bg": "#f5f5f5",
-    "dropdown element dark hover bg": "#3a3a3a",
+    "dropdown element hover bg": "#f5f6f6",
+    "dropdown element dark hover bg": "#2a3942",
 
-    "dropdown border": "#dcdcdc50",
-    "dropdown dark border": "#dcdcdc50",
+    "dropdown border": "rgba(220, 220, 220, 0.35)",
+    "dropdown dark border": "rgba(220, 220, 220, 0.12)",
   },
 
   Button: {
@@ -34,22 +34,22 @@ export const THEME = {
   },
 
   "Keyboard Shortcut": {
-    "shortcut bg": "#ffffff",
-    "shortcut dark bg": "#323232",
-    "shortcut border": "#585a5c",
-    "shortcut text": "#000000",
-    "shortcut dark text": "#ffffff",
+    "shortcut bg": "#f0f2f5",
+    "shortcut dark bg": "#2a3942",
+    "shortcut border": "#8696a0",
+    "shortcut text": "#111b21",
+    "shortcut dark text": "#e9edef",
   },
 
   "Chat Bubble": {
     "sent bubble bg": "#d9fdd3",
-    "sent bubble dark bg": "#005c4b",
-    "sent bubble text": "#101828",
-    "sent bubble dark text": "#ffffff",
+    "sent bubble dark bg": "#0b3d2b",
+    "sent bubble text": "#111b21",
+    "sent bubble dark text": "#f0f2f5",
     "received bubble bg": "#ffffff",
-    "received bubble dark bg": "#202c33",
-    "received bubble text": "#101828",
-    "received bubble dark text": "#ffffff",
+    "received bubble dark bg": "#121212",
+    "received bubble text": "#111b21",
+    "received bubble dark text": "#f0f2f5",
   },
 } as const
 

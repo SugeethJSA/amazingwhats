@@ -19,7 +19,7 @@ const CommunitiesEmptyIcon = () => (
     viewBox="0 0 24 24"
     width="96"
     height="96"
-    className="fill-current text-gray-300 dark:text-light-muted dark:text-dark-muted"
+    className="fill-current text-gray-300 dark:text-dark-muted"
   >
     <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
   </svg>
@@ -150,7 +150,7 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-gray-500 dark:text-light-muted dark:text-dark-muted">
+      <div className="flex flex-col items-center justify-center p-8 text-gray-600 dark:text-dark-muted">
         <p className="text-center text-sm">{error}</p>
         <button
           onClick={load}
@@ -164,12 +164,12 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
 
   if (filtered.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-gray-500 dark:text-light-muted dark:text-dark-muted">
+      <div className="flex flex-col items-center justify-center p-8 text-gray-600 dark:text-dark-muted">
         <CommunitiesEmptyIcon />
         <p className="mt-4 text-center text-sm">
           {searchTerm ? "No communities match your search." : "You're not in any communities yet."}
         </p>
-        <p className="mt-2 text-center text-xs text-gray-400 dark:text-[#8696a0] max-w-[240px]">
+        <p className="mt-2 text-center text-xs text-gray-600 dark:text-[#8696a0] max-w-[240px]">
           Communities bring related groups together with a shared announcement channel.
         </p>
         {!searchTerm && (
@@ -200,7 +200,7 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
           <CommunityAvatar avatar={c.avatar_url} name={c.name} jid={c.jid} />
           <div className="ml-4 flex-1 min-w-0">
             <h3 className="text-light-text dark:text-dark-text font-medium truncate">{c.name}</h3>
-            <p className="text-sm text-gray-500 dark:text-[#8696a0] truncate">
+            <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">
               {c.group_count > 0
                 ? `${c.group_count} group${c.group_count === 1 ? "" : "s"}`
                 : c.topic || "Community"}
@@ -259,26 +259,26 @@ function CreateSubGroupDialog({
       }}
     >
       <div
-        className="bg-white dark:bg-dark-secondary rounded-2xl w-96 p-6 shadow-xl"
+        className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
           New Group in {communityName}
         </h2>
-        <p className="text-sm text-gray-500 dark:text-light-muted dark:text-dark-muted mb-4">
+        <p className="text-sm text-gray-600 dark:text-dark-muted mb-4">
           Creates a linked sub-group within this community.
         </p>
         <input
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Group name"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none mb-3"
+          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
+            className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
           >
             Cancel
           </button>
@@ -396,7 +396,7 @@ export function CommunityHome({
         <div className="min-w-0 flex-1">
           <h2 className="font-medium text-light-text dark:text-dark-text truncate">{name}</h2>
           {memberCount > 0 && (
-            <p className="text-xs text-gray-500 dark:text-[#8696a0]">
+            <p className="text-xs text-gray-600 dark:text-[#8696a0]">
               {memberCount.toLocaleString()} member{memberCount === 1 ? "" : "s"}
             </p>
           )}
@@ -411,11 +411,11 @@ export function CommunityHome({
             {name}
           </h1>
           {topic ? (
-            <p className="mt-2 text-sm text-gray-500 dark:text-[#8696a0] text-center max-w-md whitespace-pre-wrap">
+            <p className="mt-2 text-sm text-gray-600 dark:text-[#8696a0] text-center max-w-md whitespace-pre-wrap">
               {topic}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-gray-400 dark:text-[#8696a0] text-center">
+            <p className="mt-2 text-sm text-gray-600 dark:text-[#8696a0] text-center">
               Community · {memberCount > 0 ? `${memberCount.toLocaleString()} members` : "Groups"}
             </p>
           )}
@@ -476,7 +476,7 @@ export function CommunityHome({
                     <h3 className="font-medium text-light-text dark:text-dark-text truncate">
                       {announcement.name || "Announcements"}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-[#8696a0] truncate">
+                    <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">
                       Only admins can send messages
                     </p>
                   </div>
@@ -499,11 +499,11 @@ export function CommunityHome({
               </div>
 
               {groups.length === 0 && !announcement ? (
-                <p className="px-4 py-6 text-sm text-gray-500 dark:text-[#8696a0] text-center">
+                <p className="px-4 py-6 text-sm text-gray-600 dark:text-[#8696a0] text-center">
                   No groups in this community yet.
                 </p>
               ) : groups.length === 0 ? (
-                <p className="px-4 py-4 text-sm text-gray-500 dark:text-[#8696a0]">
+                <p className="px-4 py-4 text-sm text-gray-600 dark:text-[#8696a0]">
                   No other groups linked.
                 </p>
               ) : (
@@ -538,7 +538,7 @@ export function CommunityHome({
                       <h3 className="font-medium text-light-text dark:text-dark-text truncate">
                         {g.name || "Group"}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-[#8696a0] truncate">Group</p>
+                      <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">Group</p>
                     </div>
                   </button>
                 ))
@@ -587,7 +587,7 @@ function CreateCommunityDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
-        className="bg-white dark:bg-dark-secondary rounded-2xl w-96 p-6 shadow-xl"
+        className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -597,20 +597,20 @@ function CreateCommunityDialog({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Community name"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none mb-3"
+          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={3}
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none mb-3 resize-none"
+          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3 resize-none"
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
+            className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
           >
             Cancel
           </button>
@@ -634,16 +634,16 @@ export function CommunitiesWelcome() {
 
   return (
     <>
-      <div className="flex-1 flex flex-col items-center justify-center z-10 text-center px-10 border-b-[6px] border-[#43d187]">
+      <div className="flex-1 flex flex-col items-center justify-center z-10 text-center px-6 border-b border-gray-200 dark:border-white/5">
         <div className="mb-6">
           <CommunitiesEmptyIcon />
         </div>
         <h1 className="text-3xl font-light text-gray-600 dark:text-gray-300 mb-4">Communities</h1>
-        <p className="text-gray-500 dark:text-light-muted dark:text-dark-muted max-w-md">
+        <p className="text-gray-600 dark:text-dark-muted max-w-md">
           Communities bring members together in topic-based groups and let admins send announcements
           to everyone.
         </p>
-        <p className="mt-4 text-sm text-gray-400 dark:text-[#8696a0] max-w-sm">
+        <p className="mt-4 text-sm text-gray-600 dark:text-[#8696a0] max-w-sm">
           Select a community from the list to view its announcement channel and groups.
         </p>
         <button

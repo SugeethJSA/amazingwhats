@@ -23,22 +23,47 @@ interface MessageSearchScreenProps {
   onClose: () => void
 }
 
-const FILTERS = [
+interface FilterOption {
+  readonly label: string
+  readonly value: string
+}
+
+// The four everyday filters stay visible; the rest live behind "More filters".
+// "Links" was removed: the backend has no link filter and its old value ("")
+// silently duplicated "All". Stickers is a real, supported type filter.
+const CORE_FILTERS: readonly FilterOption[] = [
   { label: "All", value: "" },
   { label: "Text", value: "text" },
   { label: "Images", value: "image" },
   { label: "Videos", value: "video" },
+]
+
+const MORE_FILTERS: readonly FilterOption[] = [
   { label: "Audio", value: "audio" },
   { label: "Documents", value: "document" },
-  { label: "Links", value: "" },
-] as const
+  { label: "Stickers", value: "sticker" },
+]
 
 const PAGE_SIZE = 30
+
+const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#137a43] dark:focus-visible:outline-[#21c063]"
+
+/** Never surface a raw binding error to the user. */
+function friendlySearchError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : ""
+  const text = raw.toLowerCase()
+  if (text.includes("offline") || text.includes("connection") || text.includes("network")) {
+    return "Search is unavailable right now. Check your connection and try again."
+  }
+  return "We couldn't load results. Try again in a moment."
+}
 
 export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
   const [query, setQuery] = useState("")
   const [mediaFilter, setMediaFilter] = useState("")
   const [senderFilter, setSenderFilter] = useState("")
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -72,8 +97,8 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         setResults(prev => (append ? [...prev, ...items] : items))
         setHasMore(items.length >= PAGE_SIZE)
         setOffset(off + items.length)
-      } catch (e: any) {
-        setError(e?.message || "Search failed")
+      } catch (e: unknown) {
+        setError(friendlySearchError(e))
       } finally {
         setLoading(false)
       }
@@ -119,6 +144,10 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
     doSearch(query, mediaFilter, senderFilter, offset, true)
   }
 
+  const retrySearch = () => {
+    doSearch(query, mediaFilter, senderFilter, 0, false)
+  }
+
   const handleResultClick = (r: SearchResult) => {
     setActiveChatId(r.chat_jid)
     onClose()
@@ -128,37 +157,69 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
     if (e.key === "Escape") onClose()
   }
 
+  const renderFilterButton = (f: FilterOption) => (
+    <button
+      key={f.label}
+      type="button"
+      onClick={() => setMediaFilter(f.value)}
+      aria-pressed={mediaFilter === f.value}
+      className={clsx(
+        "rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors shrink-0",
+        focusRing,
+        mediaFilter === f.value
+          ? "bg-[#21c063] text-[#0a1014] font-medium"
+          : "bg-gray-100 dark:bg-dark-secondary text-[#5a6670] dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-[#2a2c2c]",
+      )}
+    >
+      {f.label}
+    </button>
+  )
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-dark-bg" onKeyDown={handleKeyDown}>
-      <div className="relative flex items-center p-3 border-b border-gray-200 dark:border-white/5 gap-2">
+      <div role="search" aria-label="Message search" className="relative flex items-center p-3 border-b border-gray-200 dark:border-white/5 gap-2">
         <button
           onClick={onClose}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full"
+          className={clsx("p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full", focusRing)}
           aria-label="Back"
         >
           <GoBackIcon />
         </button>
+        <label htmlFor="message-search-query" className="sr-only">
+          Search messages
+        </label>
         <div className="flex-1 bg-light-tertiary dark:bg-dark-secondary rounded-full flex items-center px-4 py-2">
           <input
             ref={inputRef}
-            type="text"
+            id="message-search-query"
+            type="search"
             placeholder="Search messages..."
-            className="bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder-gray-500"
+            className={clsx(
+              "bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder-[#5a6670] dark:placeholder-[#8696a0]",
+              focusRing,
+            )}
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
         </div>
 
         {suggestions.length > 0 && (
-          <div className="absolute top-full left-3 right-3 z-10 mt-1 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-dark-border rounded-lg shadow-lg overflow-hidden">
+          <div
+            aria-label="Search suggestions"
+            className="absolute top-full left-3 right-3 z-10 mt-1 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-dark-border rounded-lg shadow-lg overflow-hidden"
+          >
             {suggestions.map(s => (
               <button
                 key={s}
+                type="button"
                 onClick={() => {
                   setQuery(s)
                   setSuggestions([])
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-light-text dark:text-dark-text hover:bg-gray-100 dark:hover:bg-white/5"
+                className={clsx(
+                  "w-full px-4 py-2 text-left text-sm text-light-text dark:text-dark-text hover:bg-gray-100 dark:hover:bg-white/5",
+                  focusRing,
+                )}
               >
                 {s}
               </button>
@@ -167,56 +228,118 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         )}
       </div>
 
-      <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b border-gray-200 dark:border-white/5">
-        {FILTERS.map(f => (
-          <button
-            key={f.label}
-            onClick={() => setMediaFilter(f.value)}
-            className={clsx(
-              "rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors shrink-0",
-              mediaFilter === f.value
-                ? "bg-[#21c063] text-[#0a1014] font-medium"
-                : "bg-gray-100 dark:bg-dark-secondary text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-[#2a2c2c]",
-            )}
+      <div role="group" aria-label="Filter results by type" className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-gray-200 dark:border-white/5">
+        {CORE_FILTERS.map(renderFilterButton)}
+        <button
+          type="button"
+          onClick={() => setShowMoreFilters(v => !v)}
+          aria-expanded={showMoreFilters}
+          aria-controls="more-message-filters"
+          className={clsx(
+            "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors shrink-0",
+            focusRing,
+            showMoreFilters
+              ? "bg-gray-200 dark:bg-dark-elevated text-light-text dark:text-dark-text font-medium"
+              : "text-[#5a6670] dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5",
+          )}
+        >
+          More filters
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={clsx("transition-transform", showMoreFilters && "rotate-180")}
+            aria-hidden="true"
           >
-            {f.label}
-          </button>
-        ))}
+            <path d="m2.5 4.5 3.5 3.5 3.5-3.5" />
+          </svg>
+        </button>
+        {showMoreFilters && (
+          <div id="more-message-filters" className="w-full flex flex-wrap gap-1.5 pt-1.5">
+            {MORE_FILTERS.map(renderFilterButton)}
+          </div>
+        )}
       </div>
 
       <div className="px-3 py-2 border-b border-gray-200 dark:border-white/5">
+        <label htmlFor="sender-filter" className="sr-only">
+          Filter by sender
+        </label>
         <input
+          id="sender-filter"
           type="text"
           placeholder="Filter by sender..."
-          className="w-full px-3 py-1.5 rounded-lg bg-light-tertiary dark:bg-dark-secondary text-sm text-light-text dark:text-dark-text placeholder-gray-500 outline-none"
+          className={clsx(
+            "w-full px-3 py-1.5 rounded-lg outline-none bg-light-tertiary dark:bg-dark-secondary text-sm text-light-text dark:text-dark-text placeholder-[#5a6670] dark:placeholder-[#8696a0]",
+            focusRing,
+          )}
           value={senderFilter}
           onChange={e => setSenderFilter(e.target.value)}
         />
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {error && <div className="p-4 text-center text-red-500 text-sm">{error}</div>}
+        {!loading && !error && query && (
+          <p role="status" aria-live="polite" className="sr-only">
+            {results.length === 0
+              ? "No messages found."
+              : `${results.length} message${results.length === 1 ? "" : "s"} found.`}
+          </p>
+        )}
+
+        {error && (
+          <div role="alert" className="p-4 text-center">
+            <p className="text-sm text-[#c62828] dark:text-[#ef4444]">{error}</p>
+            <button
+              type="button"
+              onClick={retrySearch}
+              className={clsx(
+                "mt-2 text-sm font-medium text-[#137a43] dark:text-[#21c063] hover:underline",
+                focusRing,
+              )}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
         {!loading && !error && query && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-light-muted dark:text-dark-muted p-8">
-            <p className="text-sm">No messages found</p>
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <p className="text-sm font-medium text-light-text dark:text-dark-text">No messages found</p>
+            <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
+              Try a different word or remove a filter.
+            </p>
           </div>
         )}
         {!query && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-light-muted dark:text-dark-muted p-8">
-            <p className="text-sm">Type to search messages</p>
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <p className="text-sm font-medium text-light-text dark:text-dark-text">Search your messages</p>
+            <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
+              Type at least two characters to find a message.
+            </p>
           </div>
         )}
+
         {results.map(r => (
           <button
             key={r.message_id}
+            type="button"
             onClick={() => handleResultClick(r)}
-            className="w-full flex flex-col items-start px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5"
+            className={clsx(
+              "w-full flex flex-col items-start px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5",
+              focusRing,
+            )}
           >
             <div className="flex items-center gap-2 w-full">
               <span className="text-sm font-medium text-light-text dark:text-dark-text truncate flex-1">
                 {r.chat_name || r.chat_jid.split("@")[0]}
               </span>
-              <span className="text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted shrink-0">
+              <span className="text-xs text-[#5a6670] dark:text-dark-muted shrink-0">
                 {new Date(r.timestamp * 1000).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
@@ -224,30 +347,35 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
               </span>
             </div>
             <div className="flex items-center gap-2 w-full mt-0.5">
-              <span className="text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted shrink-0">
+              <span className="text-xs text-[#5a6670] dark:text-dark-muted shrink-0">
                 {r.is_from_me ? "You" : r.sender_jid.split("@")[0]}
               </span>
-              <span className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted truncate">
+              <span className="text-sm text-light-text dark:text-dark-text truncate">
                 {htmlToPlainText(r.text) ||
-                  (r.media_type === 1 ? "🖼 Image" : r.media_type === 2 ? "🎵 Audio" : "[Media]")}
+                  (r.media_type === 1 ? "[Image]" : r.media_type === 2 ? "[Audio]" : "[Media]")}
               </span>
             </div>
             {r.edited && (
-              <span className="text-[10px] text-gray-400 dark:text-light-muted dark:text-dark-muted italic mt-0.5">
-                edited
-              </span>
+              <span className="text-xs text-[#5a6670] dark:text-dark-muted italic mt-0.5">Edited</span>
             )}
           </button>
         ))}
+
         {loading && (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#21c063]" />
+          <div role="status" aria-live="polite" className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#21c063]" aria-hidden="true" />
+            <span className="sr-only">Searching messages…</span>
           </div>
         )}
+
         {hasMore && !loading && results.length > 0 && (
           <button
+            type="button"
             onClick={handleLoadMore}
-            className="w-full py-3 text-sm font-medium text-[#21c063] hover:bg-gray-50 dark:hover:bg-white/5"
+            className={clsx(
+              "w-full py-3 text-sm font-medium text-[#137a43] dark:text-[#21c063] hover:bg-gray-50 dark:hover:bg-white/5",
+              focusRing,
+            )}
           >
             Load more
           </button>

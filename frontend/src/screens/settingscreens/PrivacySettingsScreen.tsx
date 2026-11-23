@@ -14,6 +14,12 @@ interface Setting {
   options: { value: string; label: string }[]
 }
 
+/** Render excluded contacts as phone numbers rather than raw JIDs. */
+function jidToPhone(jid: string): string {
+  const local = jid.split("@")[0].split(":")[0].replace(/\D/g, "")
+  return local ? `+${local}` : jid
+}
+
 const SETTINGS: Setting[] = [
   {
     key: "last",
@@ -196,7 +202,7 @@ const PrivacySettingsScreen = () => {
                 values[s.key] === "contact_blacklist" &&
                 statusBlacklist.length > 0 && (
                   <div className="px-4 pb-2.5 text-[12px] text-light-muted dark:text-dark-muted">
-                    Excluded: {statusBlacklist.join(", ")}
+                    Excluded: {statusBlacklist.map(jidToPhone).join(", ")}
                   </div>
                 )}
             </div>

@@ -61,6 +61,27 @@ import {
 } from "../components/common/resizable"
 import { MessageSearchScreen } from "./MessageSearchScreen"
 
+/**
+ * Tracks a CSS media query. Below the `md` breakpoint the chat shell must not
+ * mount the resizable group at all — hiding one sized panel with `hidden`
+ * leaves a phantom flex-sized gap — so layout decisions are made in React.
+ */
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia(query).matches,
+  )
+
+  useEffect(() => {
+    const mql = window.matchMedia(query)
+    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches)
+    setMatches(mql.matches)
+    mql.addEventListener("change", onChange)
+    return () => mql.removeEventListener("change", onChange)
+  }, [query])
+
+  return matches
+}
+
 interface HeaderProps {
   onOpenSettings: () => void
   onNewChat?: () => void
@@ -71,9 +92,10 @@ interface HeaderProps {
 const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
     <h1 className="text-xl font-bold text-light-text dark:text-white">WhatsApp</h1>
-    <div className="flex items-center gap-1 text-gray-500 dark:text-light-muted dark:text-dark-muted">
+    <div className="flex items-center gap-1 text-gray-600 dark:text-[#8696a0]">
       <button
         title="Search Messages"
+        aria-label="Search messages"
         onClick={onSearch}
         className="hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full"
       >
@@ -81,6 +103,7 @@ const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) =>
       </button>
       <button
         title="New Chat"
+        aria-label="New chat"
         onClick={onNewChat}
         className="hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full"
       >
@@ -88,6 +111,7 @@ const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) =>
       </button>
       <button
         title="Menu"
+        aria-label="Open settings menu"
         onClick={onOpenSettings}
         className="hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full"
       >
@@ -113,13 +137,14 @@ const SearchBar = ({
 }: SearchBarProps) => (
   <div className="px-3 py-2 bg-light-bg dark:bg-dark-bg">
     <div className="bg-light-tertiary dark:bg-dark-secondary rounded-full flex items-center px-4 py-2">
-      <div className="text-gray-500 dark:text-light-muted dark:text-dark-muted mr-4">
+      <div className="text-gray-600 dark:text-[#8696a0] mr-4">
         <SearchIcon />
       </div>
       <input
         type="text"
         placeholder={placeholder}
-        className="bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder-gray-500"
+        aria-label={placeholder}
+        className="bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -271,13 +296,17 @@ const ChatListItemContent = memo(
     const communityName = isCommunityChat ? chat.communityName || "Community" : null
 
     return (
-      <div
+      <button
+        type="button"
         onClick={() => onSelect(chat)}
         onContextMenu={e => onContextMenu(e, chat)}
+        aria-current={isSelected ? "true" : undefined}
+        aria-label={`${chat.name}${chat.unreadCount ? `, ${chat.unreadCount} unread` : ""}`}
         className={clsx(
-          "flex items-center px-3 py-3 mx-2 my-1 cursor-pointer rounded-xl transition-all duration-150",
+          "flex w-[calc(100%_-_1rem)] items-center px-3 py-3 mx-2 my-1 cursor-pointer rounded-xl border border-transparent text-left transition-colors duration-150",
           "hover:bg-gray-100/80 dark:hover:bg-white/5",
-          isSelected && "bg-[#21c063]/10 dark:bg-[#21c063]/10 chat-row-selected",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/40",
+          isSelected && "border-[#21c063]/40 bg-[#21c063]/10 dark:bg-[#21c063]/10",
         )}
       >
         {isCommunityChat ? (
@@ -302,7 +331,7 @@ const ChatListItemContent = memo(
         )}
         <div className="flex-1 min-w-0">
           {communityName && (
-            <div className="text-[13px] leading-snug text-gray-500 dark:text-[#8696a0] truncate">
+            <div className="text-[13px] leading-snug text-gray-600 dark:text-[#8696a0] truncate">
               {communityName}
             </div>
           )}
@@ -312,7 +341,7 @@ const ChatListItemContent = memo(
             </h3>
             <div className="flex items-center gap-1 shrink-0">
               {muted && (
-                <span className="text-gray-500 dark:text-[#8696a0]">
+                <span className="text-gray-600 dark:text-[#8696a0]">
                   <MutedBellIcon />
                 </span>
               )}
@@ -320,8 +349,8 @@ const ChatListItemContent = memo(
                 className={clsx(
                   "text-xs",
                   chat.unreadCount
-                    ? "font-medium text-[#1b9a58] dark:text-[#21c063]"
-                    : "text-gray-500 dark:text-[#8696a0]",
+                    ? "font-medium text-[#14663c] dark:text-[#21c063]"
+                    : "text-gray-600 dark:text-[#8696a0]",
                 )}
               >
                 {formatChatTimestamp(chat.timestamp)}
@@ -329,8 +358,8 @@ const ChatListItemContent = memo(
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 text-sm text-gray-500 dark:text-[#8696a0] truncate [&_p]:inline [&_p]:m-0 ">
-              {chat.isFromMe && <span className="mr-1 text-[#8696a0]">You: </span>}
+            <div className="flex-1 text-sm text-gray-600 dark:text-[#8696a0] truncate [&_p]:inline [&_p]:m-0 ">
+              {chat.isFromMe && <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>}
               {chat.sender && chat.type === "group" && !chat.isFromMe && (
                 <span className="mr-1">{chat.sender}: </span>
               )}
@@ -339,7 +368,7 @@ const ChatListItemContent = memo(
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(chat.subtitle) }}
               />
             </div>
-            {chat.pinned && <PinIcon className="shrink-0 text-gray-400 dark:text-[#8696a0]" />}
+            {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-[#8696a0]" />}
             {chat.unreadCount ? (
               <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-[#21c063] text-[#0a1014] text-xs font-semibold">
                 {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
@@ -347,7 +376,7 @@ const ChatListItemContent = memo(
             ) : null}
           </div>
         </div>
-      </div>
+      </button>
     )
   },
 )
@@ -390,7 +419,7 @@ interface EmptyStateProps {
 }
 
 const EmptyState = ({ hasChats, isLoading, onRefresh }: EmptyStateProps) => (
-  <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-light-muted dark:text-dark-muted p-8">
+  <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-[#8696a0] p-8">
     <div
       className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
       style={{ background: "rgba(33,192,99,0.08)", color: "#21c063" }}
@@ -479,13 +508,13 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
-        className="bg-white dark:bg-dark-secondary rounded-2xl w-96 max-h-[80vh] flex flex-col p-6 shadow-xl"
+        className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] flex flex-col p-6 shadow-xl"
         onClick={e => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Subscribe to Channel
         </h2>
-        <p className="text-sm text-gray-500 dark:text-light-muted dark:text-dark-muted mb-4">
+        <p className="text-sm text-gray-600 dark:text-[#8696a0] mb-4">
           Enter a newsletter JID or search for channels.
         </p>
         <input
@@ -501,7 +530,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
             if (e.key === "Escape") onClose()
           }}
           placeholder="Newsletter JID or invite code"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none mb-3"
+          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
         />
 
         {/* Search newsletters */}
@@ -509,10 +538,10 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Search channels..."
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none mb-3"
+          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none mb-3"
         />
 
-        {searching && <p className="text-xs text-gray-500 mb-2">Searching...</p>}
+        {searching && <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>}
 
         {searchResults.length > 0 && (
           <div className="flex-1 overflow-y-auto max-h-40 mb-3 border border-gray-200 dark:border-dark-border rounded-lg">
@@ -525,7 +554,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">
                     {ch.full_name || ch.push_name || ch.jid}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted truncate">
+                  <p className="text-xs text-gray-600 dark:text-[#8696a0] truncate">
                     {ch.jid}
                   </p>
                 </div>
@@ -555,7 +584,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
+            className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg"
           >
             Cancel
           </button>
@@ -573,36 +602,21 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
 }
 
 const WelcomeScreen = () => (
-  <div
-    className="flex-1 flex flex-col items-center justify-center z-10 text-center px-10 relative overflow-hidden"
-    style={{ borderBottom: "6px solid #21c063" }}
-  >
-    <div
-      className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20"
-      style={{
-        background: "radial-gradient(circle at center, rgba(33,192,99,0.15) 0%, transparent 60%)",
-      }}
-    />
-
+  <div className="flex-1 flex flex-col items-center justify-center z-10 text-center px-6 relative overflow-hidden border-b border-gray-200 dark:border-white/5">
     <div className="mb-8 relative z-10">
-      <div
-        className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl glass-light dark:glass"
-        style={{
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
-      >
+      <div className="w-24 h-24 rounded-2xl flex items-center justify-center bg-gray-100 dark:bg-white/5 border border-gray-200/80 dark:border-white/5">
         <EmptyStateIcon />
       </div>
     </div>
 
     <h1
-      className="text-3xl font-semibold mb-4 relative z-10"
-      style={{ color: "var(--color-light-text)", letterSpacing: "-0.02em" }}
+      className="text-3xl font-semibold mb-4 relative z-10 text-light-text dark:text-dark-text"
+      style={{ letterSpacing: "-0.02em" }}
     >
       WhatsApp for Linux
     </h1>
 
-    <p className="relative z-10 text-sm leading-relaxed" style={{ color: "#8696a0" }}>
+    <p className="relative z-10 text-sm leading-relaxed text-gray-600 dark:text-[#8696a0]">
       Send and receive messages without keeping your phone online.
       <br />
       Use WhatsApp on up to 4 linked devices and 1 phone.
@@ -1149,6 +1163,163 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     }
   }, [fetchChats, getChat, loadSelfAvatar, updateChatLastMessage, updateSingleChat])
 
+  // Below `md` two sized panes cannot coexist: a hidden ResizablePanel still
+  // reserves its flex space. Swap one full-width pane on selection instead.
+  const isWide = useMediaQuery("(min-width: 768px)")
+
+  const listPane = (
+    <div className="flex h-full flex-col border-r border-gray-200 dark:border-dark-tertiary bg-white dark:bg-dark-bg">
+      {showSearch ? (
+        <MessageSearchScreen onClose={() => setShowSearch(false)} />
+      ) : (
+        <>
+          <Header
+            onOpenSettings={onOpenSettings}
+            onNewChat={() => setShowCreateGroup(true)}
+            onSearch={() => setShowSearch(true)}
+            avatar={selfAvatar}
+          />
+          <div className="flex gap-2 px-3 pb-2 pt-1 overflow-x-auto">
+            {(["chats", "communities", "channels", "status"] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                aria-pressed={view === v}
+                className={clsx(
+                  "rounded-full border px-3 py-1 text-sm capitalize transition-colors shrink-0",
+                  view === v
+                    ? "border-transparent bg-[#d9fdd3] font-medium text-[#0a1014] dark:bg-[#e9edef] dark:text-[#0b141a]"
+                    : "border-gray-300 dark:border-dark-border text-gray-600 dark:text-[#8696a0] hover:bg-gray-100 dark:hover:bg-white/5",
+                )}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          {view !== "status" && (
+            <SearchBar
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder={
+                view === "communities"
+                  ? "Search communities"
+                  : view === "channels"
+                    ? "Search channels"
+                    : "Search or start new chat"
+              }
+            />
+          )}
+
+          {view === "channels" && (
+            <div className="mx-3 mt-2 flex gap-2">
+              <button
+                onClick={() => setShowSubscribeChannel(true)}
+                className="flex-1 px-4 py-2 bg-[#21c063] text-[#0a1014] rounded-lg text-sm font-medium hover:bg-[#1ea952] transition-colors"
+              >
+                Subscribe
+              </button>
+              <button
+                onClick={() => setShowCreateChannel(true)}
+                className="flex-1 px-4 py-2 bg-white dark:bg-dark-tertiary border border-gray-300 dark:border-dark-border text-light-text dark:text-dark-text rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-dark-secondary transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          )}
+
+          {/* Archived entry (main view) / archived header (archived view) */}
+          {!showArchived && view === "chats" && archivedCount > 0 && (
+            <button
+              onClick={() => setShowArchived(true)}
+              className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
+            >
+              <span className="flex w-12 justify-center text-[#14663c] dark:text-[#21c063]">
+                <svg viewBox="0 0 24 24" width="20" height="20" className="fill-current">
+                  <path d="M20.54 5.23 19.15 3.55A1.5 1.5 0 0 0 18 3H6a1.5 1.5 0 0 0-1.16.55L3.46 5.23A2 2 0 0 0 3 6.5V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5a2 2 0 0 0-.46-1.27ZM6.24 5h11.52l.81.97H5.44ZM5 19V8h14v11Zm8-5.5V11h-2v2.5H8.5L12 17l3.5-3.5Z" />
+                </svg>
+              </span>
+              <span className="flex-1 font-medium text-light-text dark:text-dark-text">
+                Archived
+              </span>
+              <span className="text-xs text-gray-600 dark:text-[#8696a0]">{archivedCount}</span>
+            </button>
+          )}
+          {showArchived && (
+            <div className="flex items-center gap-4 border-b border-gray-200 dark:border-white/5 px-4 py-3">
+              <button
+                onClick={() => setShowArchived(false)}
+                className="text-gray-600 dark:text-[#8696a0] hover:text-gray-900 dark:hover:text-white"
+                aria-label="Back to chats"
+              >
+                <GoBackIcon />
+              </button>
+              <span className="font-medium text-light-text dark:text-dark-text">Archived</span>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto">
+            {view === "status" ? (
+              <StatusList onOpen={setStoryGroup} />
+            ) : view === "communities" ? (
+              <CommunityList
+                searchTerm={searchTerm}
+                selectedJid={selectedCommunity?.jid ?? null}
+                onSelect={handleCommunitySelect}
+              />
+            ) : filteredChatIds.length === 0 ? (
+              <EmptyState
+                hasChats={totalChats > 0}
+                isLoading={isFetchingRef.current}
+                onRefresh={fetchChats}
+              />
+            ) : (
+              filteredChatIds.map(chatId => (
+                <ChatListItem
+                  key={chatId}
+                  chatId={chatId}
+                  isSelected={selectedChatId === chatId}
+                  onSelect={handleChatSelect}
+                  onContextMenu={handleChatContextMenu}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+
+  const detailPane = (
+    <div
+      className={clsx(
+        "relative flex h-full flex-col",
+        selectedCommunity ? "bg-light-secondary dark:bg-dark-bg" : "bg-[#efeae2] dark:bg-dark-bg",
+      )}
+    >
+      {selectedChatId ? (
+        <ChatDetail
+          key={selectedChatId}
+          chatId={selectedChatId}
+          chatName={selectedChatName}
+          chatAvatar={selectedChatAvatar}
+          onBack={handleBack}
+        />
+      ) : selectedCommunity ? (
+        <CommunityHome
+          communityJid={selectedCommunity.jid}
+          communityName={selectedCommunity.name}
+          communityAvatar={selectedCommunity.avatar_url}
+          onBack={() => setSelectedCommunity(null)}
+          onOpenGroup={handleOpenGroupFromCommunity}
+        />
+      ) : view === "communities" ? (
+        <CommunitiesWelcome />
+      ) : (
+        <WelcomeScreen />
+      )}
+    </div>
+  )
+
   return (
     <div className="flex h-screen bg-light-secondary dark:bg-dark-bg overflow-hidden">
       {chatMenu && (
@@ -1186,10 +1357,11 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           <div className="px-4 py-2">
             <div className="flex gap-1">
               <input
-                className="flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs outline-none focus:border-[#21c063] text-light-text dark:text-dark-text"
+                className="flex-1 rounded border border-gray-300 dark:border-dark-border bg-transparent px-2 py-1 text-xs outline-none focus:border-[#21c063] text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
                 value={chatLabelId}
                 onChange={e => setChatLabelId(e.target.value)}
                 placeholder="Label ID"
+                aria-label="Chat label ID"
                 onClick={e => e.stopPropagation()}
               />
               <button
@@ -1211,176 +1383,21 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           </div>
         </div>
       )}
-      <ResizablePanelGroup className="h-full">
-        {/* Chat List Sidebar */}
-        <ResizablePanel
-          defaultSize="30%"
-          minSize="320px"
-          maxSize="600px"
-          className={clsx(
-            "flex-col",
-            "border-r border-gray-200 dark:border-dark-tertiary",
-            "bg-white dark:bg-dark-bg h-full",
-            selectedChatId || selectedCommunity ? "hidden md:flex" : "flex",
-          )}
-        >
-          {showSearch ? (
-            <MessageSearchScreen onClose={() => setShowSearch(false)} />
-          ) : (
-            <>
-              <Header
-                onOpenSettings={onOpenSettings}
-                onNewChat={() => setShowCreateGroup(true)}
-                onSearch={() => setShowSearch(true)}
-                avatar={selfAvatar}
-              />
-              <div className="flex gap-2 px-3 pb-2 pt-1 overflow-x-auto">
-                {(["chats", "communities", "channels", "status"] as const).map(v => (
-                  <button
-                    key={v}
-                    onClick={() => setView(v)}
-                    className={clsx(
-                      "rounded-full border px-3 py-1 text-sm capitalize transition-colors shrink-0",
-                      view === v
-                        ? "border-transparent bg-[#d9fdd3] font-medium text-[#0a1014] dark:bg-[#e9edef] dark:text-[#0b141a]"
-                        : "border-gray-300 dark:border-dark-border text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:border-white/10 dark:text-[#8696a0] dark:hover:bg-white/5",
-                    )}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-              {view !== "status" && (
-                <SearchBar
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  placeholder={
-                    view === "communities"
-                      ? "Search communities"
-                      : view === "channels"
-                        ? "Search channels"
-                        : "Search or start new chat"
-                  }
-                />
-              )}
-
-              {view === "channels" && (
-                <div className="mx-3 mt-2 flex gap-2">
-                  <button
-                    onClick={() => setShowSubscribeChannel(true)}
-                    className="flex-1 px-4 py-2 bg-[#21c063] text-[#0a1014] rounded-lg text-sm font-medium hover:bg-[#1ea952] transition-colors"
-                  >
-                    Subscribe
-                  </button>
-                  <button
-                    onClick={() => setShowCreateChannel(true)}
-                    className="flex-1 px-4 py-2 bg-white dark:bg-dark-tertiary border border-gray-300 dark:border-dark-border text-light-text dark:text-dark-text rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-dark-secondary transition-colors"
-                  >
-                    Create
-                  </button>
-                </div>
-              )}
-
-              {/* Archived entry (main view) / archived header (archived view) */}
-              {!showArchived && view === "chats" && archivedCount > 0 && (
-                <button
-                  onClick={() => setShowArchived(true)}
-                  className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
-                >
-                  <span className="flex w-12 justify-center text-[#1b9a58] dark:text-[#21c063]">
-                    <svg viewBox="0 0 24 24" width="20" height="20" className="fill-current">
-                      <path d="M20.54 5.23 19.15 3.55A1.5 1.5 0 0 0 18 3H6a1.5 1.5 0 0 0-1.16.55L3.46 5.23A2 2 0 0 0 3 6.5V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.5a2 2 0 0 0-.46-1.27ZM6.24 5h11.52l.81.97H5.44ZM5 19V8h14v11Zm8-5.5V11h-2v2.5H8.5L12 17l3.5-3.5Z" />
-                    </svg>
-                  </span>
-                  <span className="flex-1 font-medium text-light-text dark:text-dark-text">
-                    Archived
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-[#8696a0]">{archivedCount}</span>
-                </button>
-              )}
-              {showArchived && (
-                <div className="flex items-center gap-4 border-b border-gray-200 dark:border-dark-border px-4 py-3 dark:border-white/5">
-                  <button
-                    onClick={() => setShowArchived(false)}
-                    className="text-light-muted dark:text-dark-muted hover:text-gray-700 dark:text-light-muted dark:text-dark-muted dark:hover:text-gray-200"
-                    aria-label="Back to chats"
-                  >
-                    <GoBackIcon />
-                  </button>
-                  <span className="font-medium text-light-text dark:text-dark-text">Archived</span>
-                </div>
-              )}
-
-              <div className="flex-1 overflow-y-auto">
-                {view === "status" ? (
-                  <StatusList onOpen={setStoryGroup} />
-                ) : view === "communities" ? (
-                  <CommunityList
-                    searchTerm={searchTerm}
-                    selectedJid={selectedCommunity?.jid ?? null}
-                    onSelect={handleCommunitySelect}
-                  />
-                ) : filteredChatIds.length === 0 ? (
-                  <EmptyState
-                    hasChats={totalChats > 0}
-                    isLoading={isFetchingRef.current}
-                    onRefresh={fetchChats}
-                  />
-                ) : (
-                  filteredChatIds.map(chatId => (
-                    <ChatListItem
-                      key={chatId}
-                      chatId={chatId}
-                      isSelected={selectedChatId === chatId}
-                      onSelect={handleChatSelect}
-                      onContextMenu={handleChatContextMenu}
-                    />
-                  ))
-                )}
-              </div>
-            </>
-          )}
-        </ResizablePanel>
-        {storyGroup && <StoryViewer group={storyGroup} onClose={() => setStoryGroup(null)} />}
-
-        <ResizableHandle />
-
-        {/* Chat Detail */}
-        <ResizablePanel
-          defaultSize="70%"
-          minSize="400px"
-          className={clsx(
-            "flex-col h-full",
-            selectedCommunity
-              ? "bg-light-secondary dark:bg-dark-bg"
-              : "bg-[#efeae2] dark:bg-dark-bg",
-            "relative",
-            selectedChatId || selectedCommunity ? "flex" : "hidden md:flex",
-          )}
-        >
-          {selectedChatId ? (
-            <ChatDetail
-              key={selectedChatId}
-              chatId={selectedChatId}
-              chatName={selectedChatName}
-              chatAvatar={selectedChatAvatar}
-              onBack={handleBack}
-            />
-          ) : selectedCommunity ? (
-            <CommunityHome
-              communityJid={selectedCommunity.jid}
-              communityName={selectedCommunity.name}
-              communityAvatar={selectedCommunity.avatar_url}
-              onBack={() => setSelectedCommunity(null)}
-              onOpenGroup={handleOpenGroupFromCommunity}
-            />
-          ) : view === "communities" ? (
-            <CommunitiesWelcome />
-          ) : (
-            <WelcomeScreen />
-          )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      {isWide ? (
+        <ResizablePanelGroup className="h-full">
+          {/* Percentage sizes keep both panes usable down to ~400px. */}
+          <ResizablePanel defaultSize={30} minSize={25} maxSize={55}>
+            {listPane}
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel defaultSize={70} minSize={45}>
+            {detailPane}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <div className="h-full w-full min-w-0">{selectedChatId || selectedCommunity ? detailPane : listPane}</div>
+      )}
+      {storyGroup && <StoryViewer group={storyGroup} onClose={() => setStoryGroup(null)} />}
       {showCreateGroup && <CreateGroupDialog onClose={() => setShowCreateGroup(false)} />}
       {showSubscribeChannel && (
         <SubscribeChannelDialog onClose={() => setShowSubscribeChannel(false)} />

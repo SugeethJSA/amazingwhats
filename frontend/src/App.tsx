@@ -1,20 +1,106 @@
-import { useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import QRCode from "qrcode"
-import { ChatListScreen } from "./screens/ChatScreen"
 import { LoginScreen } from "./screens/LoginScreen"
-import { SettingsScreen } from "./screens/SettingsScreen"
 import { initSelf, resetSelf } from "./lib/self"
 import { Lightbox } from "./components/Lightbox"
 import { CallOverlay } from "./components/chat/CallOverlay"
 
 import { useUIStore, useMessageStore } from "./store"
+import type { Notification } from "./store/useUIStore"
 import { useAppSettingsStore } from "./store/useAppSettingsStore"
 import { applyThemeClass } from "./lib/theme"
 import { useWailsEvents } from "./hooks/useWailsEvents"
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts"
 import { registerShortcut } from "./lib/shortcuts"
+
+// Both screens pull in the GSAP/CustomEase chunk (Settings via its ease
+// editors, chats via ChatDetail's scroll button). Neither is needed on the
+// login screen, so keep that chunk out of the startup bundle.
+const ChatListScreen = lazy(() =>
+  import("./screens/ChatScreen").then(module => ({ default: module.ChatListScreen })),
+)
+const SettingsScreen = lazy(() =>
+  import("./screens/SettingsScreen").then(module => ({ default: module.SettingsScreen })),
+)
+
+/** Backend errors can carry paths, URLs or JIDs. Never render them verbatim. */
+function sanitizeErrorMessage(value: unknown): string {
+  if (typeof value !== "string") return "Something went wrong. Please try again."
+  const text = value
+    .replace(/\u001b\[[0-9;]*m/g, "")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, "[link]")
+    .replace(/(?:[A-Za-z]:)?[\\/][^\s"'<>]+/g, "[path]")
+    .replace(/\b\d{5,}@[^\s"'<>]+/g, "[contact]")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!text) return "Something went wrong. Please try again."
+  return text.length > 200 ? `${text.slice(0, 197)}…` : text
+}
+
+function NotificationToast({
+  notification,
+  onDismiss,
+}: {
+  notification: Notification
+  onDismiss: (id: number) => void
+}) {
+  useEffect(() => {
+    if (notification.durationMs === undefined) return
+    const timer = window.setTimeout(
+      () => onDismiss(notification.id),
+      Math.max(0, notification.durationMs),
+    )
+    return () => window.clearTimeout(timer)
+  }, [notification.id, notification.durationMs, onDismiss])
+
+  const isError = notification.tone === "error"
+  const isSuccess = notification.tone === "success"
+  const isWarning = notification.tone === "warning"
+  const cls = isSuccess
+    ? "toast-success"
+    : isError
+      ? "toast-error"
+      : isWarning
+        ? "toast-warning"
+        : "toast-info"
+  const icon = isSuccess ? "✓" : isError ? "✕" : isWarning ? "⚠" : "ℹ"
+
+  return (
+    <div
+      className={`toast-base ${cls}`}
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+    >
+      <span aria-hidden="true" style={{ fontSize: 14 }}>
+        {icon}
+      </span>
+      <span className="toast-message">{notification.message}</span>
+      {notification.action && (
+        <button
+          type="button"
+          className="toast-action"
+          onClick={() => {
+            notification.action?.onClick()
+            onDismiss(notification.id)
+          }}
+        >
+          {notification.action.label}
+        </button>
+      )}
+      <button
+        type="button"
+        className="toast-close"
+        onClick={() => onDismiss(notification.id)}
+        title="Dismiss"
+        aria-label="Dismiss notification"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
 
 function App() {
   const screen = useUIStore(state => state.screen)
@@ -24,8 +110,11 @@ function App() {
   const [status, setStatus] = useState<string>("waiting")
   const [historyProgress, setHistoryProgress] = useState<number | null>(null)
 
-  const { theme, loaded } = useAppSettingsStore()
-  const { notifications, addNotification, removeNotification } = useUIStore()
+  const theme = useAppSettingsStore(state => state.theme)
+  const loaded = useAppSettingsStore(state => state.loaded)
+  const notifications = useUIStore(state => state.notifications)
+  const addNotification = useUIStore(state => state.addNotification)
+  const removeNotification = useUIStore(state => state.removeNotification)
 
   useEffect(() => {
     useAppSettingsStore.getState().loadSettings()
@@ -134,15 +223,14 @@ function App() {
           delete (window as any).__reconnectNotifId
         }
       } else if (status === "reconnecting") {
-        const nid = addNotification("Reconnecting to WhatsApp...")
+        const nid = addNotification("Reconnecting to WhatsApp...", { tone: "warning" })
         // The "logged_in" or "disconnected" events will remove this.
         ;(window as any).__reconnectNotifId = nid
       } else if (status === "disconnected") {
         const nid = (window as any).__reconnectNotifId
         if (nid !== undefined) removeNotification(nid)
         delete (window as any).__reconnectNotifId
-        const disconnectNid = addNotification("Disconnected from WhatsApp")
-        setTimeout(() => removeNotification(disconnectNid), 6000)
+        addNotification("Disconnected from WhatsApp", { tone: "error", durationMs: 6000 })
       } else if (status === "logged_out") {
         // The backend confirmed logout (or another device logged us out):
         // drop any reconnect toast and return to the login screen.
@@ -161,26 +249,22 @@ function App() {
         .split(/[\\/]/)
         .pop()
         ?.trim()
-      const notificationId = addNotification(`Downloaded: ${name || "file"}`)
-      setTimeout(() => {
-        removeNotification(notificationId)
-      }, 3000)
+      addNotification(`Downloaded: ${name || "file"}`, { tone: "success", durationMs: 3000 })
     })
 
     // Surface backend errors to the user as toast notifications.
     const unsubError = EventsOn("wa:error", (msg: string) => {
-      const nid = addNotification(msg)
-      setTimeout(() => removeNotification(nid), 6000)
+      addNotification(sanitizeErrorMessage(msg), { tone: "error", durationMs: 6000 })
     })
 
     // Identity changes are auto-trusted for WhatsApp-Web parity, but must be
     // visible: use the same toast path as other backend security errors.
     const unsubIdentity = EventsOn("wa:identity_change", (_msg: string) => {
       // Do not render the raw payload: it contains a contact JID.
-      const nid = addNotification(
-        "A contact's security code changed. Verify it in WhatsApp on your phone."
-      )
-      setTimeout(() => removeNotification(nid), 8000)
+      addNotification("A contact's security code changed. Verify it in WhatsApp on your phone.", {
+        tone: "warning",
+        durationMs: 8000,
+      })
     })
 
     // Register all status listeners before starting login. Existing sessions
@@ -245,6 +329,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-light-secondary text-light-text dark:bg-dark-bg dark:text-white relative">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
       {historyProgress !== null && (
         <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gray-200 dark:bg-gray-800">
           <div
@@ -258,47 +346,44 @@ function App() {
         className="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
         style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
-        {notifications.map(n => {
-          const msg = n.message.toLowerCase()
-          const isSuccess =
-            msg.includes("downloaded") || msg.includes("logged_in") || msg.includes("success")
-          const isError =
-            msg.includes("error") || msg.includes("failed") || msg.includes("disconnect")
-          const isWarning = msg.includes("reconnect")
-          const cls = isSuccess
-            ? "toast-success"
-            : isError
-              ? "toast-error"
-              : isWarning
-                ? "toast-warning"
-                : "toast-info"
-          const icon = isSuccess ? "✓" : isError ? "✕" : isWarning ? "⚠" : "ℹ"
-          return (
-            <div key={n.id} className={`toast-base ${cls}`}>
-              <span style={{ fontSize: 14 }}>{icon}</span>
-              <span className="toast-message">{n.message}</span>
-              <button
-                className="toast-close"
-                onClick={() => removeNotification(n.id)}
-                title="Dismiss"
-                aria-label="Dismiss notification"
-              >
-                ✕
-              </button>
-            </div>
-          )
-        })}
+        {notifications.map(notification => (
+          <NotificationToast
+            key={notification.id}
+            notification={notification}
+            onDismiss={removeNotification}
+          />
+        ))}
       </div>
 
-      {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}
+      <main id="main-content" tabIndex={-1} className="relative">
+        {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}
 
-      {(screen === "chats" || screen === "settings") && (
-        <div className={screen === "settings" ? "hidden" : "contents"}>
-          <ChatListScreen onOpenSettings={() => setScreen("settings")} />
-        </div>
-      )}
+        {(screen === "chats" || screen === "settings") && (
+          <Suspense
+            fallback={
+              <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
+                Loading chats…
+              </div>
+            }
+          >
+            <div className={screen === "settings" ? "hidden" : "contents"}>
+              <ChatListScreen onOpenSettings={() => setScreen("settings")} />
+            </div>
+          </Suspense>
+        )}
 
-      {screen === "settings" && <SettingsScreen onBack={() => setScreen("chats")} />}
+        {screen === "settings" && (
+          <Suspense
+            fallback={
+              <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
+                Loading settings…
+              </div>
+            }
+          >
+            <SettingsScreen onBack={() => setScreen("chats")} />
+          </Suspense>
+        )}
+      </main>
       <CallOverlay />
     </div>
   )

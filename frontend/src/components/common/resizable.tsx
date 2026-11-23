@@ -18,16 +18,18 @@ function ResizablePanelGroup({
 
 function ResizablePanel({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Panel>) {
-  // overflow-hidden keeps an unshrinkable child (long unbroken text, wide
-  // media) from blowing the panel past the group and shifting the layout.
+  // The outer Panel element is owned by the resize group: it carries the
+  // flex-basis/size and must keep `overflow-hidden` so an unshrinkable child
+  // (long unbroken text, wide media) cannot blow past the group. Layout and
+  // visibility classes belong on an inner wrapper, never on the sized element
+  // itself — `hidden` there leaves a phantom flex-sized gap behind.
   return (
-    <ResizablePrimitive.Panel
-      data-slot="resizable-panel"
-      className={cn("overflow-hidden", className)}
-      {...props}
-    />
+    <ResizablePrimitive.Panel data-slot="resizable-panel" className="overflow-hidden" {...props}>
+      <div className={cn("h-full min-h-0 min-w-0", className)}>{children}</div>
+    </ResizablePrimitive.Panel>
   )
 }
 

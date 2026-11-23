@@ -15,6 +15,8 @@ import {
 import * as store from "../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
+import { useChatById } from "../store/useChatStore"
+import { useAppSettingsStore } from "../store/useAppSettingsStore"
 import { useContactStore } from "../store/useContactStore"
 import { MessageList, type MessageListHandle } from "../components/chat/MessageList"
 import { preloadImages, visibleImageIDs } from "../components/chat/MediaContent"
@@ -42,6 +44,46 @@ const PAGE_SIZE = 50
 // messages are prepended, keeping the scroll position anchored.
 const START_INDEX = 1_000_000
 
+// Stable empty list so the mark-read effect does not re-run on every render.
+const EMPTY_MESSAGES: Message[] = []
+
+type SendPayload = {
+  type: string
+  text?: string
+  base64Data?: string
+  mimetype?: string
+  fileName?: string
+  quotedMessageId?: string
+  mentions?: string[]
+  gifPlayback?: boolean
+  clientTempId?: string
+}
+
+interface FailedSend {
+  tempId: string
+  payload: SendPayload | null
+  optimistic: Message
+  preview: string
+  notificationId: number
+}
+
+function messagePreview(message: Message): string {
+  const content = message.Content
+  const text =
+    content?.conversation ||
+    content?.extendedTextMessage?.text ||
+    content?.imageMessage?.caption ||
+    content?.videoMessage?.caption ||
+    content?.documentMessage?.fileName ||
+    ""
+  if (text) return text.replace(/<[^>]*>/g, "").trim()
+  if (content?.imageMessage) return "Photo"
+  if (content?.videoMessage) return "Video"
+  if (content?.audioMessage) return "Audio"
+  if (content?.documentMessage) return "Document"
+  return "Message"
+}
+
 // "Reply privately" quotes a message from the group the user is currently in,
 // then switches to a 1:1 chat with that sender. The message is staged here and
 // consumed by the newly-mounted ChatDetail (keyed by chatId).
@@ -62,27 +104,30 @@ function blobToDataURL(blob: Blob): Promise<string> {
 }
 
 export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailProps) {
-  const {
-    messages,
-    setMessages,
-    updateMessage,
-    prependMessages,
-    setActiveChatId,
-    addPendingMessage,
-    updatePendingMessageToSent,
-  } = useMessageStore()
-  const {
-    setTypingIndicator,
-    showEmojiPicker,
-    setShowEmojiPicker,
-    chatInfoOpen,
-    setChatInfoOpen,
-    typingIndicators,
-  } = useUIStore()
-  const { chatsById } = useChatStore()
-  const screen = useUIStore(state => state.screen)
+  // Narrow selectors: a presence/typing event (or a new message) in another
+  // chat must not re-render this conversation. Action selectors are stable.
+  const messages = useMessageStore(s => s.messages[chatId])
+  const setMessages = useMessageStore(s => s.setMessages)
+  const updateMessage = useMessageStore(s => s.updateMessage)
+  const prependMessages = useMessageStore(s => s.prependMessages)
+  const setActiveChatId = useMessageStore(s => s.setActiveChatId)
+  const addPendingMessage = useMessageStore(s => s.addPendingMessage)
+  const updatePendingMessageToSent = useMessageStore(s => s.updatePendingMessageToSent)
 
-  const chatMessages = messages[chatId] || []
+  const setTypingIndicator = useUIStore(s => s.setTypingIndicator)
+  const showEmojiPicker = useUIStore(s => s.showEmojiPicker)
+  const setShowEmojiPicker = useUIStore(s => s.setShowEmojiPicker)
+  const chatInfoOpen = useUIStore(s => s.chatInfoOpen)
+  const setChatInfoOpen = useUIStore(s => s.setChatInfoOpen)
+  const typingIndicator = useUIStore(s => s.typingIndicators[chatId])
+  const addNotification = useUIStore(s => s.addNotification)
+  const removeNotification = useUIStore(s => s.removeNotification)
+  const screen = useUIStore(s => s.screen)
+
+  const enterIsSend = useAppSettingsStore(s => s.enterIsSend)
+  const currentChat = useChatById(chatId)
+
+  const chatMessages = messages ?? EMPTY_MESSAGES
   const [inputText, setInputText] = useState("")
   const [pastedImage, setPastedImage] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -90,6 +135,8 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const [sendAsGif, setSendAsGif] = useState(false)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [forwardTarget, setForwardTarget] = useState<string | null>(null)
+  const [failedSends, setFailedSends] = useState<FailedSend[]>([])
+  const retrySendRef = useRef<(tempId: string) => void>(() => {})
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const [mentionableContacts, setMentionableContacts] = useState<any[]>([])
@@ -122,7 +169,6 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const easeShowRef = useRef(getEase("DropDown", "open"))
   const easeHideRef = useRef(getEase("DropDown", "close"))
 
-  const currentChat = chatsById.get(chatId)
   const chatType = currentChat?.type || "contact"
   const [chatSubtitle, setChatSubtitle] = useState("")
   const [pinnedMessages, setPinnedMessages] = useState<store.PinnedMessage[]>([])
@@ -500,6 +546,82 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     setTypingTimeout(timeout)
   }
 
+  // A failed optimistic send must not linger as a pending bubble. Remove the
+  // phantom bubble, keep an explicit failed record with a short human error and
+  // a Retry action (through the shared notification contract), and show the
+  // failed message inline next to the composer.
+  const markSendFailed = useCallback(
+    (tempId: string, payload: SendPayload | null, optimistic: Message) => {
+      setMessages(
+        chatId,
+        (useMessageStore.getState().messages[chatId] || []).filter(m => m.tempId !== tempId),
+      )
+      const notificationId = addNotification("Message not sent", {
+        tone: "error",
+        ...(payload
+          ? { action: { label: "Retry", onClick: () => retrySendRef.current(tempId) } }
+          : {}),
+      })
+      setFailedSends(prev => [
+        ...prev,
+        { tempId, payload, optimistic, preview: messagePreview(optimistic), notificationId },
+      ])
+    },
+    [chatId, setMessages, addNotification],
+  )
+
+  const transmit = useCallback(
+    async (tempId: string, payload: SendPayload, optimistic: Message) => {
+      try {
+        await SendMessage(chatId, payload)
+      } catch (err) {
+        console.error("Failed to send:", err)
+        markSendFailed(tempId, payload, optimistic)
+      }
+    },
+    [chatId, markSendFailed],
+  )
+
+  const retrySend = useCallback(
+    (tempId: string) => {
+      const failed = failedSends.find(f => f.tempId === tempId)
+      if (!failed?.payload) return
+      removeNotification(failed.notificationId)
+      setFailedSends(prev => prev.filter(f => f.tempId !== tempId))
+      // Drop the failed optimistic bubble before re-adding it as pending.
+      setMessages(
+        chatId,
+        (useMessageStore.getState().messages[chatId] || []).filter(m => m.tempId !== tempId),
+      )
+      const newTempId = `temp-${Date.now()}-${Math.random()}`
+      const newPayload: SendPayload = { ...failed.payload, clientTempId: newTempId }
+      const newOptimistic: Message = {
+        ...failed.optimistic,
+        tempId: newTempId,
+        isPending: true,
+        receiptStatus: undefined,
+        Info: { ...failed.optimistic.Info, ID: newTempId },
+      }
+      addPendingMessage(chatId, newOptimistic)
+      void transmit(newTempId, newPayload, newOptimistic)
+    },
+    [failedSends, removeNotification, setMessages, chatId, addPendingMessage, transmit],
+  )
+  retrySendRef.current = retrySend
+
+  const dismissFailedSend = useCallback(
+    (tempId: string) => {
+      const failed = failedSends.find(f => f.tempId === tempId)
+      if (failed) removeNotification(failed.notificationId)
+      setFailedSends(prev => prev.filter(f => f.tempId !== tempId))
+      setMessages(
+        chatId,
+        (useMessageStore.getState().messages[chatId] || []).filter(m => m.tempId !== tempId),
+      )
+    },
+    [failedSends, removeNotification, setMessages, chatId],
+  )
+
   const handleSendMessage = async () => {
     if (!inputText.trim() && !pastedImage && !selectedFile) return
 
@@ -652,46 +774,49 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
       }
     }
 
+    let payload: SendPayload | null = null
     try {
       if (imageToSend) {
-        const base64 = imageToSend.split(",")[1]
-        const mimetype = imageToSend.match(/^data:([^;,]+)/)?.[1] || "image/png"
-        await SendMessage(chatId, {
+        payload = {
           type: "image",
           clientTempId: tempId,
-          base64Data: base64,
-          mimetype,
+          base64Data: imageToSend.split(",")[1],
+          mimetype: imageToSend.match(/^data:([^;,]+)/)?.[1] || "image/png",
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
-        })
+        }
       } else if (fileToSend) {
         const dataURL = await blobToDataURL(fileToSend)
-        const base64 = dataURL.split(",")[1]
         const asGif = fileTypeToSend === "gif" || (fileTypeToSend === "video" && sendAsGif)
-        await SendMessage(chatId, {
+        payload = {
           type: "video",
           clientTempId: tempId,
-          base64Data: base64,
+          base64Data: dataURL.split(",")[1],
           mimetype: fileToSend.type || "application/octet-stream",
           fileName: fileToSend.name,
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
           gifPlayback: asGif,
-        })
+        }
       } else {
-        await SendMessage(chatId, {
+        payload = {
           type: "text",
           clientTempId: tempId,
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
-        })
+        }
       }
     } catch (err) {
-      console.error("Failed to send:", err)
-      // Optionally, mark message as failed or remove it
+      console.error("Failed to prepare message:", err)
+    }
+
+    if (payload) {
+      await transmit(tempId, payload, pendingMessage)
+    } else {
+      markSendFailed(tempId, null, pendingMessage)
     }
   }
 
@@ -833,20 +958,22 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               MakeCall(chatId).catch(showCallError)
             }
           }}
-          isTyping={typingIndicators[chatId]?.isTyping ?? false}
+          isTyping={typingIndicator?.isTyping ?? false}
         />
 
         {/* Pinned-messages banner: shows the latest pin, click cycles through
             pins newest-first and jumps to each message (WhatsApp behavior). */}
         {pinnedMessages.length > 0 && (
-          <div
+          <button
+            type="button"
             onClick={() => {
               const idx = pinnedCycleRef.current % pinnedMessages.length
               const target = pinnedMessages[pinnedMessages.length - 1 - idx]
               pinnedCycleRef.current = idx + 1
               handleQuotedClick(target.message_id)
             }}
-            className="flex items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-sm cursor-pointer dark:border-white/5 dark:bg-dark-bg"
+            aria-label={`Pinned message, ${pinnedMessages.length} total. Activate to jump to the next one.`}
+            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/70 dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
           >
             <svg
               viewBox="0 0 24 24"
@@ -865,11 +992,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               }}
             />
             {pinnedMessages.length > 1 && (
-              <span className="shrink-0 text-xs text-gray-500 dark:text-[#8696a0]">
+              <span className="shrink-0 text-xs text-gray-600 dark:text-[#8696a0]">
                 {pinnedMessages.length}
               </span>
             )}
-          </div>
+          </button>
         )}
 
         <div className="flex-1 relative overflow-hidden">
@@ -877,21 +1004,27 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               scrolling (and repainting) with it — big scroll-perf win. */}
           <div className="chat-wallpaper absolute inset-0 pointer-events-none z-0" />
           {(initialLoad || !isReady) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#efeae2] dark:bg-dark-bg z-50">
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-[#efeae2] dark:bg-dark-bg z-50"
+              role="status"
+              aria-label="Loading messages"
+            >
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
             </div>
           )}
 
           <button
             ref={scrollButtonRef}
+            type="button"
             onClick={() => scrollToBottom(false)}
-            className="absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 dark:hover:bg-[#2a3942]"
+            aria-label="Scroll to latest message"
+            className="absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 dark:hover:bg-[#2a3942]"
           >
             <svg
               viewBox="0 0 24 24"
               width="24"
               height="24"
-              className="fill-current text-gray-600 dark:text-light-muted dark:text-dark-muted"
+              className="fill-current text-gray-600 dark:text-dark-muted"
             >
               <path d="M12 16.17L4.83 9L3.41 10.41L12 19L20.59 10.41L19.17 9L12 16.17Z" />
             </svg>
@@ -917,6 +1050,39 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             />
           </div>
         </div>
+        {/* Explicit failed-send state: the optimistic bubble is no longer left
+            pending forever. Retry and dismiss stay available next to the
+            composer even after the notification times out. */}
+        {failedSends.length > 0 && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mx-3 mb-2 flex items-center gap-2 rounded-xl border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-sm text-[#b42318] dark:text-[#fca5a5]"
+          >
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-semibold">
+                Not sent{failedSends.length > 1 ? ` (${failedSends.length})` : ""}:
+              </span>{" "}
+              {failedSends[failedSends.length - 1].preview}
+            </span>
+            <button
+              type="button"
+              onClick={() => retrySend(failedSends[failedSends.length - 1].tempId)}
+              className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4444]/70"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={() => dismissFailedSend(failedSends[failedSends.length - 1].tempId)}
+              aria-label="Dismiss failed message"
+              className="shrink-0 rounded p-1 text-lg leading-none hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4444]/70"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <ChatInput
           chatId={chatId}
           disabled={!canSend}
@@ -932,9 +1098,15 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           replyingTo={replyingTo}
           mentionableContacts={mentionableContacts}
           onInputChange={handleInputChange}
-          onKeyDown={e =>
-            e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSendMessage())
-          }
+          onKeyDown={e => {
+            if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return
+            // "Enter is send" controls the plain Enter key. With it off, Enter
+            // inserts a newline and Ctrl/Cmd+Enter sends.
+            if (enterIsSend || e.ctrlKey || e.metaKey) {
+              e.preventDefault()
+              void handleSendMessage()
+            }
+          }}
           onPaste={async e => {
             // Chromium exposes pasted images synchronously via DataTransfer.
             const items = e.clipboardData?.items

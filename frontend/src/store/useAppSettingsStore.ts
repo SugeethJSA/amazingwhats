@@ -78,6 +78,16 @@ function extractSettings(state: AppSettingsStore): AppSettings {
   return settings
 }
 
+/** Accepts values such as "120%" or "100% (Default)" from the settings select. */
+export function fontSizeToCss(value: string | undefined): string {
+  const match = typeof value === "string" ? value.match(/(\d+(?:\.\d+)?)\s*%/) : null
+  return match ? `${match[1]}%` : "100%"
+}
+
+function applyFontSize(value: string | undefined): void {
+  document.documentElement.style.fontSize = fontSizeToCss(value)
+}
+
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   ...defaultSettings,
   loaded: false,
@@ -104,6 +114,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       }
 
       applyThemeColors(merged.themeColors)
+      applyFontSize(merged.fontSize)
       useEaseStore.setState({ eases: merged.eases })
       cacheTheme(merged.theme)
 
@@ -115,6 +126,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       // fallback to defaults, but keep the locally cached theme so a backend
       // failure does not flip a dark-mode user back to light
       applyThemeColors(defaultSettings.themeColors)
+      applyFontSize(defaultSettings.fontSize)
       useEaseStore.setState({ eases: defaultSettings.eases })
 
       set({ theme: readCachedTheme(), loaded: true })
@@ -127,6 +139,9 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
 
       if (key === "theme") {
         cacheTheme(next.theme)
+      }
+      if (key === "fontSize") {
+        applyFontSize(next.fontSize)
       }
 
       SaveSettings(extractSettings(next)).catch(err => {

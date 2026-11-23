@@ -75,13 +75,17 @@ export function CallOverlay() {
 
   const onDragStart = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      const el = e.currentTarget.parentElement as HTMLElement | null
-      if (!el) return
+      // currentTarget is the drag strip; its parent is the card, and the card's
+      // parent is the positioned wrapper whose left/top we are moving.
+      const card = e.currentTarget.parentElement as HTMLElement | null
+      const widget = card?.parentElement as HTMLElement | null
+      if (!card || !widget) return
+      const rect = widget.getBoundingClientRect()
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
-        offsetX: position?.x ?? el.offsetLeft,
-        offsetY: position?.y ?? el.offsetTop,
+        offsetX: position?.x ?? rect.left,
+        offsetY: position?.y ?? rect.top,
       }
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     },
@@ -90,11 +94,17 @@ export function CallOverlay() {
 
   const onDragMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return
+    const card = e.currentTarget.parentElement as HTMLElement | null
+    if (!card) return
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
+    // Keep the whole widget on screen, including when the window is narrow.
+    const margin = 16
+    const maxX = Math.max(margin, window.innerWidth - card.offsetWidth - margin)
+    const maxY = Math.max(margin, window.innerHeight - card.offsetHeight - margin)
     setPosition({
-      x: dragRef.current.offsetX + dx,
-      y: dragRef.current.offsetY + dy,
+      x: Math.min(Math.max(dragRef.current.offsetX + dx, margin), maxX),
+      y: Math.min(Math.max(dragRef.current.offsetY + dy, margin), maxY),
     })
   }, [])
 
@@ -343,12 +353,13 @@ export function CallOverlay() {
       }
     >
       <div
-        className="w-80 rounded-2xl p-5 shadow-2xl border flex flex-col items-center select-none"
+        role="dialog"
+        aria-label={`Call with ${activeCall.contactName}`}
+        className="w-80 max-w-[calc(100vw_-_2rem)] rounded-2xl p-5 shadow-2xl border flex flex-col items-center select-none"
         style={{
-          background: "rgba(18, 27, 34, 0.95)",
-          backdropFilter: "blur(20px) saturate(180%)",
-          borderColor: "rgba(33, 192, 99, 0.25)",
-          boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6), 0 0 20px rgba(33, 192, 99, 0.15)",
+          background: "#121b22",
+          borderColor: "rgba(255, 255, 255, 0.08)",
+          boxShadow: "0 14px 40px rgba(0, 0, 0, 0.45)",
         }}
       >
         <div
@@ -361,11 +372,8 @@ export function CallOverlay() {
         >
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#21c063] animate-pulse" />
-            <span className="tracking-wide uppercase text-[10px] font-semibold text-[#21c063]">
-              Whats4Linux Call
-            </span>
           </div>
-          <span className="text-[11px] text-gray-400">
+          <span className="text-xs text-gray-300">
             {activeCall.isGroup
               ? activeCall.isVideo
                 ? "Group Video Call"
@@ -427,6 +435,7 @@ export function CallOverlay() {
                 setShowAddParticipant(true)
               }}
               className="p-3 rounded-full bg-white/10 text-gray-300 hover:bg-white/20 transition-all duration-150"
+              aria-label="Add participant to call"
               title="Add participant to call"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -440,6 +449,7 @@ export function CallOverlay() {
               <button
                 onClick={handleReject}
                 className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 transition-transform hover:scale-105 active:scale-95"
+                aria-label="Decline call"
                 title="Decline Call"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -449,6 +459,7 @@ export function CallOverlay() {
               <button
                 onClick={handleAccept}
                 className="w-12 h-12 rounded-full bg-[#21c063] text-white flex items-center justify-center shadow-lg shadow-[#21c063]/40 transition-transform hover:scale-105 active:scale-95 animate-pulse"
+                aria-label="Accept call"
                 title="Accept Call"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -460,6 +471,7 @@ export function CallOverlay() {
             <button
               onClick={handleEnd}
               className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 transition-transform hover:scale-105 active:scale-95"
+              aria-label="End call"
               title="End Call"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -473,7 +485,7 @@ export function CallOverlay() {
         {activeCall.status === "active" && (
           <button
             onClick={() => setShowStats(!showStats)}
-            className="mt-3 text-[10px] uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+            className="mt-3 text-xs text-gray-400 hover:text-white transition-colors"
           >
             {showStats ? "Hide Details" : "Show Details"}
           </button>
@@ -522,9 +534,14 @@ export function CallOverlay() {
             if (e.target === e.currentTarget) setShowAddParticipant(false)
           }}
         >
-          <div className="bg-white dark:bg-dark-secondary rounded-2xl w-96 max-h-[80vh] flex flex-col shadow-xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-to-call-title"
+            className="bg-white dark:bg-dark-secondary rounded-2xl w-full max-w-sm mx-4 max-h-[80vh] flex flex-col shadow-xl"
+          >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 id="add-to-call-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Add to call
               </h2>
               <input
@@ -532,12 +549,12 @@ export function CallOverlay() {
                 onChange={e => setAddSearch(e.target.value)}
                 placeholder="Search contacts..."
                 autoFocus
-                className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 outline-none"
+                className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none"
               />
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {candidateContacts.length === 0 && (
-                <p className="text-center text-gray-400 dark:text-light-muted dark:text-dark-muted text-sm py-8">
+                <p className="text-center text-gray-400 dark:text-dark-muted text-sm py-8">
                   No contacts found
                 </p>
               )}
@@ -562,7 +579,7 @@ export function CallOverlay() {
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {chat.name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted truncate">
+                    <div className="text-xs text-gray-600 dark:text-[#9aa8b0] truncate">
                       {chat.type === "group" ? "Group" : formatPhone(phoneFromJID(chat.id))}
                     </div>
                   </div>
@@ -572,7 +589,7 @@ export function CallOverlay() {
             <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
               <button
                 onClick={() => setShowAddParticipant(false)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg transition-colors"
               >
                 Cancel
               </button>

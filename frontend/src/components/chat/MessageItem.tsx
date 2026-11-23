@@ -17,6 +17,7 @@ import { QuotedMessage } from "./QuotedMessage"
 import { ReactionBubble, ReactionDetails } from "./Reactions"
 import { LinkPreview } from "./LinkPreview"
 import clsx from "clsx"
+import ConfirmDialog from "@/components/common/ConfirmDialog"
 import { MessageMenu } from "./MessageMenu"
 import { ForwardDialog } from "./ForwardDialog"
 import { PollVoteDialog } from "./PollVoteDialog"
@@ -28,7 +29,7 @@ import {
   UserAvatar,
 } from "../../assets/svgs/chat_icons"
 import { useContactStore } from "../../store/useContactStore"
-import { useMessageStore } from "../../store"
+import { useMessageStore, useUIStore } from "../../store"
 import type { Message } from "../../store/types"
 import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import { isMe } from "../../lib/self"
@@ -37,6 +38,15 @@ import { LRUCache } from "../../lib/lruCache"
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
+
+type NotificationOptions = {
+  tone?: "info" | "success" | "error" | "warning"
+  action?: { label: string; onClick: () => void }
+  durationMs?: number
+}
+// The UI store owns the toast contract; this cast keeps the file type-safe
+// against the shared signature while the store's options overload lands.
+type Notify = (message: string, options?: NotificationOptions) => number
 
 const votedPollKeys = new Set<string>()
 
@@ -76,7 +86,7 @@ function SenderAvatar({ jid }: { jid: string }) {
   }, [jid])
 
   return (
-    <div className="w-7 h-7 ml-3 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 shrink-0 self-start flex items-center justify-center text-gray-500 dark:text-light-muted dark:text-dark-muted [&_svg]:w-5 [&_svg]:h-5">
+    <div className="w-7 h-7 ml-3 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 shrink-0 self-start flex items-center justify-center text-gray-500 dark:text-dark-muted [&_svg]:w-5 [&_svg]:h-5">
       {url ? <img src={url} className="w-full h-full object-cover" /> : <UserAvatar />}
     </div>
   )
@@ -130,10 +140,11 @@ export function MessageItem({
   const [senderColor, setSenderColor] = useState<string | undefined>(cachedSender?.senderColor)
   const getSenderInfo = useContactStore(state => state.getSenderInfo)
   const addReactionToMessage = useMessageStore(state => state.addReactionToMessage)
+  const notify = useUIStore(s => s.addNotification) as unknown as Notify
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [showFullEmoji, setShowFullEmoji] = useState(false)
   const [showReactionDetails, setShowReactionDetails] = useState(false)
-  const reactionPillRef = useRef<HTMLDivElement>(null)
+  const reactionPillRef = useRef<HTMLButtonElement>(null)
   // Derived directly from the message; no state/effect needed (a state+effect
   // here forced an extra re-render per message on mount).
   const reactions = message.reactions ?? []
@@ -222,9 +233,36 @@ export function MessageItem({
     }
   }
 
-  const handleDelete = () => {
+  // Deletion is irreversible in both directions: there is no revoke-undo or
+  // local-restore binding. The confirmation names that consequence plainly,
+  // so no undo action is offered after success.
+  const [pendingDelete, setPendingDelete] = useState(false)
+  const deleteBusyRef = useRef(false)
+
+  const handleDelete = () => setPendingDelete(true)
+
+  const confirmDelete = async () => {
+    if (deleteBusyRef.current) return
+    deleteBusyRef.current = true
+    setPendingDelete(false)
     const method = isFromMe ? RevokeMessage : DeleteForMe
-    method(chatId, message.Info.ID).catch((e: any) => console.error("Delete message failed:", e))
+    try {
+      await method(chatId, message.Info.ID)
+      notify(isFromMe ? "Message deleted for everyone" : "Message removed from this device", {
+        tone: "success",
+        durationMs: 5000,
+      })
+    } catch {
+      // Never surface the backend's raw error (it may contain JIDs or paths).
+      notify(
+        isFromMe
+          ? "Couldn't delete the message for everyone. Please try again."
+          : "Couldn't remove the message from this device. Please try again.",
+        { tone: "error", durationMs: 6000 },
+      )
+    } finally {
+      deleteBusyRef.current = false
+    }
   }
 
   const handleStar = () => {
@@ -331,7 +369,7 @@ export function MessageItem({
   const timeMeta = (floated: boolean) => (
     <span
       className={clsx(
-        "inline-flex items-center gap-1 text-[11px] leading-none opacity-55 select-none whitespace-nowrap",
+        "inline-flex items-center gap-1 text-[11px] leading-none opacity-75 select-none whitespace-nowrap",
         floated && "float-right ml-2 mt-2",
       )}
     >
@@ -346,7 +384,7 @@ export function MessageItem({
   )
 
   const renderContent = () => {
-    if (!content) return <span className="italic opacity-50">Empty Message</span>
+    if (!content) return <span className="italic opacity-70">Empty Message</span>
     else if (content.conversation || content.extendedTextMessage?.text) {
       const htmlContent = content.conversation || content.extendedTextMessage?.text || ""
       const stripped = htmlContent
@@ -412,13 +450,13 @@ export function MessageItem({
                           {mine && <span className="text-green-500 dark:text-green-400">✓ </span>}
                           {opt.name}
                         </span>
-                        <span className="shrink-0 opacity-70">
+                        <span className="shrink-0 opacity-75">
                           {opt.votes} · {pct}%
                         </span>
                       </div>
                     )
                   })}
-                  <div className="text-xs opacity-55">
+                  <div className="text-xs opacity-75">
                     {pollVotes.totalVotes} vote{pollVotes.totalVotes === 1 ? "" : "s"}
                   </div>
                 </div>
@@ -516,7 +554,7 @@ export function MessageItem({
               <div className="truncate font-medium text-sm text-gray-900 dark:text-gray-100">
                 {fileName}
               </div>
-              <div className="text-xs opacity-60 text-gray-500 dark:text-light-muted dark:text-dark-muted">
+              <div className="text-xs opacity-75 text-gray-500 dark:text-dark-muted">
                 {fileSize > 0 ? formatSize(fileSize) : "Document"}
               </div>
             </div>
@@ -534,7 +572,7 @@ export function MessageItem({
     }
     // Note: senderKeyDistributionMessage and reactionMessage are not stored in messages.db
     // Reactions are stored separately and shown via the Reactions field
-    return <span className="italic opacity-50 text-xs">Unsupported Message Type</span>
+    return <span className="italic opacity-70 text-xs">Unsupported Message Type</span>
   }
 
   const hasMedia = !!(content?.imageMessage || content?.videoMessage)
@@ -635,7 +673,7 @@ export function MessageItem({
                 {senderName}
               </span>
               {senderName.startsWith("~") && senderPhone && (
-                <span className="shrink-0 text-[11px] text-black/40 dark:text-white/40">
+                <span className="shrink-0 text-[11px] text-black/70 dark:text-white/70">
                   {senderPhone}
                 </span>
               )}
@@ -646,13 +684,16 @@ export function MessageItem({
               This is the quick-picker control; the reaction pill below opens
               the "who reacted" details instead. */}
           <button
+            type="button"
             onClick={() => {
               setShowReactionDetails(false)
               setShowReactionPicker(v => !v)
             }}
+            aria-label="React to message"
+            aria-expanded={showReactionPicker}
             title="React"
             className={clsx(
-              "absolute bottom-1 z-20 rounded-full bg-white p-1 text-sm leading-none opacity-0 shadow transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none dark:bg-dark-tertiary",
+              "absolute bottom-1 z-20 rounded-full bg-white p-1 text-sm leading-none opacity-0 shadow transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:bg-dark-tertiary",
               isFromMe ? "-left-9" : "-right-9",
             )}
           >
@@ -742,14 +783,14 @@ export function MessageItem({
               {/* WhatsApp shows the phone number next to the name for senders
                   that aren't saved contacts (pushName-only, "~"-prefixed). */}
               {senderName.startsWith("~") && senderPhone && (
-                <span className="shrink-0 text-[11px] text-black/40 dark:text-white/40">
+                <span className="shrink-0 text-[11px] text-black/70 dark:text-white/70">
                   {senderPhone}
                 </span>
               )}
             </div>
           )}
           {message.forwarded && (
-            <div className="text-[10px] flex gap-1 italic items-center opacity-60 mb-1">
+            <div className="text-[10px] flex gap-1 italic items-center opacity-75 mb-1">
               <ForwardedIcon />
               Forwarded
             </div>
@@ -762,20 +803,22 @@ export function MessageItem({
 
           {/* Reactions */}
           {reactions.length > 0 && (
-            <div
+            <button
               ref={reactionPillRef}
+              type="button"
+              aria-label="Who reacted"
               onClick={() => {
                 setShowReactionDetails(true)
                 setShowReactionPicker(false)
                 setShowFullEmoji(false)
               }}
               className={clsx(
-                "absolute -bottom-3 z-9999 cursor-pointer transition-transform duration-150 hover:-translate-y-0.5",
+                "absolute -bottom-3 z-9999 cursor-pointer rounded-full transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/60",
                 isFromMe ? "right-2" : "left-2",
               )}
             >
               <ReactionBubble reactions={reactions} isFromMe={isFromMe} />
-            </div>
+            </button>
           )}
 
           {showReactionDetails && reactions.length > 0 && (
@@ -791,6 +834,25 @@ export function MessageItem({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title={
+          isFromMe
+            ? "Delete for everyone — this cannot be undone"
+            : "Delete for me — this cannot be undone"
+        }
+        description={
+          isFromMe
+            ? "The message will be removed for everyone in this chat. There is no undo and no way to restore it."
+            : "The message will be removed from this device only. Others still see it, and there is no undo here."
+        }
+        confirmLabel={isFromMe ? "Delete for everyone" : "Delete for me"}
+        cancelLabel="Keep message"
+        tone="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(false)}
+      />
     </>
   )
 }

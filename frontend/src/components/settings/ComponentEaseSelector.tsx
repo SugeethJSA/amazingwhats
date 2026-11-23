@@ -294,7 +294,9 @@ const GSAPMasterVisualizer = () => {
       {/* PREVIEW PANEL */}
       <div className="w-1/4 flex items-center justify-center border-l border-[#42433d]/30">
         {!component && <div className="opacity-40 text-sm">Pick a component to preview</div>}
-        {component === "ToggleButton" && <ToggleButton isEnabled={true} onToggle={() => {}} />}
+        {component === "ToggleButton" && (
+          <ToggleButton isEnabled={true} onToggle={() => {}} ariaLabel="Preview toggle" />
+        )}
         {component === "DropDown" && (
           <DropDown title="Preview" elements={["Option 1", "Option 2"]} onToggle={() => {}} />
         )}

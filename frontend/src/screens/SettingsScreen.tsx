@@ -114,6 +114,14 @@ const settingsItems: SettingsItem[] = [
   },
 ]
 
+/** Genuine sections for the settings list: related categories sit together. */
+const SETTINGS_GROUPS: { label: string; ids: SettingsCategory[] }[] = [
+  { label: "Preferences", ids: ["general", "chats", "notifications", "shortcuts"] },
+  { label: "Account and privacy", ids: ["account", "privacy"] },
+  { label: "Help and tools", ids: ["help", "advanced"] },
+  { label: "Session", ids: ["logout"] },
+]
+
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [selectedCategory, setSelectedCategory] = useState<SettingsCategory | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -175,7 +183,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <div className="w-full max-w-3xl overflow-y-auto px-6 py-6 lg:px-10">
           <button
             onClick={() => setNestedScreen(null)}
-            className="mb-5 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-light-muted transition-colors hover:bg-black/[0.04] hover:text-light-text dark:text-dark-muted dark:hover:bg-white/[0.06] dark:hover:text-dark-text"
+            className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-light-muted transition-colors hover:bg-black/[0.04] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:bg-white/[0.06] dark:hover:text-dark-text"
           >
             <ChevronBack />
             Back
@@ -245,14 +253,24 @@ function Sidebar({
   selectedCategory,
   onSelectCategory,
   onBack,
-}: any) {
+}: {
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  profile: api.Contact | null
+  avatar?: string | null
+  items: SettingsItem[]
+  selectedCategory: SettingsCategory | null
+  onSelectCategory: (category: SettingsCategory) => void
+  onBack: () => void
+}) {
   return (
     <div className="flex w-[380px] shrink-0 flex-col border-r border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-dark-bg">
       <div className="px-4 pb-3 pt-5">
         <div className="mb-4 flex items-center gap-2">
           <button
             onClick={onBack}
-            className="rounded-xl p-2 text-light-muted transition-colors hover:bg-black/[0.05] hover:text-light-text dark:text-dark-muted dark:hover:bg-white/[0.07] dark:hover:text-dark-text"
+            aria-label="Back to chats"
+            className="rounded-xl p-2 text-light-muted transition-colors hover:bg-black/[0.05] hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:bg-white/[0.07] dark:hover:text-dark-text"
             title="Back to chats"
           >
             <BackIcon />
@@ -265,15 +283,17 @@ function Sidebar({
           <SearchIcon className="h-4 w-4 shrink-0 text-light-muted dark:text-dark-muted" />
           <input
             type="text"
+            aria-label="Search settings"
             placeholder="Search settings"
-            className="w-full bg-transparent text-sm text-light-text outline-none placeholder:text-light-muted/70 dark:text-dark-text dark:placeholder:text-dark-muted/60"
+            className="w-full bg-transparent text-sm text-light-text outline-none placeholder:text-light-muted dark:text-dark-text dark:placeholder:text-dark-muted"
             value={searchTerm}
             onChange={e => onSearchChange(e.target.value)}
           />
           {searchTerm && (
             <button
               onClick={() => onSearchChange("")}
-              className="text-light-muted/70 transition-colors hover:text-light-text dark:text-dark-muted/70 dark:hover:text-dark-text"
+              aria-label="Clear search"
+              className="rounded-md p-0.5 text-light-muted transition-colors hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] dark:text-dark-muted dark:hover:text-dark-text"
               title="Clear search"
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -292,14 +312,29 @@ function Sidebar({
             No settings match "{searchTerm}"
           </p>
         ) : (
-          items.map((item: SettingsItem) => (
-            <SettingsMenuItem
-              key={item.id}
-              item={item}
-              isSelected={selectedCategory === item.id}
-              onClick={() => onSelectCategory(item.id)}
-            />
-          ))
+          SETTINGS_GROUPS.map(group => {
+            const groupItems = items.filter(item => group.ids.includes(item.id))
+            if (groupItems.length === 0) return null
+            const headingId = `settings-group-${group.label.replace(/\s+/g, "-").toLowerCase()}`
+            return (
+              <section key={group.label} aria-labelledby={headingId} className="mb-2 last:mb-0">
+                <h2
+                  id={headingId}
+                  className="px-5 pb-1 pt-2 text-[13px] font-semibold text-light-muted dark:text-dark-muted"
+                >
+                  {group.label}
+                </h2>
+                {groupItems.map((item: SettingsItem) => (
+                  <SettingsMenuItem
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedCategory === item.id}
+                    onClick={() => onSelectCategory(item.id)}
+                  />
+                ))}
+              </section>
+            )
+          })
         )}
       </div>
     </div>
@@ -310,7 +345,7 @@ function ProfileCard({ profile, avatar }: { profile: api.Contact | null; avatar?
   const avatarSrc = avatar || profile?.avatar_url || null
   return (
     <div className="mx-3 mb-1 overflow-hidden rounded-2xl border border-black/[0.06] bg-white transition-all hover:shadow-md dark:border-white/[0.08] dark:bg-dark-secondary">
-      <div className="h-14 w-full bg-gradient-to-r from-[#21c063]/25 via-[#21c063]/10 to-transparent" />
+      <div className="h-14 w-full bg-black/[0.03] dark:bg-white/[0.04]" />
       <div className="-mt-8 flex items-end gap-3 px-4 pb-3.5">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-light-tertiary ring-4 ring-white dark:bg-dark-elevated dark:ring-dark-secondary">
           {avatarSrc ? (
@@ -342,13 +377,13 @@ function SettingsMenuItem({
   onClick: () => void
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
+      aria-current={isSelected ? "page" : undefined}
       onClick={onClick}
-      onKeyDown={e => e.key === "Enter" && onClick()}
       className={clsx(
-        "mx-2 my-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150",
+        "mx-2 my-0.5 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50",
         isSelected ? "bg-[#21c063]/10" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
       )}
     >
@@ -358,7 +393,7 @@ function SettingsMenuItem({
           item.danger
             ? "bg-red-500/10 text-red-500"
             : isSelected
-              ? "bg-[#21c063]/15 text-[#21c063]"
+              ? "bg-[#21c063]/15 text-[#0b6b3a] dark:text-[#5fd385]"
               : "bg-black/[0.04] text-light-muted dark:bg-white/[0.06] dark:text-dark-muted",
         )}
       >
@@ -369,9 +404,9 @@ function SettingsMenuItem({
           className={clsx(
             "truncate text-sm font-medium",
             item.danger
-              ? "text-red-500"
+              ? "text-red-500 dark:text-red-400"
               : isSelected
-                ? "text-[#21c063]"
+                ? "text-[#0b6b3a] dark:text-[#5fd385]"
                 : "text-light-text dark:text-dark-text",
           )}
         >
@@ -386,6 +421,6 @@ function SettingsMenuItem({
       {isSelected && (
         <span className="h-2 w-2 shrink-0 rounded-full bg-[#21c063] shadow-[0_0_8px_rgba(33,192,99,0.6)]" />
       )}
-    </div>
+    </button>
   )
 }

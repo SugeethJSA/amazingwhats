@@ -54,6 +54,43 @@ import ToggleButton from "../settings/ToggleButton"
 import { useMuteStore } from "../../store/useMuteStore"
 import { InviteLinkDialog } from "./InviteLinkDialog"
 
+/**
+ * Accessible on/off control for group settings. A real button keeps Enter and
+ * Space working, while role="switch" communicates the state to assistive tech.
+ * The 44×24px track is the minimum comfortable hit area.
+ */
+function SettingsSwitch({
+  checked,
+  disabled,
+  label,
+  onChange,
+}: {
+  checked: boolean
+  disabled?: boolean
+  label: string
+  onChange: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
+        checked ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
+      }`}
+    >
+      <span
+        className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : ""
+        }`}
+      />
+    </button>
+  )
+}
+
 interface ChatInfoProps {
   chatId: string
   chatName: string
@@ -466,7 +503,16 @@ export function ChatInfo({
   if (!isOpen) return null
 
   return (
-    <div className="w-full md:w-[400px] h-full bg-white dark:bg-dark-secondary border-l border-gray-300 dark:border-dark-tertiary flex flex-col overflow-hidden">
+    <>
+      {/* Below lg the panel floats over the conversation, keeping the chat at a
+          usable width. The backdrop also gives narrow windows a clear dismissal
+          target. At lg it returns to a normal 400px flex column. */}
+      <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={onClose} aria-hidden="true" />
+      <div
+        role="complementary"
+        aria-label={chatType === "group" ? "Group info" : "Contact info"}
+        className="fixed inset-y-0 right-0 z-40 flex h-full w-full max-w-[400px] flex-col overflow-hidden border-l border-gray-200 bg-white shadow-xl dark:border-white/5 dark:bg-dark-secondary lg:static lg:z-auto lg:w-[400px] lg:max-w-none lg:shadow-none"
+      >
       {/* Header */}
       <div className="flex items-center p-4 bg-light-secondary dark:bg-dark-secondary">
         <button
@@ -542,12 +588,12 @@ export function ChatInfo({
                   : contactInfo?.full_name || "~ " + contactInfo?.push_name || chatName}
               </h3>
               {chatType === "contact" && contactInfo && (
-                <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                <p className="text-sm text-gray-600 dark:text-dark-muted">
                   {contactInfo.phno}
                 </p>
               )}
               {chatType === "group" && groupInfo && (
-                <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                <p className="text-sm text-gray-600 dark:text-dark-muted">
                   Group · {groupInfo.participant_count} participants
                 </p>
               )}
@@ -560,7 +606,7 @@ export function ChatInfo({
                   <p className="text-gray-900 dark:text-dark-text text-md break-words whitespace-pre-wrap">
                     {groupInfo.group_topic}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-dark-muted mt-2">
+                  <p className="text-xs text-gray-600 dark:text-dark-muted mt-2">
                     Group created by{" "}
                     {groupInfo.group_owner.full_name ||
                       groupInfo.group_owner.push_name ||
@@ -579,7 +625,7 @@ export function ChatInfo({
             {chatType === "contact" && contactInfo && (
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <div className="p-4">
-                  <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                  <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                     About
                   </p>
                   <p className="text-gray-900 dark:text-gray-100">
@@ -594,7 +640,7 @@ export function ChatInfo({
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <div className="p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                       Info
                     </p>
                     {userInfo ? (
@@ -605,9 +651,9 @@ export function ChatInfo({
                           : ""}
                       </p>
                     ) : userInfoBusy ? (
-                      <p className="text-sm text-gray-500">Loading…</p>
+                      <p className="text-sm text-gray-600">Loading…</p>
                     ) : (
-                      <p className="text-sm text-gray-500">Unknown</p>
+                      <p className="text-sm text-gray-600">Unknown</p>
                     )}
                   </div>
                   <button
@@ -636,7 +682,7 @@ export function ChatInfo({
             {chatType === "contact" && contactInfo && (
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <div className="p-4">
-                  <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                  <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                     Phone
                   </p>
                   <p className="text-gray-900 dark:text-gray-100">{contactInfo.phno}</p>
@@ -677,7 +723,7 @@ export function ChatInfo({
             {chatType === "contact" && businessInfo && (
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <div className="p-4">
-                  <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-2">
+                  <p className="text-sm text-gray-600 dark:text-dark-muted mb-2">
                     Business
                   </p>
                   {businessInfo.description && (
@@ -689,17 +735,17 @@ export function ChatInfo({
                     <p className="text-sm text-blue-500 mb-1">{businessInfo.website}</p>
                   )}
                   {businessInfo.email && (
-                    <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                       {businessInfo.email}
                     </p>
                   )}
                   {businessInfo.category && (
-                    <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                       {businessInfo.category}
                     </p>
                   )}
                   {businessInfo.address && (
-                    <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted">
                       {businessInfo.address}
                     </p>
                   )}
@@ -715,7 +761,7 @@ export function ChatInfo({
               </div>
 
               <div className="p-4">
-                <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted text-center">
+                <p className="text-sm text-gray-600 dark:text-dark-muted text-center">
                   No media available
                 </p>
               </div>
@@ -750,7 +796,7 @@ export function ChatInfo({
                       <DisappearingMessagesIcon />
                       <div className="flex-1 text-left">
                         <p className="text-gray-900 dark:text-gray-100">Disappearing messages</p>
-                        <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                        <p className="text-sm text-gray-600 dark:text-dark-muted">
                           {DISAPPEAR_LABEL[disappearTimer] || "Off"}
                         </p>
                       </div>
@@ -831,7 +877,7 @@ export function ChatInfo({
                         <p className="text-gray-900 dark:text-gray-100 font-medium truncate">
                           {participant.contact.full_name || "~ " + participant.contact.push_name}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted">
+                        <p className="text-sm text-gray-600 dark:text-dark-muted">
                           {participant.contact.phno}
                         </p>
                       </div>
@@ -947,7 +993,7 @@ export function ChatInfo({
                   <div className="mx-4 mb-3">
                     <input
                       autoFocus
-                      className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none focus:border-[#21c063] text-light-text dark:text-dark-text mb-2"
+                      className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none focus:border-[#21c063] placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] text-light-text dark:text-dark-text mb-2"
                       value={addSearch}
                       onChange={e => {
                         const q = e.target.value
@@ -972,7 +1018,7 @@ export function ChatInfo({
                     />
                     <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-dark-border">
                       {addResults.length === 0 && (
-                        <p className="p-3 text-sm text-gray-500 dark:text-dark-muted">
+                        <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
                           No contacts to add
                         </p>
                       )}
@@ -1008,7 +1054,7 @@ export function ChatInfo({
             {chatId.endsWith("@newsletter") && newsletterInfo && (
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <div className="p-4 space-y-3">
-                  <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mb-1">
+                  <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
                     Channel Info
                   </p>
                   {newsletterInfo.description && (
@@ -1127,8 +1173,11 @@ export function ChatInfo({
                 {/* Group announce toggle */}
                 <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
                   <span className="text-sm text-gray-900 dark:text-gray-100">Send Messages</span>
-                  <button
-                    onClick={async () => {
+                  <SettingsSwitch
+                    checked={groupAnnounce}
+                    disabled={!isAdmin}
+                    label="Only admins can send messages"
+                    onChange={async () => {
                       const next = !groupAnnounce
                       setGroupAnnounce(next)
                       try {
@@ -1138,19 +1187,9 @@ export function ChatInfo({
                         setGroupAnnounce(!next)
                       }
                     }}
-                    disabled={!isAdmin}
-                    className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-40 ${
-                      groupAnnounce ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        groupAnnounce ? "translate-x-5" : ""
-                      }`}
-                    />
-                  </button>
+                  />
                 </div>
-                <p className="px-4 pb-3 -mt-2 text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted">
+                <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
                   {groupAnnounce
                     ? "Only admins can send messages"
                     : "All participants can send messages"}
@@ -1159,8 +1198,11 @@ export function ChatInfo({
                 {/* Group locked toggle */}
                 <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
                   <span className="text-sm text-gray-900 dark:text-gray-100">Lock Group</span>
-                  <button
-                    onClick={async () => {
+                  <SettingsSwitch
+                    checked={groupLocked}
+                    disabled={!isAdmin}
+                    label="Lock group info to admins"
+                    onChange={async () => {
                       const next = !groupLocked
                       setGroupLocked(next)
                       try {
@@ -1170,19 +1212,9 @@ export function ChatInfo({
                         setGroupLocked(!next)
                       }
                     }}
-                    disabled={!isAdmin}
-                    className={`relative w-10 h-5 rounded-full transition-colors disabled:opacity-40 ${
-                      groupLocked ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        groupLocked ? "translate-x-5" : ""
-                      }`}
-                    />
-                  </button>
+                  />
                 </div>
-                <p className="px-4 pb-3 -mt-2 text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted">
+                <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
                   {groupLocked ? "Group info locked by admins" : "Anyone can edit group info"}
                 </p>
 
@@ -1236,22 +1268,13 @@ export function ChatInfo({
                       <span className="text-sm text-gray-900 dark:text-gray-100">
                         Member Add Mode
                       </span>
-                      <button
-                        onClick={handleToggleMemberAddMode}
-                        className={`relative w-10 h-5 rounded-full transition-colors ${
-                          memberAddMode === "admin_add"
-                            ? "bg-[#21c063]"
-                            : "bg-gray-300 dark:bg-gray-600"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                            memberAddMode === "admin_add" ? "translate-x-5" : ""
-                          }`}
-                        />
-                      </button>
+                      <SettingsSwitch
+                        checked={memberAddMode === "admin_add"}
+                        label="Only admins can add members"
+                        onChange={handleToggleMemberAddMode}
+                      />
                     </div>
-                    <p className="px-4 pb-3 -mt-2 text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted">
+                    <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
                       {memberAddMode === "admin_add"
                         ? "Only admins can add members"
                         : "All participants can add members"}
@@ -1266,20 +1289,13 @@ export function ChatInfo({
                       <span className="text-sm text-gray-900 dark:text-gray-100">
                         Join Approval
                       </span>
-                      <button
-                        onClick={handleToggleJoinApproval}
-                        className={`relative w-10 h-5 rounded-full transition-colors ${
-                          joinApproval ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                            joinApproval ? "translate-x-5" : ""
-                          }`}
-                        />
-                      </button>
+                      <SettingsSwitch
+                        checked={joinApproval}
+                        label="Require admin approval to join"
+                        onChange={handleToggleJoinApproval}
+                      />
                     </div>
-                    <p className="px-4 pb-3 -mt-2 text-xs text-gray-500 dark:text-light-muted dark:text-dark-muted">
+                    <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
                       {joinApproval
                         ? "Join requests require admin approval"
                         : "Anyone can join freely"}
@@ -1328,7 +1344,7 @@ export function ChatInfo({
                       </div>
                     )}
                     {showJoinRequests && joinRequests.length === 0 && !joinReqBusy && (
-                      <p className="px-4 pb-3 text-xs text-gray-500 dark:text-dark-muted">
+                      <p className="px-4 pb-3 text-xs text-gray-600 dark:text-dark-muted">
                         No pending requests
                       </p>
                     )}
@@ -1369,7 +1385,7 @@ export function ChatInfo({
                         {showLinkCommunity && (
                           <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary max-h-40 overflow-y-auto">
                             {communities.length === 0 && (
-                              <p className="p-3 text-sm text-gray-500 dark:text-dark-muted">
+                              <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
                                 No communities available
                               </p>
                             )}
@@ -1430,6 +1446,7 @@ export function ChatInfo({
         )}
       </div>
       {showJoinDialog && <InviteLinkDialog onClose={() => setShowJoinDialog(false)} />}
-    </div>
+      </div>
+    </>
   )
 }

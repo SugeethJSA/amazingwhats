@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useState, useRef, useEffect } from "react"
+import React, { lazy, Suspense, useState, useRef, useEffect, useId } from "react"
+import { createPortal } from "react-dom"
 import clsx from "clsx"
 import {
   EmojiIcon,
@@ -66,13 +67,18 @@ interface IconButtonProps {
   ref?: React.RefObject<HTMLButtonElement>
 }
 
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
+
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ onClick, title, children }, ref) => (
     <button
       ref={ref}
+      type="button"
       onClick={onClick}
-      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+      className={`p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors ${FOCUS_RING}`}
       title={title}
+      aria-label={title}
     >
       {children}
     </button>
@@ -107,19 +113,29 @@ const FilePreview = ({ file, fileType, onRemove, gifEnabled, onToggleGif }: File
     </div>
     {(fileType === "video" || fileType === "gif") && onToggleGif && (
       <button
+        type="button"
         onClick={onToggleGif}
         title="Send as an animated GIF (loops instead of playing like a video)"
+        aria-label="Send as an animated GIF"
+        aria-pressed={!!gifEnabled}
         className={clsx(
           "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+          FOCUS_RING,
           gifEnabled
             ? "border-[#21c063] bg-[#21c063] text-[#0a1014]"
-            : "border-gray-300 dark:border-white/15 text-light-muted dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-gray-600",
+            : "border-gray-300 dark:border-white/15 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600",
         )}
       >
         GIF
       </button>
     )}
-    <button onClick={onRemove} className="text-red-500 hover:text-red-600 p-1" title="Remove file">
+    <button
+      type="button"
+      onClick={onRemove}
+      className={`rounded p-1 text-[#b42318] hover:text-[#8a1c13] dark:text-[#fca5a5] ${FOCUS_RING}`}
+      title="Remove file"
+      aria-label="Remove attached file"
+    >
       ×
     </button>
   </div>
@@ -134,13 +150,17 @@ const ImagePreview = ({ imageSrc, onRemove }: ImagePreviewProps) => (
   <div className="mb-2 relative inline-block">
     <img src={imageSrc} alt="Pasted" className="max-h-40 rounded-lg" />
     <button
+      type="button"
       onClick={onRemove}
       className={clsx(
         "absolute top-1 right-1",
-        "bg-red-500 text-white rounded-full",
+        "bg-[#ef4444] text-white rounded-full",
         "w-6 h-6 flex items-center justify-center",
-        "hover:bg-red-600 transition-colors",
+        "hover:brightness-110 transition-colors",
+        FOCUS_RING,
       )}
+      title="Remove image"
+      aria-label="Remove pasted image"
     >
       ×
     </button>
@@ -187,6 +207,15 @@ export function ChatInput({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mentionAvatars, setMentionAvatars] = useState<Record<string, string>>({})
   const [loadingAvatars, setLoadingAvatars] = useState<Record<string, boolean>>({})
+  const [locationSending, setLocationSending] = useState(false)
+  const [locationError, setLocationError] = useState("")
+
+  const addNotification = useUIStore(state => state.addNotification)
+
+  const locationTitleId = useId()
+  const locationPanelRef = useRef<HTMLDivElement>(null)
+  const locationLatRef = useRef<HTMLInputElement>(null)
+  const locationReturnFocusRef = useRef<HTMLElement | null>(null)
 
   // Alt+A opens/toggles this component's attachment dropdown (the global
   // shortcut handler won't reach here while the user is typing in the box).
@@ -195,9 +224,66 @@ export function ChatInput({
     if (screen !== "chats") return
     return registerShortcut("attach-menu", () => setAttachMenuOpen(v => !v))
   }, [screen])
+
+  // The attach menu needs its own Escape handler; the chat-level handler would
+  // otherwise close the whole conversation while the menu is still open.
+  useEffect(() => {
+    if (!attachMenuOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        event.stopPropagation()
+        setAttachMenuOpen(false)
+      }
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => document.removeEventListener("keydown", onKey, true)
+  }, [attachMenuOpen])
+
+  // Location dialog: focus the first field on open, Escape closes, Tab stays in
+  // the dialog, and focus returns to the attachment trigger on close.
+  useEffect(() => {
+    if (!locationOpen) return
+    locationReturnFocusRef.current = (document.activeElement as HTMLElement | null) ?? null
+    locationLatRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        event.stopPropagation()
+        setLocationOpen(false)
+        return
+      }
+      if (event.key !== "Tab" || !locationPanelRef.current) return
+      const focusables = Array.from(
+        locationPanelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => {
+      document.removeEventListener("keydown", onKey, true)
+      const target = locationReturnFocusRef.current?.isConnected
+        ? locationReturnFocusRef.current
+        : attachButtonRef.current
+      target?.focus()
+    }
+  }, [locationOpen])
+
   const avatarCacheRef = useRef<Record<string, string>>({})
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+  const attachButtonRef = useRef<HTMLButtonElement>(null)
 
   const handleScroll = () => {
     if (textareaRef.current && backdropRef.current) {
@@ -421,9 +507,11 @@ export function ChatInput({
           />
         </div>
         <button
+          type="button"
           onClick={onCancelReply}
-          className="ml-2 text-light-muted dark:text-dark-muted hover:text-gray-700 dark:hover:text-gray-200"
+          className={`ml-2 rounded text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white ${FOCUS_RING}`}
           title="Cancel reply"
+          aria-label="Cancel reply"
         >
           <CloseIcon />
         </button>
@@ -445,7 +533,7 @@ export function ChatInput({
     <div className="relative z-20 mx-3 mb-3 mt-1.5">
       {showEmojiPicker && (
         <div ref={emojiPickerRef} className="absolute bottom-full left-0 z-50 mb-2">
-          <Suspense fallback={<div className="p-4 text-sm">Loading emojis...</div>}>
+          <Suspense fallback={<div className="p-4 text-sm" role="status">Loading emojis…</div>}>
             <EmojiPicker
               onEmojiSelect={handleEmojiSelect}
               theme="auto"
@@ -476,7 +564,7 @@ export function ChatInput({
       {/* Main input row: rounded pill (emoji left, attach right) with the
           send button as a separate circle outside, WhatsApp-style. */}
       <div className="flex items-end gap-2">
-        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 dark:border-dark-border bg-white/70 px-2 py-0.5 shadow-sm backdrop-blur-md transition-all focus-within:border-[#21c063]/50 focus-within:bg-white focus-within:shadow-md dark:border-white/5 dark:bg-dark-secondary/60 dark:focus-within:border-[#21c063]/30 dark:focus-within:bg-dark-elevated">
+        <div className="flex flex-1 items-center rounded-3xl border border-gray-200 bg-white px-2 py-0.5 shadow-sm transition-colors focus-within:border-[#21c063]/70 focus-within:ring-2 focus-within:ring-[#21c063]/20 dark:border-white/10 dark:bg-dark-secondary dark:focus-within:border-[#21c063]/50 dark:focus-within:bg-dark-elevated">
           {/* Emoji Button */}
           <IconButton ref={emojiButtonRef} onClick={onToggleEmojiPicker} title="Emoji">
             <EmojiIcon />
@@ -503,10 +591,12 @@ export function ChatInput({
               onPaste={onPaste}
               onScroll={handleScroll}
               placeholder="Message"
+              aria-label="Message"
               className={clsx(
                 "relative z-10 w-full p-2 bg-transparent resize-none outline-none max-h-32",
                 "text-transparent caret-green",
-                "placeholder:text-light-muted dark:text-dark-muted",
+                "placeholder:text-gray-600 dark:placeholder:text-gray-400",
+                FOCUS_RING,
               )}
               rows={1}
             />
@@ -514,16 +604,21 @@ export function ChatInput({
             {showSuggestions && (
               <div
                 ref={suggestionsRef}
+                role="listbox"
+                aria-label="Contact mentions"
                 className="absolute bottom-full left-0 right-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto"
               >
                 {mentionSuggestions.map(contact => {
                   const avatar = mentionAvatars[contact.phno]
                   const isLoading = loadingAvatars[contact.phno]
                   return (
-                    <div
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={false}
                       key={contact.phno}
                       onClick={() => handleSuggestionClick(contact)}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+                      className={`w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 text-left ${FOCUS_RING}`}
                     >
                       <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 overflow-hidden flex items-center justify-center shrink-0">
                         {isLoading ? (
@@ -541,7 +636,7 @@ export function ChatInput({
                       <span>
                         {contact.full_name || contact.push_name || contact.short || contact.phno}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -550,13 +645,21 @@ export function ChatInput({
 
           {/* Attach Button + WhatsApp-style attach menu */}
           <div className="relative">
-            <IconButton onClick={() => setAttachMenuOpen(v => !v)} title="Attach">
+            <IconButton
+              ref={attachButtonRef}
+              onClick={() => setAttachMenuOpen(v => !v)}
+              title="Attach"
+            >
               <AttachIcon />
             </IconButton>
             {attachMenuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setAttachMenuOpen(false)} />
-                <div className="absolute bottom-12 right-0 z-50 w-56 rounded-2xl bg-white py-3 shadow-xl dark:bg-dark-elevated border border-gray-100 dark:border-dark-border">
+                <div
+                  role="menu"
+                  aria-label="Attach options"
+                  className="absolute bottom-12 right-0 z-50 w-56 rounded-2xl bg-white py-3 shadow-xl dark:bg-dark-elevated border border-gray-100 dark:border-dark-border"
+                >
                   {(
                     [
                       {
@@ -617,11 +720,13 @@ export function ChatInput({
                   ).map(item => (
                     <button
                       key={item.label}
+                      type="button"
+                      role="menuitem"
                       onClick={() => {
                         setAttachMenuOpen(false)
                         item.act()
                       }}
-                      className="w-full px-5 py-2.5 flex items-center gap-4 text-left hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                      className={`w-full px-5 py-2.5 flex items-center gap-4 text-left transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
                     >
                       <span className={clsx("flex items-center justify-center", item.color)}>
                         {item.icon}
@@ -648,10 +753,13 @@ export function ChatInput({
 
         {/* Send Button — separate green circle outside the pill */}
         <button
+          type="button"
           onClick={onSendMessage}
           disabled={!hasContent}
+          aria-label="Send message"
           className={clsx(
             "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all duration-200",
+            FOCUS_RING,
             hasContent
               ? "bg-[#21c063] hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95"
               : "cursor-not-allowed bg-[#21c063]/40 scale-95 opacity-60",
@@ -663,68 +771,118 @@ export function ChatInput({
 
       {pollOpen && <PollDialog chatId={chatId} onClose={() => setPollOpen(false)} />}
       {contactOpen && <ContactShareDialog chatId={chatId} onClose={() => setContactOpen(false)} />}
-      {locationOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setLocationOpen(false)}
-        >
+      {locationOpen &&
+        createPortal(
           <div
-            className="w-[360px] rounded-xl bg-white p-4 shadow-xl dark:bg-dark-secondary"
-            onClick={e => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={event => {
+              if (event.target === event.currentTarget) setLocationOpen(false)
+            }}
           >
-            <h2 className="mb-3 text-lg font-medium text-light-text dark:text-dark-text">
-              Send location
-            </h2>
-            <p className="mb-3 text-sm text-gray-500 dark:text-light-muted dark:text-dark-muted">
-              Share your current location or enter coordinates.
-            </p>
-            <input
-              autoFocus
-              className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none focus:border-[#21c063] dark:border-white/10 dark:focus:border-[#21c063] text-light-text dark:text-dark-text placeholder-gray-500 mb-2"
-              placeholder="Latitude (e.g. 37.7749)"
-              value={latInput}
-              onChange={e => setLatInput(e.target.value)}
-            />
-            <input
-              className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none focus:border-[#21c063] dark:border-white/10 dark:focus:border-[#21c063] text-light-text dark:text-dark-text placeholder-gray-500 mb-2"
-              placeholder="Longitude (e.g. -122.4194)"
-              value={lngInput}
-              onChange={e => setLngInput(e.target.value)}
-            />
-            <input
-              className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none focus:border-[#21c063] dark:border-white/10 dark:focus:border-[#21c063] text-light-text dark:text-dark-text placeholder-gray-500 mb-3"
-              placeholder="Place name (optional)"
-              value={placeName}
-              onChange={e => setPlaceName(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setLocationOpen(false)}
-                className="rounded-lg px-4 py-2 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+            <div
+              ref={locationPanelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={locationTitleId}
+              className="w-[360px] max-w-full rounded-xl bg-white p-4 shadow-xl dark:bg-dark-secondary"
+              onClick={event => event.stopPropagation()}
+            >
+              <h2
+                id={locationTitleId}
+                className="mb-3 text-lg font-medium text-gray-900 dark:text-gray-100"
               >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  const lat = parseFloat(latInput)
-                  const lng = parseFloat(lngInput)
-                  if (isNaN(lat) || isNaN(lng)) return
-                  try {
-                    await SendLocation(chatId, lat, lng, placeName.trim())
-                    setLocationOpen(false)
-                  } catch (e) {
-                    console.error("Send location failed:", e)
-                  }
+                Send location
+              </h2>
+              <p className="mb-3 text-sm text-gray-600 dark:text-[#8696a0]">
+                Share your current location or enter coordinates.
+              </p>
+              <label htmlFor="location-lat" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                Latitude
+              </label>
+              <input
+                id="location-lat"
+                ref={locationLatRef}
+                inputMode="decimal"
+                className="mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                placeholder="Latitude (e.g. 37.7749)"
+                value={latInput}
+                onChange={event => {
+                  setLatInput(event.target.value)
+                  setLocationError("")
                 }}
-                disabled={isNaN(parseFloat(latInput)) || isNaN(parseFloat(lngInput))}
-                className="rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] disabled:opacity-50"
-              >
-                Send
-              </button>
+              />
+              <label htmlFor="location-lng" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                Longitude
+              </label>
+              <input
+                id="location-lng"
+                inputMode="decimal"
+                className="mb-2 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                placeholder="Longitude (e.g. -122.4194)"
+                value={lngInput}
+                onChange={event => {
+                  setLngInput(event.target.value)
+                  setLocationError("")
+                }}
+              />
+              <label htmlFor="location-place" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                Place name (optional)
+              </label>
+              <input
+                id="location-place"
+                className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[#21c063] focus-visible:ring-2 focus-visible:ring-[#21c063]/50 dark:placeholder:text-gray-400 dark:focus:border-[#21c063] text-gray-900 dark:text-gray-100"
+                placeholder="Place name (optional)"
+                value={placeName}
+                onChange={event => setPlaceName(event.target.value)}
+              />
+              {locationError && (
+                <p role="alert" className="mb-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+                  {locationError}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLocationOpen(false)}
+                  className={`rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const lat = parseFloat(latInput)
+                    const lng = parseFloat(lngInput)
+                    if (isNaN(lat) || isNaN(lng)) {
+                      setLocationError("Enter a valid latitude and longitude.")
+                      return
+                    }
+                    setLocationSending(true)
+                    setLocationError("")
+                    try {
+                      await SendLocation(chatId, lat, lng, placeName.trim())
+                      setLocationOpen(false)
+                    } catch (err) {
+                      console.error("Send location failed:", err)
+                      setLocationError("Location could not be sent. Please try again.")
+                      addNotification("Location could not be sent. Please try again.", {
+                        tone: "error",
+                      })
+                    } finally {
+                      setLocationSending(false)
+                    }
+                  }}
+                  disabled={locationSending || isNaN(parseFloat(latInput)) || isNaN(parseFloat(lngInput))}
+                  aria-busy={locationSending}
+                  className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+                >
+                  {locationSending ? "Sending…" : "Send"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

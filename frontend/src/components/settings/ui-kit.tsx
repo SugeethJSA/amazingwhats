@@ -45,6 +45,24 @@ export function RowList({ children, className }: { children: ReactNode; classNam
   )
 }
 
+/** A real section heading, used to group related settings. Not an eyebrow label. */
+export function SettingsSection({
+  title,
+  children,
+  className,
+}: {
+  title: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={clsx("flex flex-col gap-2", className)}>
+      <h3 className="text-[15px] font-semibold text-light-text dark:text-dark-text">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
 export function SettingRow({
   title,
   description,
@@ -52,6 +70,9 @@ export function SettingRow({
   control,
   onClick,
   danger,
+  hint,
+  pressed,
+  selected,
 }: {
   title: string
   description?: string
@@ -59,18 +80,35 @@ export function SettingRow({
   control?: ReactNode
   onClick?: () => void
   danger?: boolean
+  /** Honest secondary note, e.g. why a control is unavailable. */
+  hint?: string
+  /** Set when the row is a toggle-style action. */
+  pressed?: boolean
+  /** Set when the row represents the current selection in a list. */
+  selected?: boolean
 }) {
   const clickable = Boolean(onClick)
   return (
     <div
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
+      aria-pressed={pressed === undefined ? undefined : pressed}
+      aria-current={selected ? "true" : undefined}
       onClick={onClick}
-      onKeyDown={clickable ? e => e.key === "Enter" && onClick?.() : undefined}
+      onKeyDown={
+        clickable
+          ? e => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onClick?.()
+              }
+            }
+          : undefined
+      }
       className={clsx(
         "flex items-center gap-3 px-4 py-3.5",
         clickable &&
-          "cursor-pointer transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
+          "cursor-pointer transition-colors hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50 dark:hover:bg-white/[0.04]",
       )}
     >
       {icon && (
@@ -99,6 +137,11 @@ export function SettingRow({
             {description}
           </div>
         )}
+        {hint && (
+          <div className="mt-1 text-[12px] font-medium text-light-muted dark:text-dark-muted">
+            {hint}
+          </div>
+        )}
       </div>
       {control && <div className="flex shrink-0 items-center">{control}</div>}
       {clickable && !control && (
@@ -115,19 +158,31 @@ export function SwitchRow({
   icon,
   enabled,
   onToggle,
+  disabled,
+  hint,
 }: {
   title: string
   description?: string
   icon?: ReactNode
   enabled: boolean
   onToggle: () => void
+  disabled?: boolean
+  hint?: string
 }) {
   return (
     <SettingRow
       title={title}
       description={description}
       icon={icon}
-      control={<ToggleButton isEnabled={enabled} onToggle={onToggle} />}
+      hint={hint}
+      control={
+        <ToggleButton
+          isEnabled={enabled}
+          onToggle={onToggle}
+          ariaLabel={title}
+          disabled={disabled}
+        />
+      }
     />
   )
 }
@@ -139,22 +194,29 @@ export function SelectMenu<T extends string>({
   onChange,
   disabled,
   className,
+  ariaLabel,
 }: {
   value: T
   options: { value: T; label: string }[]
   onChange: (value: T) => void
   disabled?: boolean
   className?: string
+  ariaLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
     document.addEventListener("mousedown", onDown)
     document.addEventListener("keydown", onKey)
     return () => {
@@ -164,18 +226,24 @@ export function SelectMenu<T extends string>({
   }, [open])
 
   const current = options.find(o => o.value === value)
+  const menuLabel = ariaLabel ?? "Select an option"
 
   return (
     <div ref={ref} className={clsx("relative shrink-0", className)}>
       <button
+        ref={triggerRef}
         type="button"
+        aria-label={menuLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen(o => !o)}
         disabled={disabled}
         className={clsx(
-          "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
-          "bg-black/[0.04] text-light-muted hover:bg-black/[0.08] hover:text-light-text",
-          "dark:bg-white/[0.06] dark:text-dark-muted dark:hover:bg-white/[0.1] dark:hover:text-dark-text",
-          disabled && "opacity-50",
+          "flex min-h-8 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
+          "bg-black/[0.04] text-light-text hover:bg-black/[0.08]",
+          "dark:bg-white/[0.06] dark:text-dark-text dark:hover:bg-white/[0.1]",
+          disabled && "cursor-not-allowed opacity-40",
         )}
       >
         <span className="max-w-48 truncate">{current?.label ?? ""}</span>
@@ -184,6 +252,8 @@ export function SelectMenu<T extends string>({
 
       {open && (
         <div
+          role="listbox"
+          aria-label={menuLabel}
           className={clsx(
             "absolute z-50 mt-1.5 min-w-40 overflow-hidden rounded-xl border border-black/[0.06] dark:border-white/[0.1]",
             "bg-white dark:bg-dark-elevated shadow-xl shadow-black/10",
@@ -194,14 +264,18 @@ export function SelectMenu<T extends string>({
             <button
               key={o.value}
               type="button"
+              role="option"
+              aria-selected={o.value === value}
               onClick={() => {
                 onChange(o.value)
                 setOpen(false)
+                triggerRef.current?.focus()
               }}
               className={clsx(
-                "flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left text-[13px] transition-colors",
+                "flex min-h-9 w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[13px] transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#21c063]/50",
                 "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
-                o.value === value ? "text-[#21c063]" : "text-light-text dark:text-dark-text",
+                o.value === value ? "text-light-text dark:text-dark-text" : "text-light-muted dark:text-dark-muted",
               )}
             >
               <span>{o.label}</span>
@@ -231,7 +305,7 @@ export function TextField({ label, wrapperClassName, className, ...props }: Text
         {...props}
         className={clsx(
           "w-full rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-transparent",
-          "px-3 py-2 text-sm text-light-text dark:text-dark-text placeholder:text-light-muted/70 dark:placeholder:text-dark-muted/60",
+          "px-3 py-2 text-sm text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted",
           "outline-none transition-all focus:border-[#21c063] focus:ring-2 focus:ring-[#21c063]/20",
           className,
         )}
@@ -265,7 +339,9 @@ export function ActionButton({
     <button
       {...props}
       className={clsx(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
+        "disabled:cursor-not-allowed disabled:opacity-40",
         actionVariants[variant],
         className,
       )}
@@ -286,7 +362,7 @@ export function StatusBanner({
     <div
       className={clsx(
         "rounded-xl px-3.5 py-2.5 text-[13px] font-medium animate-slide-up",
-        tone === "success" && "bg-[#21c063]/10 text-[#1b9a58] dark:text-[#5fd385]",
+        tone === "success" && "bg-[#21c063]/10 text-[#0b6b3a] dark:text-[#5fd385]",
         tone === "error" && "bg-red-500/10 text-red-600 dark:text-red-400",
         tone === "info" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
       )}

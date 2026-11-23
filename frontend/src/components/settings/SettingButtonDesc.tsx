@@ -10,12 +10,12 @@ const SettingButtonDesc = ({ title, description, isEnabled, onToggle }: SettingB
   return (
     <div className="flex flex-row justify-between items-start py-4">
       <div className="flex flex-col flex-1 pr-6">
-        <h3 className="text-lg font-medium text-black dark:text-white">{title}</h3>
-        <p className="text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted mt-1">
+        <h3 className="text-lg font-medium text-light-text dark:text-dark-text">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-light-muted dark:text-dark-muted">
           {description}
         </p>
       </div>
-      <Button isEnabled={isEnabled} onToggle={onToggle} />
+      <Button isEnabled={isEnabled} onToggle={onToggle} ariaLabel={title} />
     </div>
   )
 }

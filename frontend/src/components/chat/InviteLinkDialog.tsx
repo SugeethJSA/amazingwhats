@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { AcceptGroupInviteLink } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 
@@ -7,6 +7,9 @@ interface InviteLinkDialogProps {
 }
 
 const INVITE_URL_PREFIX = "https://chat.whatsapp.com/"
+
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21c063]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
 
 function extractInviteCode(input: string): string {
   const trimmed = input.trim()
@@ -22,9 +25,49 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
   const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const titleId = useId()
+  const returnFocusRef = useRef<HTMLElement | null>(
+    typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null,
+  )
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     inputRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        event.stopPropagation()
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== "Tab" || !panelRef.current) return
+      const focusables = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => {
+      document.removeEventListener("keydown", onKey, true)
+      if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus()
+    }
   }, [])
 
   const handleJoin = async () => {
@@ -38,59 +81,85 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
     setSuccess("")
     try {
       await AcceptGroupInviteLink(code)
-      setSuccess(`Joined successfully!`)
+      setSuccess("Joined successfully!")
       setTimeout(onClose, 1500)
-    } catch (e: any) {
-      setError(e?.message || "Failed to join group")
+    } catch (err) {
+      console.error("Failed to join group:", err)
+      // Raw backend strings can contain JIDs; keep the message human.
+      setError("Could not join that group. Check the link and try again.")
     } finally {
       setBusy(false)
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleJoin()
-    if (e.key === "Escape") onClose()
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      void handleJoin()
+    }
   }
 
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={e => {
-        if (e.target === e.currentTarget) onClose()
+      onClick={event => {
+        if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="bg-white dark:bg-dark-secondary rounded-2xl w-96 flex flex-col shadow-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="flex flex-col rounded-2xl bg-white p-6 shadow-xl dark:bg-dark-secondary"
+        onClick={event => event.stopPropagation()}
+      >
+        <h2 id={titleId} className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
           Join Group by Link
         </h2>
-        <p className="text-sm text-gray-500 dark:text-light-muted dark:text-dark-muted mb-4">
+        <p className="mb-4 text-sm text-gray-600 dark:text-[#8696a0]">
           Paste a WhatsApp group invite link or code
         </p>
+        <label htmlFor="invite-link" className="sr-only">
+          Invite link or code
+        </label>
         <input
+          id="invite-link"
           ref={inputRef}
           value={input}
-          onChange={e => {
-            setInput(e.target.value)
+          onChange={event => {
+            setInput(event.target.value)
             setError("")
             setSuccess("")
           }}
           onKeyDown={handleKeyDown}
           placeholder="https://chat.whatsapp.com/... or invite code"
-          className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 outline-none mb-4"
+          className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[#21c063]/60 dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400 ${FOCUS_RING}`}
         />
-        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
-        {success && <p className="text-sm text-[#21c063] mb-3">{success}</p>}
+        {error && (
+          <p role="alert" className="mb-3 text-sm text-[#b42318] dark:text-[#fca5a5]">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p role="status" className="mb-3 text-sm text-[#1b9a58] dark:text-[#21c063]">
+            {success}
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-tertiary rounded-lg transition-colors"
+            className={`px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-tertiary ${FOCUS_RING}`}
           >
             Cancel
           </button>
           <button
-            onClick={handleJoin}
+            type="button"
+            onClick={() => void handleJoin()}
             disabled={busy || !input.trim()}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50 transition-colors"
+            aria-busy={busy}
+            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
           >
             {busy ? "Joining..." : "Join"}
           </button>

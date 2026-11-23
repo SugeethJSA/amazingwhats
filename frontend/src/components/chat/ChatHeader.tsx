@@ -13,10 +13,10 @@ interface ChatHeaderProps {
 
 const typingDot = (delay: string) => (
   <span
-    className="inline-block h-1.5 w-1.5 rounded-full"
+    className="typing-dot inline-block h-1.5 w-1.5 rounded-full"
     style={{
       background: "#21c063",
-      animation: `bounce 1s ${delay} infinite ease-in-out`,
+      animationDelay: delay,
     }}
   />
 )
@@ -31,29 +31,13 @@ export function ChatHeader({
   isTyping,
 }: ChatHeaderProps) {
   return (
-    <div
-      className="flex items-center justify-between px-4 py-3 border-b chat-header-glass"
-      style={{
-        background: "rgba(240,242,245,0.85)",
-        backdropFilter: "blur(12px) saturate(180%)",
-        WebkitBackdropFilter: "blur(12px) saturate(180%)",
-        borderColor: "rgba(0,0,0,0.08)",
-      }}
-    >
-      {/* Dark mode override via class */}
-      <style>{`
-        .dark .chat-header-glass {
-          background: rgba(17,27,33,0.85) !important;
-          border-color: rgba(255,255,255,0.05) !important;
-        }
-      `}</style>
-
+    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/5 bg-light-secondary dark:bg-dark-bg">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {onBack && (
           <button
             onClick={onBack}
-            className="mr-2 p-1.5 rounded-full transition-colors md:hidden"
-            style={{ color: "#8696a0" }}
+            aria-label="Back to chats"
+            className="mr-2 p-1.5 rounded-full transition-colors text-gray-600 dark:text-[#8696a0] hover:bg-black/5 dark:hover:bg-white/10 md:hidden"
           >
             <GoBackIcon />
           </button>
@@ -90,11 +74,8 @@ export function ChatHeader({
             </h2>
             {isTyping ? (
               <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                style={{
-                  background: "rgba(33,192,99,0.12)",
-                  color: "#21c063",
-                }}
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium text-[#14663c] dark:text-[#21c063]"
+                style={{ background: "rgba(33,192,99,0.12)" }}
               >
                 <span>typing</span>
                 {typingDot("0ms")}
@@ -102,7 +83,7 @@ export function ChatHeader({
                 {typingDot("320ms")}
               </div>
             ) : chatSubtitle ? (
-              <div className="text-xs truncate" style={{ color: "#8696a0" }}>
+              <div className="text-xs truncate text-gray-600 dark:text-[#8696a0]">
                 {chatSubtitle}
               </div>
             ) : null}
