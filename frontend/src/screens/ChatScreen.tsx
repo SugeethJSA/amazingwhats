@@ -444,7 +444,14 @@ interface ChatListItemProps {
 
 // Container component that subscribes to specific chat data
 const ChatListItem = memo(
-  ({ chatId, isSelected, onSelect, onContextMenu, onMenuTrigger, isMenuOpen }: ChatListItemProps) => {
+  ({
+    chatId,
+    isSelected,
+    onSelect,
+    onContextMenu,
+    onMenuTrigger,
+    isMenuOpen,
+  }: ChatListItemProps) => {
     // This hook only triggers re-render when THIS specific chat changes
     const chat = useChatById(chatId)
     // Boolean selector - only re-renders when THIS chat's muted flag flips
