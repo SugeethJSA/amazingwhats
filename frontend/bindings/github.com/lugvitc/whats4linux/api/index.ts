@@ -20,6 +20,7 @@ export {
     GroupJoinRequest,
     GroupParticipant,
     LinkPreviewResult,
+    MediaHubItem,
     MessageContent,
     NewsletterInfo,
     NewsletterMessageItem,

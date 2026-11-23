@@ -11,6 +11,7 @@ import QRCode from "qrcode"
 import { LoginScreen } from "./screens/LoginScreen"
 import { initSelf, resetSelf } from "./lib/self"
 import { Lightbox } from "./components/Lightbox"
+import { MediaHub } from "./components/chat/MediaHub"
 import { CallOverlay } from "./components/chat/CallOverlay"
 
 import { useUIStore, useMessageStore } from "./store"
@@ -447,6 +448,7 @@ function App() {
         </div>
       )}
       <Lightbox />
+      <MediaHub />
       {/* Global transient toast stack. Bottom-left keeps security/identity
           warnings over the chat-list column, away from the chat header and the
           composer (which live at the top and bottom of the conversation pane).

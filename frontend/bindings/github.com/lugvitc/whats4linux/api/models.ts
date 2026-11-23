@@ -611,6 +611,94 @@ export class LinkPreviewResult {
     }
 }
 
+/**
+ * MediaHubItem is the frontend-safe row returned by GetMediaHubItems.
+ */
+export class MediaHubItem {
+    "chat_jid": string;
+    "message_id": string;
+    "sender_jid": string;
+    "timestamp": number;
+    "is_from_me": boolean;
+    "media_type": number;
+    "mime_type": string;
+    "file_name": string;
+    "file_size": number;
+    "direct_path": string;
+    "caption": string;
+    "url": string;
+    "title": string;
+    "description": string;
+    "width": number;
+    "height": number;
+    "gif_playback": boolean;
+
+    /** Creates a new MediaHubItem instance. */
+    constructor($$source: Partial<MediaHubItem> = {}) {
+        if (!("chat_jid" in $$source)) {
+            this["chat_jid"] = "";
+        }
+        if (!("message_id" in $$source)) {
+            this["message_id"] = "";
+        }
+        if (!("sender_jid" in $$source)) {
+            this["sender_jid"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = 0;
+        }
+        if (!("is_from_me" in $$source)) {
+            this["is_from_me"] = false;
+        }
+        if (!("media_type" in $$source)) {
+            this["media_type"] = 0;
+        }
+        if (!("mime_type" in $$source)) {
+            this["mime_type"] = "";
+        }
+        if (!("file_name" in $$source)) {
+            this["file_name"] = "";
+        }
+        if (!("file_size" in $$source)) {
+            this["file_size"] = 0;
+        }
+        if (!("direct_path" in $$source)) {
+            this["direct_path"] = "";
+        }
+        if (!("caption" in $$source)) {
+            this["caption"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("width" in $$source)) {
+            this["width"] = 0;
+        }
+        if (!("height" in $$source)) {
+            this["height"] = 0;
+        }
+        if (!("gif_playback" in $$source)) {
+            this["gif_playback"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MediaHubItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MediaHubItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MediaHubItem($$parsedSource as Partial<MediaHubItem>);
+    }
+}
+
 export class MessageContent {
     "type": string;
     "text"?: string;

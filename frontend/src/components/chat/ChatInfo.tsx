@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { UserAvatar } from "../../assets/svgs/chat_icons"
+import { useMediaHubStore } from "../../store/useMediaHubStore"
 import {
   Mediaicon,
   BlockIcon,
@@ -779,18 +780,17 @@ export function ChatInfo({
                 </div>
               )}
 
-              {/* Media, links, and docs */}
+              {/* Media, links, and docs — opens the combined hub */}
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                <div className="w-full p-4  flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={useMediaHubStore.getState().openHub}
+                  className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                  aria-label="Open media, links and docs"
+                >
                   <Mediaicon />
                   <span className="text-gray-900 dark:text-gray-100">Media, links and docs</span>
-                </div>
-
-                <div className="p-4">
-                  <p className="text-sm text-gray-600 dark:text-dark-muted text-center">
-                    No media available
-                  </p>
-                </div>
+                </button>
               </div>
 
               {/* Mute notifications */}
