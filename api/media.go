@@ -18,8 +18,8 @@ import (
 	"github.com/lugvitc/whats4linux/internal/notify"
 	"github.com/lugvitc/whats4linux/internal/store"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // LinkPreviewResult is the link preview surfaced to the frontend.

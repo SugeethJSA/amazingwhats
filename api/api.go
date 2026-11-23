@@ -24,13 +24,13 @@ import (
 	"github.com/lugvitc/whats4linux/internal/wa"
 	"github.com/purpshell/meowcaller"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/appstate"
-	"go.mau.fi/whatsmeow/proto/waE2E"
-	"go.mau.fi/whatsmeow/store/sqlstore"
-	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/types/events"
-	waLog "go.mau.fi/whatsmeow/util/log"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/appstate"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow/store/sqlstore"
+	"github.com/polymorfa/hypermeow/types"
+	"github.com/polymorfa/hypermeow/types/events"
+	waLog "github.com/polymorfa/hypermeow/util/log"
 )
 
 // knownBuildTypes are the only trailing suffixes NormalizeUpdateVersion strips.

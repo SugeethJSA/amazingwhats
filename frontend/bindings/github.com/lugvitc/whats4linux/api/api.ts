@@ -18,7 +18,7 @@ import * as store$0 from "../internal/store/models.js";
 import * as wa$0 from "../internal/wa/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as types$0 from "../../../../go.mau.fi/whatsmeow/types/models.js";
+import * as types$0 from "../../../polymorfa/hypermeow/types/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports

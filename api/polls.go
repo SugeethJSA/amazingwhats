@@ -9,13 +9,13 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/store"
 	"go.mau.fi/util/random"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/proto/waCommon"
-	"go.mau.fi/whatsmeow/proto/waE2E"
-	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/types/events"
-	"go.mau.fi/whatsmeow/util/gcmutil"
-	"go.mau.fi/whatsmeow/util/hkdfutil"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/proto/waCommon"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow/types"
+	"github.com/polymorfa/hypermeow/types/events"
+	"github.com/polymorfa/hypermeow/util/gcmutil"
+	"github.com/polymorfa/hypermeow/util/hkdfutil"
 	"google.golang.org/protobuf/proto"
 )
 

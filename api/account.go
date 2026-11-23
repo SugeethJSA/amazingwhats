@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/appstate"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/appstate"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 type StickerPackResult struct {

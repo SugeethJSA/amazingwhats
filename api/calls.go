@@ -11,7 +11,7 @@ import (
 
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"
-	"go.mau.fi/whatsmeow/types/events"
+	"github.com/polymorfa/hypermeow/types/events"
 )
 
 // CallStats holds diagnostic info about an active call for the frontend stats panel.

@@ -6,8 +6,8 @@ import (
 	"github.com/lugvitc/whats4linux/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
 )
 
 // Compile-time contracts. Whatsmeow's DownloadableMessage is the four-method

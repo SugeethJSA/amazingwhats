@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"go.mau.fi/whatsmeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
 )
 
 // vcardTelRE pulls the first phone number out of a vCard payload.
@@ -310,8 +310,6 @@ func simpleSpecialLabel(msg *waE2E.Message) (string, bool) {
 		return "💳 Split payment", true
 	case msg.GetSplitPaymentUpdateMessage() != nil:
 		return "💳 Split payment updated", true
-	case msg.GetPaymentDetailsMessage() != nil:
-		return "💳 Payment details", true
 
 	case msg.GetRequestPhoneNumberMessage() != nil:
 		return "📱 Phone number request", true

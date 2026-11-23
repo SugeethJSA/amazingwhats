@@ -8,8 +8,8 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/nyaruka/phonenumbers"
-	"go.mau.fi/whatsmeow/appstate"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/appstate"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // formatPhone formats a JID user component as an international phone number.

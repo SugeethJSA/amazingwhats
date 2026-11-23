@@ -2,8 +2,8 @@ package wa
 
 import (
 	"github.com/lugvitc/whats4linux/internal/types"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
 )
 
 type MediaContent interface {

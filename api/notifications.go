@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/lugvitc/whats4linux/internal/store"
-	"go.mau.fi/whatsmeow/appstate"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/appstate"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // GetNotificationsEnabled reports the global desktop notification switch.

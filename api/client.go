@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // IsLoggedIn returns true if the WhatsApp client is connected and authenticated.

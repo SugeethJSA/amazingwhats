@@ -10,11 +10,11 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/misc"
 	messagestore "github.com/lugvitc/whats4linux/internal/store"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/proto/waE2E"
-	wastore "go.mau.fi/whatsmeow/store"
-	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/util/gcmutil"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
+	wastore "github.com/polymorfa/hypermeow/store"
+	"github.com/polymorfa/hypermeow/types"
+	"github.com/polymorfa/hypermeow/util/gcmutil"
 	"google.golang.org/protobuf/proto"
 )
 

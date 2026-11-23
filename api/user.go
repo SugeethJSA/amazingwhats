@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/nyaruka/phonenumbers"
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // GetMyJID returns the logged-in user's full JID. Callers normalize it with

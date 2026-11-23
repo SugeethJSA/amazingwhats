@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // polls_test.go already exists, so the additional pure-helper tests for

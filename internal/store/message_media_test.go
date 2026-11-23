@@ -6,7 +6,7 @@ import (
 
 	"github.com/lugvitc/whats4linux/internal/query"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
-	"go.mau.fi/whatsmeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
 )
 

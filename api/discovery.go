@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 type OnWhatsAppResult struct {

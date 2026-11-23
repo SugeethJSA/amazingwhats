@@ -16,10 +16,10 @@ import (
 	"github.com/lugvitc/whats4linux/internal/query"
 	mtypes "github.com/lugvitc/whats4linux/internal/types"
 	"github.com/lugvitc/whats4linux/internal/wa"
-	"go.mau.fi/whatsmeow/proto/waE2E"
-	"go.mau.fi/whatsmeow/store"
-	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/types/events"
+	"github.com/polymorfa/hypermeow/proto/waE2E"
+	"github.com/polymorfa/hypermeow/store"
+	"github.com/polymorfa/hypermeow/types"
+	"github.com/polymorfa/hypermeow/types/events"
 )
 
 type Reaction struct {

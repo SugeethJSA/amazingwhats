@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 type StatusPrivacyEntry struct {

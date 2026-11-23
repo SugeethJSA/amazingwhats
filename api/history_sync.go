@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.mau.fi/whatsmeow/types"
+	"github.com/polymorfa/hypermeow/types"
 )
 
 // RequestHistorySync asks the primary device for older messages from a chat.

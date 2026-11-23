@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"go.mau.fi/whatsmeow"
+	"github.com/polymorfa/hypermeow"
 )
 
 // minPhoneLen is the minimum length for a phone number (country code + number).
