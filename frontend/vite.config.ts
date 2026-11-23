@@ -11,6 +11,13 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // Two entries: the full chat SPA and the standalone call window. The
+      // call window must not boot the chat UI at all — it renders only the
+      // call surface in its own WebviewWindow.
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        call: path.resolve(__dirname, "call.html"),
+      },
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return

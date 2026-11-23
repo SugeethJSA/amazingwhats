@@ -130,7 +130,7 @@ function drawFrame(canvas: HTMLCanvasElement | null, frame: any, orientation: nu
   return true
 }
 
-function CallOverlayContent() {
+export function CallOverlayContent({ standalone = false }: { standalone?: boolean }) {
   const [activeCall, setActiveCall] = useState<CallState | null>(null)
   const [callDuration, setCallDuration] = useState(0)
   const [showStats, setShowStats] = useState(false)
@@ -1093,15 +1093,17 @@ function CallOverlayContent() {
 
   return (
     <div
-      className="fixed z-[9999] animate-in fade-in duration-300"
-      style={
-        position ? { left: position.x, top: position.y } : { right: "1.5rem", bottom: "1.5rem" }
-      }
+      className={standalone
+        ? "fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300"
+        : "fixed z-[9999] animate-in fade-in duration-300"}
+      style={standalone
+        ? undefined
+        : position ? { left: position.x, top: position.y } : { right: "1.5rem", bottom: "1.5rem" }}
     >
       <div
         role="dialog"
         aria-label={`Call with ${activeCall.contactName}`}
-        className="w-80 max-w-[calc(100vw_-_2rem)] rounded-2xl p-5 shadow-2xl border flex flex-col items-center select-none"
+        className={`${standalone ? "w-full max-w-[400px]" : "w-80 max-w-[calc(100vw_-_2rem)]"} rounded-2xl p-5 shadow-2xl border flex flex-col items-center select-none`}
         style={{
           background: "#121b22",
           borderColor: "rgba(255, 255, 255, 0.08)",
@@ -1109,7 +1111,7 @@ function CallOverlayContent() {
         }}
       >
         <div
-          className="w-full flex items-center justify-between pb-3 mb-4 border-b border-white/10 text-xs font-medium text-gray-400 cursor-grab active:cursor-grabbing touch-none"
+          className={`w-full flex items-center justify-between pb-3 mb-4 border-b border-white/10 text-xs font-medium text-gray-400 cursor-grab active:cursor-grabbing touch-none${standalone ? " hidden" : ""}`}
           onPointerDown={onDragStart}
           onPointerMove={onDragMove}
           onPointerUp={onDragEnd}
