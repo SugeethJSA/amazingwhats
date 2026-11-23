@@ -975,31 +975,34 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     }
   }, [chatId, chatType])
 
-  useGSAP(() => {
-    const button = scrollButtonRef.current
-    if (!button) return
+  useGSAP(
+    () => {
+      const button = scrollButtonRef.current
+      if (!button) return
 
-    const targetAlpha = scrollButtonVisible ? 1 : 0
+      const targetAlpha = scrollButtonVisible ? 1 : 0
 
-    // Reduced motion: snap to the final state in the same frame. aria-hidden,
-    // tabIndex and visibility all derive from scrollButtonVisible (autoAlpha
-    // owns the inline visibility), so the control leaves the tab order and the
-    // a11y tree together. No opacity tween is started at all.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      gsap.killTweensOf(button)
-      gsap.set(button, { autoAlpha: targetAlpha })
-      return
-    }
+      // Reduced motion: snap to the final state in the same frame. aria-hidden,
+      // tabIndex and visibility all derive from scrollButtonVisible (autoAlpha
+      // owns the inline visibility), so the control leaves the tab order and the
+      // a11y tree together. No opacity tween is started at all.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.killTweensOf(button)
+        gsap.set(button, { autoAlpha: targetAlpha })
+        return
+      }
 
-    // autoAlpha fades opacity and flips visibility at the right end of the
-    // tween, so the button can't be instantly hidden while still fading.
-    gsap.to(button, {
-      autoAlpha: targetAlpha,
-      duration: 0.3,
-      ease: scrollButtonVisible ? easeShowRef.current : easeHideRef.current,
-      overwrite: "auto",
-    })
-  }, { dependencies: [scrollButtonVisible], revertOnUpdate: false })
+      // autoAlpha fades opacity and flips visibility at the right end of the
+      // tween, so the button can't be instantly hidden while still fading.
+      gsap.to(button, {
+        autoAlpha: targetAlpha,
+        duration: 0.3,
+        ease: scrollButtonVisible ? easeShowRef.current : easeHideRef.current,
+        overwrite: "auto",
+      })
+    },
+    { dependencies: [scrollButtonVisible], revertOnUpdate: false },
+  )
 
   return (
     <div className="flex h-full min-w-0">

@@ -135,9 +135,7 @@ function connectionView(status: string): ConnectionView {
  * calls a real backend binding that asks the primary device for more history.
  */
 type HistorySyncView =
-  | { phase: "idle" }
-  | { phase: "syncing"; percent: number }
-  | { phase: "failed" }
+  { phase: "idle" } | { phase: "syncing"; percent: number } | { phase: "failed" }
 
 function App() {
   const screen = useUIStore(state => state.screen)
@@ -433,10 +431,7 @@ function App() {
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
-                <div
-                  className="history-sync-fill"
-                  style={{ width: `${historySync.percent}%` }}
-                />
+                <div className="history-sync-fill" style={{ width: `${historySync.percent}%` }} />
               </div>
             </>
           ) : (
