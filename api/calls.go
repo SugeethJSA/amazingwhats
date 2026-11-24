@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/store"
+	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow/types/events"
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"

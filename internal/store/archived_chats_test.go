@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 func TestIsChatArchived(t *testing.T) {

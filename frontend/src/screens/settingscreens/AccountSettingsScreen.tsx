@@ -6,7 +6,7 @@ import {
   SetPushName,
   ResolveContactQRLink,
   ResolveBusinessMessageLink,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import type { ReactNode } from "react"
 import {
   SettingsCard,

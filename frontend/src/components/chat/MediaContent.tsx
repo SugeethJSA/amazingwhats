@@ -5,7 +5,7 @@ import {
   DownloadMedia,
   GetVideoThumbnail,
   GetImageThumbnail,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useUIStore } from "../../store"
 import { useLightboxContext } from "../../store/lightboxContext"
 import type { Message, MediaMessageContent } from "../../store/types"

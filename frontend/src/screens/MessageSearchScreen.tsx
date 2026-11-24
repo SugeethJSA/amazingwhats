@@ -3,7 +3,7 @@ import clsx from "clsx"
 import {
   SearchMessages,
   GetSearchSuggestions,
-} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useMessageStore, useUIStore } from "../store"
 import { htmlToPlainText } from "../lib/utils"
 import { GoBackIcon } from "../assets/svgs/header_icons"

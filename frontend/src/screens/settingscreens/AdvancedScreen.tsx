@@ -8,7 +8,7 @@ import {
   SetProxy,
   FetchStickerPack,
   CheckForUpdates,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 import ComponentColorSelector from "../../components/settings/ComponentColorSelector"
 import EaseVisualizer from "../../components/settings/ComponentEaseSelector"

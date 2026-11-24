@@ -4,9 +4,9 @@ import (
 	"html"
 	"strings"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	"github.com/lugvitc/whats4linux/internal/settings"
-	"github.com/lugvitc/whats4linux/internal/store"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/settings"
+	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow/types"
 )
 

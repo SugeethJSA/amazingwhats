@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"runtime"
 
-	"github.com/lugvitc/whats4linux/cmd/common"
+	"github.com/lugvitc/amazingwhats/cmd/common"
 	"github.com/urfave/cli"
 )
 

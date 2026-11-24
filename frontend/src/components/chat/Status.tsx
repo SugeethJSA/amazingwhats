@@ -4,8 +4,8 @@ import {
   FetchMessagesPaged,
   GetCachedImage,
   DownloadMedia,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import * as store from "../../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import * as store from "../../../bindings/github.com/lugvitc/amazingwhats/internal/store/models.js"
 import { useContactStore } from "../../store/useContactStore"
 import { sanitizeHtml } from "../../lib/utils"
 

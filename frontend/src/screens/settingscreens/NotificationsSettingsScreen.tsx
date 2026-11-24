@@ -4,7 +4,7 @@ import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 import {
   GetNotificationsEnabled,
   SetNotificationsEnabled,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn } from "../../lib/wailsRuntime"
 import type { ReactNode } from "react"
 

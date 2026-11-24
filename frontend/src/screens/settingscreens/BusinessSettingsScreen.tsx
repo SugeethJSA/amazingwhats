@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import {
   GetMyBusinessProfile,
   UpdateMyBusinessProfile,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useUIStore } from "../../store/useUIStore"
 import {
   ActionButton,

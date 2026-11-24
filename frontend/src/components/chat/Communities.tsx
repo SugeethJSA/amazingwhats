@@ -7,8 +7,8 @@ import {
   GetCachedAvatar,
   CreateCommunity,
   CreateCommunitySubGroup,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { GoBackIcon } from "../../assets/svgs/header_icons"
 import { getAvatarColor, AVATAR_ICON_COLOR } from "../../lib/utils"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"

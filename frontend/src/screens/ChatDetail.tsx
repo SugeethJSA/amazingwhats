@@ -12,12 +12,12 @@ import {
   MakeCall,
   MakeGroupCall,
   StarMessage,
-} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import {
   addScheduledMessage,
   startScheduledSender,
 } from "../lib/scheduledMessages"
-import * as store from "../../bindings/github.com/lugvitc/whats4linux/internal/store/models.js"
+import * as store from "../../bindings/github.com/lugvitc/amazingwhats/internal/store/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
 import { useChatById } from "../store/useChatStore"

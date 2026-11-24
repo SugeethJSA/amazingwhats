@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react"
-import { SendPollVote } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { SendPollVote } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 interface PollVoteDialogProps {
   chatId: string

@@ -19,8 +19,8 @@ import {
   UnblockContact,
   GetBlockList,
   GetContactQRLink,
-} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import * as api from "../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import * as api from "../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
 import { useShallow } from "zustand/react/shallow"
 import { ChatDetail } from "./ChatDetail"

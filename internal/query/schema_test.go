@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 // This file holds the cross-file schema regression guards plus the small

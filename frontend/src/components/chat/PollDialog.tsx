@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react"
-import { SendPoll } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { SendPoll } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 const MAX_OPTIONS = 12
 

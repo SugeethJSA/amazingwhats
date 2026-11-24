@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/markdown"
-	"github.com/lugvitc/whats4linux/internal/store"
-	mtypes "github.com/lugvitc/whats4linux/internal/types"
+	"github.com/lugvitc/amazingwhats/internal/markdown"
+	"github.com/lugvitc/amazingwhats/internal/store"
+	mtypes "github.com/lugvitc/amazingwhats/internal/types"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waCommon"
 	"github.com/polymorfa/hypermeow/proto/waE2E"

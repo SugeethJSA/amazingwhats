@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 func newTestMessageStore(t *testing.T) *MessageStore {

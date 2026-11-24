@@ -15,9 +15,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/lugvitc/whats4linux/internal/notify"
-	"github.com/lugvitc/whats4linux/internal/store"
-	mtypes "github.com/lugvitc/whats4linux/internal/types"
+	"github.com/lugvitc/amazingwhats/internal/notify"
+	"github.com/lugvitc/amazingwhats/internal/store"
+	mtypes "github.com/lugvitc/amazingwhats/internal/types"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/types"
 )

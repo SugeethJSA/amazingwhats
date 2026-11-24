@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/misc"
 )
 
 // useTempConfigDir points misc.ConfigDir at a fresh temporary directory and

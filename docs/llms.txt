@@ -2,7 +2,7 @@ amazingwhats - DOCUMENTATION INDEX
 ==================================
 
 Repository directory: amazingwhats
-Go module: github.com/lugvitc/whats4linux (go.mod:1)
+Go module: github.com/lugvitc/amazingwhats (go.mod:1)
 Go version: 1.27.3 (go.mod:3)
 Product name: amazingwhats, version 1.0.0 (wails.json:2,16-18)
 Purpose: "An unofficial WhatsApp client." (wails.json:18; see also build/config.yml:8,10)

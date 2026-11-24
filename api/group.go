@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/lugvitc/whats4linux/internal/wa"
+	"github.com/lugvitc/amazingwhats/internal/wa"
 	"github.com/nyaruka/phonenumbers"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/types"

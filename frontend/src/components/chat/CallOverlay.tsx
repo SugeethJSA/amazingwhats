@@ -18,9 +18,9 @@ import {
   SendVideoFrame,
   SendCallReaction,
   SetCallHandRaised,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import type * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import type * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { useChatStore } from "../../store/useChatStore"
 import { formatPhone, phoneFromJID } from "../../lib/utils"
 

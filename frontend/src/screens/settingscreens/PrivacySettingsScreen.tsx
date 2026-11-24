@@ -4,7 +4,7 @@ import {
   SetPrivacySetting,
   GetStatusPrivacy,
   SetStatusPrivacy,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { RowList, SettingRow, SelectMenu } from "../../components/settings/ui-kit"
 
 interface Setting {

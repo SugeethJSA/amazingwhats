@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lugvitc/whats4linux/internal/settings"
+	"github.com/lugvitc/amazingwhats/internal/settings"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/socket"

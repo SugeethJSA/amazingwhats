@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/store"
+	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waCommon"
 	"github.com/polymorfa/hypermeow/proto/waE2E"

@@ -3,7 +3,7 @@ package store
 import (
 	"fmt"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 // MediaHubItem is one row in the combined media/docs/links viewer.

@@ -5,7 +5,7 @@ import {
   GetCustomJS,
   SetWindowFocused,
   RequestHistorySync,
-} from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import QRCode from "qrcode"
 import { LoginScreen } from "./screens/LoginScreen"

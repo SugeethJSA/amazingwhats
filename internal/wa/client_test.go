@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/misc"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/polymorfa/hypermeow/store/sqlstore"
 	"github.com/stretchr/testify/assert"

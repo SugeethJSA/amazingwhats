@@ -2,8 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react"
 import {
   CreateGroup,
   FetchContacts,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 
 export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
   const [contacts, setContacts] = useState<api.Contact[]>([])

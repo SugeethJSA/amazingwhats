@@ -7,7 +7,7 @@ import (
 	_ "embed"
 	"log"
 
-	apiPkg "github.com/lugvitc/whats4linux/api"
+	apiPkg "github.com/lugvitc/amazingwhats/api"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )

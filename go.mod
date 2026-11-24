@@ -1,4 +1,4 @@
-module github.com/lugvitc/whats4linux
+module github.com/lugvitc/amazingwhats
 
 go 1.27.3
 

@@ -1,4 +1,4 @@
-import { GetMyJID } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { GetMyJID } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 let myUser = ""
 

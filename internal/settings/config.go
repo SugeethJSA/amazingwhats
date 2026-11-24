@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/misc"
 )
 
 type _settings struct {

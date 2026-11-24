@@ -89,7 +89,7 @@ root.render(
 
 ```ts
 // frontend/src/App.tsx:1-18 (grouped excerpt; every import below is real)
-import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 import { ChatListScreen } from "./screens/ChatScreen"
 import { LoginScreen } from "./screens/LoginScreen"

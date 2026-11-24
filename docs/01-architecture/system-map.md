@@ -408,7 +408,7 @@ func New(app *application.App, window *application.WebviewWindow, api *apiPkg.Ap
 ```ts
 // frontend/src/App.tsx:1-3
 import { useEffect, useRef, useState } from "react"
-import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn, BrowserOpenURL } from "./lib/wailsRuntime"
 ```
 

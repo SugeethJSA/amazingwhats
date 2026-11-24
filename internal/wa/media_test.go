@@ -3,7 +3,7 @@ package wa
 import (
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/types"
+	"github.com/lugvitc/amazingwhats/internal/types"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"github.com/stretchr/testify/assert"

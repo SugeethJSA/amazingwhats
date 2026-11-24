@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle, useRef, memo, useMemo, useEffect, useS
 import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso"
 import type { Message } from "../../store/types"
 import { dayKey, formatDateSeparator, getAvatarColor } from "../../lib/utils"
-import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useContactStore } from "../../store/useContactStore"
 import { MessageItem } from "./MessageItem"
 import type { ContactActionTarget } from "../../hooks/useContactActions"

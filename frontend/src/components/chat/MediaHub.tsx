@@ -8,7 +8,7 @@ import {
   GetMediaHubItems,
   GetVideoThumbnail,
   StarMessage,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useUIStore } from "../../store"
 import { useLightboxContext } from "../../store/lightboxContext"
 import { useMediaHubStore } from "../../store/useMediaHubStore"

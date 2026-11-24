@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/wa"
+	"github.com/lugvitc/amazingwhats/internal/wa"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/types"
 )

@@ -3,7 +3,7 @@ package query_test
 import (
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 func TestCreatePinnedMessagesTable(t *testing.T) {

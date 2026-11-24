@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/query"
-	mtypes "github.com/lugvitc/whats4linux/internal/types"
+	"github.com/lugvitc/amazingwhats/internal/query"
+	mtypes "github.com/lugvitc/amazingwhats/internal/types"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"
 )

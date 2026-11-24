@@ -4,7 +4,7 @@ import {
   GetContact,
   GetJIDUser,
   GetProfileColor,
-} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import type * as types from "../../bindings/go.mau.fi/whatsmeow/types/models.js"
 
 interface ContactStore {

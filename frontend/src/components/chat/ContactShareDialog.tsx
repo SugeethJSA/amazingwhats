@@ -3,8 +3,8 @@ import {
   FetchContacts,
   SendShareContact,
   SearchContacts,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
-import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 
 // Shared keyboard-focus treatment: 2px outline at 2px offset in the global
 // --color-focus-ring token (>=3:1 on both canvases). No component-local ring.

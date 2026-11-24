@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/store"
-	mtypes "github.com/lugvitc/whats4linux/internal/types"
-	"github.com/lugvitc/whats4linux/internal/wa"
+	"github.com/lugvitc/amazingwhats/internal/store"
+	mtypes "github.com/lugvitc/amazingwhats/internal/types"
+	"github.com/lugvitc/amazingwhats/internal/wa"
 )
 
 // Note: media_test.go already exists, so the pure-helper tests for media.go

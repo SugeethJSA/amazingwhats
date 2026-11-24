@@ -1,6 +1,6 @@
 import { useState } from "react"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
-import { Logout } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { Logout } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { ActionButton, SettingsCard, StatusBanner } from "../../components/settings/ui-kit"
 
 const LogOut = () => {

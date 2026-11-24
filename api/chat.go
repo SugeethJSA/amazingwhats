@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/store"
+	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/nyaruka/phonenumbers"
 	"github.com/polymorfa/hypermeow/appstate"
 	"github.com/polymorfa/hypermeow/types"

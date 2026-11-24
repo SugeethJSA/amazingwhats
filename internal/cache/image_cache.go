@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 	_ "github.com/mattn/go-sqlite3"
 )
 

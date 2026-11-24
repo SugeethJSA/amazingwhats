@@ -28,18 +28,18 @@ import * as $models from "./models.js";
  * AcceptCall accepts an incoming call by ID
  */
 export function AcceptCall(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(1796833829, callID);
+    return $Call.ByID(1611114890, callID);
 }
 
 /**
  * AcceptCallVideo accepts a peer's pending video upgrade.
  */
 export function AcceptCallVideo(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(4060226220, callID);
+    return $Call.ByID(4229742849, callID);
 }
 
 export function AcceptGroupInviteLink(inviteCode: string): $CancellablePromise<string> {
-    return $Call.ByID(2106735973, inviteCode);
+    return $Call.ByID(208561316, inviteCode);
 }
 
 /**
@@ -47,7 +47,7 @@ export function AcceptGroupInviteLink(inviteCode: string): $CancellablePromise<s
  * active (connected); the invite is sent via the group invite signaling flow.
  */
 export function AddCallParticipant(callID: string, targetJID: string): $CancellablePromise<void> {
-    return $Call.ByID(1823670553, callID, targetJID);
+    return $Call.ByID(237440386, callID, targetJID);
 }
 
 /**
@@ -56,15 +56,15 @@ export function AddCallParticipant(callID: string, targetJID: string): $Cancella
  * This is distinct from the existing singular AddCallParticipant binding.
  */
 export function AddCallParticipants(callID: string, targets: string): $CancellablePromise<void> {
-    return $Call.ByID(2278242782, callID, targets);
+    return $Call.ByID(947581539, callID, targets);
 }
 
 export function AddGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(2553698633, groupJID, participantJIDs);
+    return $Call.ByID(3789388878, groupJID, participantJIDs);
 }
 
 export function ApproveGroupJoinRequest(groupJID: string, requesterJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(3220964510, groupJID, requesterJIDs);
+    return $Call.ByID(3417704895, groupJID, requesterJIDs);
 }
 
 /**
@@ -72,7 +72,7 @@ export function ApproveGroupJoinRequest(groupJID: string, requesterJIDs: string[
  * devices via IQ.
  */
 export function BlockContact(jidStr: string): $CancellablePromise<void> {
-    return $Call.ByID(2658886258, jidStr);
+    return $Call.ByID(2040658949, jidStr);
 }
 
 /**
@@ -83,14 +83,14 @@ export function BlockContact(jidStr: string): $CancellablePromise<void> {
  * D-PKG-004.
  */
 export function CheckForUpdates(): $CancellablePromise<void> {
-    return $Call.ByID(3298821984);
+    return $Call.ByID(1200153821);
 }
 
 /**
  * ClearChat deletes all messages for a given chat and refreshes the UI.
  */
 export function ClearChat(jidStr: string): $CancellablePromise<void> {
-    return $Call.ByID(3524940964, jidStr);
+    return $Call.ByID(3645390777, jidStr);
 }
 
 /**
@@ -98,30 +98,30 @@ export function ClearChat(jidStr: string): $CancellablePromise<void> {
  * This allows the caller to cancel the connection attempt.
  */
 export function ConnectWithContext(): $CancellablePromise<void> {
-    return $Call.ByID(1215680988);
+    return $Call.ByID(2690163423);
 }
 
 export function CreateCommunity(name: string, description: string): $CancellablePromise<string> {
-    return $Call.ByID(905315326, name, description);
+    return $Call.ByID(371472919, name, description);
 }
 
 export function CreateCommunitySubGroup(parentJID: string, name: string, participantJIDs: string[]): $CancellablePromise<string> {
-    return $Call.ByID(494141919, parentJID, name, participantJIDs);
+    return $Call.ByID(1253634482, parentJID, name, participantJIDs);
 }
 
 export function CreateGroup(name: string, participantJIDs: string[]): $CancellablePromise<string> {
-    return $Call.ByID(271645084, name, participantJIDs);
+    return $Call.ByID(2365856389, name, participantJIDs);
 }
 
 export function CreateNewsletter(name: string, description: string): $CancellablePromise<string> {
-    return $Call.ByID(3815886026, name, description);
+    return $Call.ByID(1029705413, name, description);
 }
 
 /**
  * DeleteChat deletes a chat and its messages from the device.
  */
 export function DeleteChat(chatJID: string): $CancellablePromise<void> {
-    return $Call.ByID(158681708, chatJID);
+    return $Call.ByID(1593310031, chatJID);
 }
 
 /**
@@ -129,26 +129,26 @@ export function DeleteChat(chatJID: string): $CancellablePromise<void> {
  * remains visible to other chat participants.
  */
 export function DeleteForMe(chatJID: string, messageID: string): $CancellablePromise<void> {
-    return $Call.ByID(389829811, chatJID, messageID);
+    return $Call.ByID(723980826, chatJID, messageID);
 }
 
 export function DeleteMedia(directPath: string, $1: string, fileEncSHA256: string, $3: string): $CancellablePromise<void> {
-    return $Call.ByID(83549810, directPath, $1, fileEncSHA256, $3);
+    return $Call.ByID(3108952831, directPath, $1, fileEncSHA256, $3);
 }
 
 export function DemoteGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(3929940482, groupJID, participantJIDs);
+    return $Call.ByID(1800285251, groupJID, participantJIDs);
 }
 
 /**
  * DownloadImageToFile writes a cached (or freshly downloaded) image to ~/Downloads.
  */
 export function DownloadImageToFile(messageID: string): $CancellablePromise<void> {
-    return $Call.ByID(47005685, messageID);
+    return $Call.ByID(290505784, messageID);
 }
 
 export function DownloadMedia(chatJID: string, messageID: string): $CancellablePromise<string> {
-    return $Call.ByID(3016137247, chatJID, messageID);
+    return $Call.ByID(3168254526, chatJID, messageID);
 }
 
 /**
@@ -159,11 +159,11 @@ export function DownloadMedia(chatJID: string, messageID: string): $CancellableP
  * / "download:error" events for per-message UI state.
  */
 export function DownloadMediaToFile(messageID: string): $CancellablePromise<void> {
-    return $Call.ByID(4224587068, messageID);
+    return $Call.ByID(4038103549, messageID);
 }
 
 export function EditLabel(labelID: string, name: string, color: number, deleted: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1581744465, labelID, name, color, deleted);
+    return $Call.ByID(2569157968, labelID, name, color, deleted);
 }
 
 /**
@@ -171,30 +171,30 @@ export function EditLabel(labelID: string, name: string, color: number, deleted:
  * edits are supported; media message captions can't be edited via this API.
  */
 export function EditMessage(chatJID: string, messageID: string, newText: string): $CancellablePromise<string> {
-    return $Call.ByID(3287625328, chatJID, messageID, newText);
+    return $Call.ByID(2130872945, chatJID, messageID, newText);
 }
 
 /**
  * EndCall terminates an active call
  */
 export function EndCall(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(932065542, callID);
+    return $Call.ByID(1501532131, callID);
 }
 
 export function FetchContacts(): $CancellablePromise<$models.Contact[]> {
-    return $Call.ByID(405812202).then(($result: any) => {
+    return $Call.ByID(306052227).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function FetchGroups(): $CancellablePromise<wa$0.Group[]> {
-    return $Call.ByID(3665656883).then(($result: any) => {
+    return $Call.ByID(1498275690).then(($result: any) => {
         return $$createType3($result);
     });
 }
 
 export function FetchMessagesPaged(jid: string, limit: number, beforeTimestamp: number, beforeMessageID: string): $CancellablePromise<store$0.DecodedMessage[]> {
-    return $Call.ByID(4016029364, jid, limit, beforeTimestamp, beforeMessageID).then(($result: any) => {
+    return $Call.ByID(2217841131, jid, limit, beforeTimestamp, beforeMessageID).then(($result: any) => {
         return $$createType5($result);
     });
 }
@@ -206,13 +206,13 @@ export function FetchMessagesPaged(jid: string, limit: number, beforeTimestamp: 
  * responsible for merging/sorting them with what it already has.
  */
 export function FetchNewsletterHistory(jidStr: string, count: number, beforeServerID: number): $CancellablePromise<$models.NewsletterHistoryEntry[]> {
-    return $Call.ByID(4650144, jidStr, count, beforeServerID).then(($result: any) => {
+    return $Call.ByID(1631548167, jidStr, count, beforeServerID).then(($result: any) => {
         return $$createType7($result);
     });
 }
 
 export function FetchStickerPack(packID: string): $CancellablePromise<$models.StickerPackResult | null> {
-    return $Call.ByID(1595411839, packID).then(($result: any) => {
+    return $Call.ByID(1983358816, packID).then(($result: any) => {
         return $$createType9($result);
     });
 }
@@ -222,7 +222,7 @@ export function FetchStickerPack(packID: string): $CancellablePromise<$models.St
  * forwards it to targetJID with the forwarded flag set.
  */
 export function ForwardMessage(sourceJID: string, messageID: string, targetJID: string): $CancellablePromise<void> {
-    return $Call.ByID(2395541369, sourceJID, messageID, targetJID);
+    return $Call.ByID(3890094978, sourceJID, messageID, targetJID);
 }
 
 /**
@@ -230,14 +230,14 @@ export function ForwardMessage(sourceJID: string, messageID: string, targetJID: 
  * SendMessage or other message-building APIs.
  */
 export function GenerateMessageID(): $CancellablePromise<string> {
-    return $Call.ByID(1117416340);
+    return $Call.ByID(2516886429);
 }
 
 /**
  * GetBlockList returns all blocked contacts.
  */
 export function GetBlockList(): $CancellablePromise<$models.BlockedContact[]> {
-    return $Call.ByID(2894734616).then(($result: any) => {
+    return $Call.ByID(3850278111).then(($result: any) => {
         return $$createType11($result);
     });
 }
@@ -246,7 +246,7 @@ export function GetBlockList(): $CancellablePromise<$models.BlockedContact[]> {
  * GetBotList fetches the list of available bots from WhatsApp.
  */
 export function GetBotList(): $CancellablePromise<types$0.BotListInfo[]> {
-    return $Call.ByID(850244428).then(($result: any) => {
+    return $Call.ByID(3765599203).then(($result: any) => {
         return $$createType13($result);
     });
 }
@@ -255,13 +255,13 @@ export function GetBotList(): $CancellablePromise<types$0.BotListInfo[]> {
  * GetBotProfiles fetches detailed profiles for the given bot list entries.
  */
 export function GetBotProfiles(botList: types$0.BotListInfo[]): $CancellablePromise<types$0.BotProfileInfo[]> {
-    return $Call.ByID(2675721990, botList).then(($result: any) => {
+    return $Call.ByID(3979034997, botList).then(($result: any) => {
         return $$createType15($result);
     });
 }
 
 export function GetBusinessProfile(jidStr: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(3955438522, jidStr).then(($result: any) => {
+    return $Call.ByID(790844141, jidStr).then(($result: any) => {
         return $$createType16($result);
     });
 }
@@ -270,11 +270,11 @@ export function GetBusinessProfile(jidStr: string): $CancellablePromise<{ [_ in 
  * GetCachedAvatar retrieves or downloads and caches an avatar for a JID
  */
 export function GetCachedAvatar(jid: string, recache: boolean): $CancellablePromise<string> {
-    return $Call.ByID(981277588, jid, recache);
+    return $Call.ByID(448082213, jid, recache);
 }
 
 export function GetCachedImage(messageID: string): $CancellablePromise<string> {
-    return $Call.ByID(746196042, messageID);
+    return $Call.ByID(3629436441, messageID);
 }
 
 /**
@@ -283,7 +283,7 @@ export function GetCachedImage(messageID: string): $CancellablePromise<string> {
  * single IPC string cannot evict on-screen images or freeze the UI.
  */
 export function GetCachedImages(messageIDs: string[]): $CancellablePromise<{ [_ in string]?: string }> {
-    return $Call.ByID(1025588667, messageIDs).then(($result: any) => {
+    return $Call.ByID(4152422622, messageIDs).then(($result: any) => {
         return $$createType17($result);
     });
 }
@@ -292,7 +292,7 @@ export function GetCachedImages(messageIDs: string[]): $CancellablePromise<{ [_ 
  * GetCallStats returns diagnostic information about an active call.
  */
 export function GetCallStats(callID: string): $CancellablePromise<$models.CallStats | null> {
-    return $Call.ByID(4228566562, callID).then(($result: any) => {
+    return $Call.ByID(2324808973, callID).then(($result: any) => {
         return $$createType19($result);
     });
 }
@@ -302,13 +302,13 @@ export function GetCallStats(callID: string): $CancellablePromise<$models.CallSt
  * their newsletter metadata.
  */
 export function GetChannelList(): $CancellablePromise<$models.ChatElement[]> {
-    return $Call.ByID(1864165994).then(($result: any) => {
+    return $Call.ByID(576007217).then(($result: any) => {
         return $$createType21($result);
     });
 }
 
 export function GetChatList(): $CancellablePromise<$models.ChatElement[]> {
-    return $Call.ByID(1316708077).then(($result: any) => {
+    return $Call.ByID(2401042580).then(($result: any) => {
         return $$createType21($result);
     });
 }
@@ -317,7 +317,7 @@ export function GetChatList(): $CancellablePromise<$models.ChatElement[]> {
  * GetCommunityDetails returns community home data: info + announcement + groups.
  */
 export function GetCommunityDetails(jidStr: string): $CancellablePromise<$models.CommunityDetails> {
-    return $Call.ByID(1129934254, jidStr).then(($result: any) => {
+    return $Call.ByID(3399960223, jidStr).then(($result: any) => {
         return $$createType22($result);
     });
 }
@@ -328,45 +328,45 @@ export function GetCommunityDetails(jidStr: string): $CancellablePromise<$models
  * when the cache is empty. Opening the tab must not block on a network refresh.
  */
 export function GetCommunityList(): $CancellablePromise<$models.CommunitySummary[]> {
-    return $Call.ByID(2472579632).then(($result: any) => {
+    return $Call.ByID(1408451199).then(($result: any) => {
         return $$createType24($result);
     });
 }
 
 export function GetContact(jid: types$0.JID): $CancellablePromise<$models.Contact | null> {
-    return $Call.ByID(3970448201, jid).then(($result: any) => {
+    return $Call.ByID(430886746, jid).then(($result: any) => {
         return $$createType25($result);
     });
 }
 
 export function GetContactQRLink(revoke: boolean): $CancellablePromise<string> {
-    return $Call.ByID(1782725222, revoke);
+    return $Call.ByID(1224407341, revoke);
 }
 
 export function GetCustomCSS(): $CancellablePromise<string> {
-    return $Call.ByID(2606698683);
+    return $Call.ByID(36061660);
 }
 
 export function GetCustomJS(): $CancellablePromise<string> {
-    return $Call.ByID(3823008915);
+    return $Call.ByID(480705198);
 }
 
 export function GetDisappearingTimer(chatJID: string): $CancellablePromise<number> {
-    return $Call.ByID(3561640625, chatJID);
+    return $Call.ByID(821150362, chatJID);
 }
 
 export function GetGroupInfo(jidStr: string): $CancellablePromise<$models.Group> {
-    return $Call.ByID(2804449142, jidStr).then(($result: any) => {
+    return $Call.ByID(2443938213, jidStr).then(($result: any) => {
         return $$createType26($result);
     });
 }
 
 export function GetGroupInviteLink(groupJID: string): $CancellablePromise<string> {
-    return $Call.ByID(933990507, groupJID);
+    return $Call.ByID(2018452544, groupJID);
 }
 
 export function GetGroupJoinRequests(groupJID: string): $CancellablePromise<$models.GroupJoinRequest[]> {
-    return $Call.ByID(3056538116, groupJID).then(($result: any) => {
+    return $Call.ByID(1562698007, groupJID).then(($result: any) => {
         return $$createType28($result);
     });
 }
@@ -377,18 +377,18 @@ export function GetGroupJoinRequests(groupJID: string): $CancellablePromise<$mod
  * image and stores it (including a negative-cache sentinel for failures).
  */
 export function GetImageThumbnail(messageID: string): $CancellablePromise<string> {
-    return $Call.ByID(1842874672, messageID);
+    return $Call.ByID(3392580525, messageID);
 }
 
 export function GetJIDUser(jid: types$0.JID): $CancellablePromise<string> {
-    return $Call.ByID(1879785157, jid);
+    return $Call.ByID(4416354, jid);
 }
 
 /**
  * GetLinkPreview returns the stored preview card for a message's URL, or nil.
  */
 export function GetLinkPreview(messageID: string): $CancellablePromise<$models.LinkPreviewResult | null> {
-    return $Call.ByID(4167060133, messageID).then(($result: any) => {
+    return $Call.ByID(2210998950, messageID).then(($result: any) => {
         return $$createType30($result);
     });
 }
@@ -399,7 +399,7 @@ export function GetLinkPreview(messageID: string): $CancellablePromise<$models.L
  * reference rather than embedded). Empty string if there's nothing to fetch.
  */
 export function GetLinkPreviewImage(messageID: string): $CancellablePromise<string> {
-    return $Call.ByID(4188879802, messageID);
+    return $Call.ByID(2808905067, messageID);
 }
 
 /**
@@ -408,7 +408,7 @@ export function GetLinkPreviewImage(messageID: string): $CancellablePromise<stri
  * 500 rows to keep the Wails event payload bounded.
  */
 export function GetMediaHubItems(kind: string): $CancellablePromise<$models.MediaHubItem[]> {
-    return $Call.ByID(627420108, kind).then(($result: any) => {
+    return $Call.ByID(989806899, kind).then(($result: any) => {
         return $$createType32($result);
     });
 }
@@ -419,7 +419,7 @@ export function GetMediaHubItems(kind: string): $CancellablePromise<$models.Medi
  * especially immediately after an update.
  */
 export function GetMyBusinessProfile(): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(823807724).then(($result: any) => {
+    return $Call.ByID(4072024035).then(($result: any) => {
         return $$createType16($result);
     });
 }
@@ -430,29 +430,29 @@ export function GetMyBusinessProfile(): $CancellablePromise<{ [_ in string]?: an
  * while group participants may be addressed by LID).
  */
 export function GetMyJID(): $CancellablePromise<string> {
-    return $Call.ByID(3655370864);
+    return $Call.ByID(2468106287);
 }
 
 export function GetNewsletterByInvite(inviteCode: string): $CancellablePromise<$models.NewsletterInfo | null> {
-    return $Call.ByID(4076892084, inviteCode).then(($result: any) => {
+    return $Call.ByID(3138587213, inviteCode).then(($result: any) => {
         return $$createType34($result);
     });
 }
 
 export function GetNewsletterInfo(jidStr: string): $CancellablePromise<$models.NewsletterInfo | null> {
-    return $Call.ByID(204452320, jidStr).then(($result: any) => {
+    return $Call.ByID(501436645, jidStr).then(($result: any) => {
         return $$createType34($result);
     });
 }
 
 export function GetNewsletterMessageUpdates(jidStr: string, count: number, afterServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
-    return $Call.ByID(1998699339, jidStr, count, afterServerID).then(($result: any) => {
+    return $Call.ByID(1665409314, jidStr, count, afterServerID).then(($result: any) => {
         return $$createType36($result);
     });
 }
 
 export function GetNewsletterMessages(jidStr: string, count: number, beforeServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
-    return $Call.ByID(2070087224, jidStr, count, beforeServerID).then(($result: any) => {
+    return $Call.ByID(3794345109, jidStr, count, beforeServerID).then(($result: any) => {
         return $$createType36($result);
     });
 }
@@ -461,11 +461,11 @@ export function GetNewsletterMessages(jidStr: string, count: number, beforeServe
  * GetNotificationsEnabled reports the global desktop notification switch.
  */
 export function GetNotificationsEnabled(): $CancellablePromise<boolean> {
-    return $Call.ByID(4111463266);
+    return $Call.ByID(2911150835);
 }
 
 export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.PinnedMessage[]> {
-    return $Call.ByID(1768915369, chatJID).then(($result: any) => {
+    return $Call.ByID(1468747240, chatJID).then(($result: any) => {
         return $$createType38($result);
     });
 }
@@ -476,7 +476,7 @@ export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.
  * stored poll card HTML.
  */
 export function GetPollVotes(chatJID: string, pollMessageID: string): $CancellablePromise<$models.PollVotesResult> {
-    return $Call.ByID(3001685323, chatJID, pollMessageID).then(($result: any) => {
+    return $Call.ByID(139090880, chatJID, pollMessageID).then(($result: any) => {
         return $$createType39($result);
     });
 }
@@ -485,19 +485,19 @@ export function GetPollVotes(chatJID: string, pollMessageID: string): $Cancellab
  * GetPrivacySettings fetches the user's current privacy settings from the server.
  */
 export function GetPrivacySettings(): $CancellablePromise<$models.PrivacySettingsResponse> {
-    return $Call.ByID(1473344212).then(($result: any) => {
+    return $Call.ByID(502605871).then(($result: any) => {
         return $$createType40($result);
     });
 }
 
 export function GetProfile(jidStr: string): $CancellablePromise<$models.Contact> {
-    return $Call.ByID(448054768, jidStr).then(($result: any) => {
+    return $Call.ByID(1036356591, jidStr).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
 export function GetProfileColor(jidStr: string): $CancellablePromise<string> {
-    return $Call.ByID(890988263, jidStr);
+    return $Call.ByID(785634398, jidStr);
 }
 
 /**
@@ -506,13 +506,13 @@ export function GetProfileColor(jidStr: string): $CancellablePromise<string> {
  * the store layer.
  */
 export function GetRecentCalls(limit: number): $CancellablePromise<store$0.CallLogEntry[]> {
-    return $Call.ByID(4214551437, limit).then(($result: any) => {
+    return $Call.ByID(1741939722, limit).then(($result: any) => {
         return $$createType42($result);
     });
 }
 
 export function GetSearchSuggestions(query: string, limit: number): $CancellablePromise<string[]> {
-    return $Call.ByID(2991969524, query, limit).then(($result: any) => {
+    return $Call.ByID(2906839967, query, limit).then(($result: any) => {
         return $$createType43($result);
     });
 }
@@ -525,29 +525,29 @@ export function GetSearchSuggestions(query: string, limit: number): $Cancellable
  * XXXX:45@s.whatsapp.net instead of XXXX:@s.whatsapp.net
  */
 export function GetSelfAvatar(recache: boolean): $CancellablePromise<string> {
-    return $Call.ByID(1093493440, recache);
+    return $Call.ByID(4257552237, recache);
 }
 
 export function GetSettings(): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(949349650).then(($result: any) => {
+    return $Call.ByID(4209372951).then(($result: any) => {
         return $$createType16($result);
     });
 }
 
 export function GetStatusPrivacy(): $CancellablePromise<$models.StatusPrivacyEntry[]> {
-    return $Call.ByID(416277147).then(($result: any) => {
+    return $Call.ByID(2740959596).then(($result: any) => {
         return $$createType45($result);
     });
 }
 
 export function GetSubscribedNewsletters(): $CancellablePromise<$models.NewsletterInfo[]> {
-    return $Call.ByID(972602877).then(($result: any) => {
+    return $Call.ByID(3249859926).then(($result: any) => {
         return $$createType46($result);
     });
 }
 
 export function GetUserInfo(jidStrs: string[]): $CancellablePromise<$models.UserInfoResult[]> {
-    return $Call.ByID(749068144, jidStrs).then(($result: any) => {
+    return $Call.ByID(3312952789, jidStrs).then(($result: any) => {
         return $$createType48($result);
     });
 }
@@ -558,7 +558,7 @@ export function GetUserInfo(jidStrs: string[]): $CancellablePromise<$models.User
  * button without downloading the full video.
  */
 export function GetVideoThumbnail(messageID: string): $CancellablePromise<string> {
-    return $Call.ByID(3522531530, messageID);
+    return $Call.ByID(662779803, messageID);
 }
 
 /**
@@ -566,57 +566,57 @@ export function GetVideoThumbnail(messageID: string): $CancellablePromise<string
  * state, including mutes synced from the phone).
  */
 export function IsChatMuted(chatJID: string): $CancellablePromise<boolean> {
-    return $Call.ByID(1594008266, chatJID);
+    return $Call.ByID(4089034491, chatJID);
 }
 
 /**
  * IsLoggedIn returns true if the WhatsApp client is connected and authenticated.
  */
 export function IsLoggedIn(): $CancellablePromise<boolean> {
-    return $Call.ByID(3970429784);
+    return $Call.ByID(2759667347);
 }
 
 export function IsOnWhatsApp(phoneNumbers: string[]): $CancellablePromise<$models.OnWhatsAppResult[]> {
-    return $Call.ByID(2901109790, phoneNumbers).then(($result: any) => {
+    return $Call.ByID(3447764437, phoneNumbers).then(($result: any) => {
         return $$createType50($result);
     });
 }
 
 export function LeaveGroup(groupJID: string): $CancellablePromise<void> {
-    return $Call.ByID(3000264059, groupJID);
+    return $Call.ByID(4180016572, groupJID);
 }
 
 export function LinkGroupToCommunity(parentJID: string, childJID: string): $CancellablePromise<void> {
-    return $Call.ByID(4013640530, parentJID, childJID);
+    return $Call.ByID(3468443269, parentJID, childJID);
 }
 
 export function Login(): $CancellablePromise<void> {
-    return $Call.ByID(406361722);
+    return $Call.ByID(363188883);
 }
 
 export function Logout(): $CancellablePromise<void> {
-    return $Call.ByID(2861414419);
+    return $Call.ByID(472695296);
 }
 
 /**
  * MakeCall initiates an outbound voice call to a user or group
  */
 export function MakeCall(targetJID: string): $CancellablePromise<void> {
-    return $Call.ByID(2560129399, targetJID);
+    return $Call.ByID(147417596, targetJID);
 }
 
 /**
  * MakeGroupCall initiates an outbound voice call to every member of a group
  */
 export function MakeGroupCall(groupJID: string): $CancellablePromise<void> {
-    return $Call.ByID(1823593266, groupJID);
+    return $Call.ByID(154372159, groupJID);
 }
 
 /**
  * MarkChatAsRead marks a chat as read or unread.
  */
 export function MarkChatAsRead(chatJID: string, read: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3200908706, chatJID, read);
+    return $Call.ByID(513006753, chatJID, read);
 }
 
 /**
@@ -625,11 +625,11 @@ export function MarkChatAsRead(chatJID: string, read: boolean): $CancellableProm
  * hash chain or after a manual state change.
  */
 export function MarkNotDirty(cleanType: string): $CancellablePromise<void> {
-    return $Call.ByID(1122249047, cleanType);
+    return $Call.ByID(4250708600, cleanType);
 }
 
 export function MarkRead(chatJID: string, messageIDs: string[], Type: string): $CancellablePromise<void> {
-    return $Call.ByID(610599084, chatJID, messageIDs, Type);
+    return $Call.ByID(627148587, chatJID, messageIDs, Type);
 }
 
 /**
@@ -639,7 +639,7 @@ export function MarkRead(chatJID: string, messageIDs: string[], Type: string): $
  * matches the shipped setting and the tray-first close behaviour.
  */
 export function MinimizeToTray(): $CancellablePromise<boolean> {
-    return $Call.ByID(645729556);
+    return $Call.ByID(1823707543);
 }
 
 /**
@@ -649,23 +649,23 @@ export function MinimizeToTray(): $CancellablePromise<boolean> {
  * (CALL-001)
  */
 export function MuteCall(callID: string, muted: boolean): $CancellablePromise<void> {
-    return $Call.ByID(4068241404, callID, muted);
+    return $Call.ByID(3533673111, callID, muted);
 }
 
 export function NewsletterMarkViewed(jidStr: string, serverIDs: number[]): $CancellablePromise<void> {
-    return $Call.ByID(3623047583, jidStr, serverIDs);
+    return $Call.ByID(3688663484, jidStr, serverIDs);
 }
 
 export function NewsletterSendReaction(jidStr: string, serverID: number, reaction: string): $CancellablePromise<void> {
-    return $Call.ByID(2683709803, jidStr, serverID, reaction);
+    return $Call.ByID(471595144, jidStr, serverID, reaction);
 }
 
 export function NewsletterSubscribeLiveUpdates(jidStr: string): $CancellablePromise<number> {
-    return $Call.ByID(1670385930, jidStr);
+    return $Call.ByID(2433654405, jidStr);
 }
 
 export function NewsletterToggleMute(jidStr: string, muted: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3091654347, jidStr, muted);
+    return $Call.ByID(1545643768, jidStr, muted);
 }
 
 /**
@@ -676,7 +676,7 @@ export function NewsletterToggleMute(jidStr: string, muted: boolean): $Cancellab
  * WhatsApp validates the client display name; common browser+OS combos only.
  */
 export function PairPhone(phone: string): $CancellablePromise<string> {
-    return $Call.ByID(2926945395, phone);
+    return $Call.ByID(4186939046, phone);
 }
 
 /**
@@ -686,28 +686,28 @@ export function PairPhone(phone: string): $CancellablePromise<string> {
  * frontend. An empty result means the dialog was cancelled.
  */
 export function PickAttachmentFile(): $CancellablePromise<$models.PickedFile | null> {
-    return $Call.ByID(2333101227).then(($result: any) => {
+    return $Call.ByID(3178011844).then(($result: any) => {
         return $$createType52($result);
     });
 }
 
 export function PromoteGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(3019694836, groupJID, participantJIDs);
+    return $Call.ByID(2972341823, groupJID, participantJIDs);
 }
 
 export function Reinitialize(): $CancellablePromise<void> {
-    return $Call.ByID(310700222);
+    return $Call.ByID(29790689);
 }
 
 /**
  * RejectCall rejects an incoming call
  */
 export function RejectCall(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(2594366674, callID);
+    return $Call.ByID(976538153, callID);
 }
 
 export function RejectGroupJoinRequest(groupJID: string, requesterJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(2487654418, groupJID, requesterJIDs);
+    return $Call.ByID(1987885205, groupJID, requesterJIDs);
 }
 
 /**
@@ -716,11 +716,11 @@ export function RejectGroupJoinRequest(groupJID: string, requesterJIDs: string[]
  * handler is still attached and never re-registers it.
  */
 export function RemoveEventHandlers(): $CancellablePromise<void> {
-    return $Call.ByID(727985870);
+    return $Call.ByID(401586775);
 }
 
 export function RemoveGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
-    return $Call.ByID(635644382, groupJID, participantJIDs);
+    return $Call.ByID(2416559623, groupJID, participantJIDs);
 }
 
 /**
@@ -732,7 +732,7 @@ export function RemoveGroupParticipants(groupJID: string, participantJIDs: strin
  * 1..50 range recommended by whatsmeow.
  */
 export function RequestHistorySync(chatJID: string, count: number): $CancellablePromise<void> {
-    return $Call.ByID(229477761, chatJID, count);
+    return $Call.ByID(993527546, chatJID, count);
 }
 
 /**
@@ -740,17 +740,17 @@ export function RequestHistorySync(chatJID: string, count: number): $Cancellable
  * immediate reconnect. Useful when the connection is stuck or unresponsive.
  */
 export function ResetConnection(): $CancellablePromise<void> {
-    return $Call.ByID(2923176288);
+    return $Call.ByID(3659900053);
 }
 
 export function ResolveBusinessMessageLink(code: string): $CancellablePromise<$models.BusinessLinkResult | null> {
-    return $Call.ByID(3573562060, code).then(($result: any) => {
+    return $Call.ByID(517205543, code).then(($result: any) => {
         return $$createType54($result);
     });
 }
 
 export function ResolveContactQRLink(code: string): $CancellablePromise<$models.ContactQRLinkResult | null> {
-    return $Call.ByID(89436650, code).then(($result: any) => {
+    return $Call.ByID(3762761161, code).then(($result: any) => {
         return $$createType56($result);
     });
 }
@@ -761,37 +761,37 @@ export function ResolveContactQRLink(code: string): $CancellablePromise<$models.
  * can revoke any message.
  */
 export function RevokeMessage(chatJID: string, messageID: string): $CancellablePromise<void> {
-    return $Call.ByID(282182418, chatJID, messageID);
+    return $Call.ByID(3116622787, chatJID, messageID);
 }
 
 /**
  * RingCallParticipant rings a participant already in the active call's roster.
  */
 export function RingCallParticipant(callID: string, targetJID: string): $CancellablePromise<void> {
-    return $Call.ByID(3387492228, callID, targetJID);
+    return $Call.ByID(1170660297, callID, targetJID);
 }
 
 export function SaveSettings(s: { [_ in string]?: any }): $CancellablePromise<void> {
-    return $Call.ByID(2553746381, s);
+    return $Call.ByID(3551503582, s);
 }
 
 /**
  * SearchContacts searches contacts by name or phone number (case-insensitive).
  */
 export function SearchContacts(query: string): $CancellablePromise<$models.Contact[]> {
-    return $Call.ByID(2013186316, query).then(($result: any) => {
+    return $Call.ByID(1166170783, query).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 export function SearchMessages(params: $models.SearchParams): $CancellablePromise<$models.SearchResult[]> {
-    return $Call.ByID(711367617, params).then(($result: any) => {
+    return $Call.ByID(3343739474, params).then(($result: any) => {
         return $$createType58($result);
     });
 }
 
 export function SearchNewsletters(query: string): $CancellablePromise<$models.ChatElement[]> {
-    return $Call.ByID(1374403199, query).then(($result: any) => {
+    return $Call.ByID(1735679774, query).then(($result: any) => {
         return $$createType21($result);
     });
 }
@@ -801,22 +801,22 @@ export function SearchNewsletters(query: string): $CancellablePromise<$models.Ch
  * emoji would clear the reaction rather than send one, so reject it here.
  */
 export function SendCallReaction(callID: string, emoji: string): $CancellablePromise<void> {
-    return $Call.ByID(1333731828, callID, emoji);
+    return $Call.ByID(3608592855, callID, emoji);
 }
 
 export function SendChatPresence(jid: string, cp: types$0.ChatPresence, cpm: types$0.ChatPresenceMedia): $CancellablePromise<void> {
-    return $Call.ByID(2137197240, jid, cp, cpm);
+    return $Call.ByID(2138215103, jid, cp, cpm);
 }
 
 /**
  * SendLocation sends a location message (latitude, longitude, optional name).
  */
 export function SendLocation(chatJID: string, latitude: number, longitude: number, name: string): $CancellablePromise<string> {
-    return $Call.ByID(132884096, chatJID, latitude, longitude, name);
+    return $Call.ByID(4255318763, chatJID, latitude, longitude, name);
 }
 
 export function SendMessage(chatJID: string, content: $models.MessageContent): $CancellablePromise<string> {
-    return $Call.ByID(3951874934, chatJID, content);
+    return $Call.ByID(839654827, chatJID, content);
 }
 
 /**
@@ -824,7 +824,7 @@ export function SendMessage(chatJID: string, content: $models.MessageContent): $
  * 0 or len(options) = multiple answers allowed.
  */
 export function SendPoll(chatJID: string, name: string, options: string[], selectableCount: number): $CancellablePromise<string> {
-    return $Call.ByID(947863918, chatJID, name, options, selectableCount);
+    return $Call.ByID(3210469121, chatJID, name, options, selectableCount);
 }
 
 /**
@@ -833,7 +833,7 @@ export function SendPoll(chatJID: string, name: string, options: string[], selec
  * updates instantly.
  */
 export function SendPollVote(chatJID: string, pollMessageID: string, selectedOptions: string[]): $CancellablePromise<string> {
-    return $Call.ByID(2413722034, chatJID, pollMessageID, selectedOptions);
+    return $Call.ByID(2888940497, chatJID, pollMessageID, selectedOptions);
 }
 
 /**
@@ -841,14 +841,14 @@ export function SendPollVote(chatJID: string, pollMessageID: string, selectedOpt
  * reaction). senderJID is the original message's sender; empty means our own.
  */
 export function SendReaction(chatJID: string, senderJID: string, messageID: string, emoji: string): $CancellablePromise<void> {
-    return $Call.ByID(2823474692, chatJID, senderJID, messageID, emoji);
+    return $Call.ByID(1676924919, chatJID, senderJID, messageID, emoji);
 }
 
 /**
  * SendShareContact shares a contact card in the chat.
  */
 export function SendShareContact(chatJID: string, displayName: string, phone: string): $CancellablePromise<string> {
-    return $Call.ByID(592765150, chatJID, displayName, phone);
+    return $Call.ByID(3875885377, chatJID, displayName, phone);
 }
 
 /**
@@ -856,21 +856,21 @@ export function SendShareContact(chatJID: string, displayName: string, phone: st
  * standard base64) into the active call's outbound video track.
  */
 export function SendVideoFrame(callID: string, accessUnitB64: string): $CancellablePromise<void> {
-    return $Call.ByID(2210176603, callID, accessUnitB64);
+    return $Call.ByID(626318460, callID, accessUnitB64);
 }
 
 /**
  * SetCallHandRaised announces our persistent hand-raised state.
  */
 export function SetCallHandRaised(callID: string, raised: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3924191142, callID, raised);
+    return $Call.ByID(1866360591, callID, raised);
 }
 
 /**
  * SetCallVideoEnabled mutes or unmutes our outbound camera flow.
  */
 export function SetCallVideoEnabled(callID: string, enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1470823347, callID, enabled);
+    return $Call.ByID(3965978514, callID, enabled);
 }
 
 /**
@@ -879,15 +879,15 @@ export function SetCallVideoEnabled(callID: string, enabled: boolean): $Cancella
  * through to signaling.
  */
 export function SetCallVideoOrientation(callID: string, orientation: number): $CancellablePromise<void> {
-    return $Call.ByID(831953368, callID, orientation);
+    return $Call.ByID(1300857829, callID, orientation);
 }
 
 export function SetCustomCSS(css: string): $CancellablePromise<void> {
-    return $Call.ByID(24017247, css);
+    return $Call.ByID(2635462080, css);
 }
 
 export function SetCustomJS(js: string): $CancellablePromise<void> {
-    return $Call.ByID(3740204831, js);
+    return $Call.ByID(3400080362, js);
 }
 
 /**
@@ -895,11 +895,11 @@ export function SetCustomJS(js: string): $CancellablePromise<void> {
  * timer: 0 (off), 86400 (24h), 604800 (7d), 7776000 (90d)
  */
 export function SetDisappearingTimer(chatJID: string, timerSeconds: number): $CancellablePromise<void> {
-    return $Call.ByID(2578724733, chatJID, timerSeconds);
+    return $Call.ByID(4177345238, chatJID, timerSeconds);
 }
 
 export function SetDisappearingTimerDefault(timerSeconds: number): $CancellablePromise<void> {
-    return $Call.ByID(2239839574, timerSeconds);
+    return $Call.ByID(236875899, timerSeconds);
 }
 
 /**
@@ -907,39 +907,39 @@ export function SetDisappearingTimerDefault(timerSeconds: number): $CancellableP
  * all messages, even if the contact has disabled read receipts.
  */
 export function SetForceActiveDeliveryReceipts(active: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2181741869, active);
+    return $Call.ByID(147967270, active);
 }
 
 export function SetGroupAnnounce(groupJID: string, announce: boolean): $CancellablePromise<void> {
-    return $Call.ByID(834534481, groupJID, announce);
+    return $Call.ByID(1013250214, groupJID, announce);
 }
 
 export function SetGroupDescription(groupJID: string, description: string): $CancellablePromise<void> {
-    return $Call.ByID(2436184020, groupJID, description);
+    return $Call.ByID(2776534117, groupJID, description);
 }
 
 export function SetGroupJoinApprovalMode(groupJID: string, requireApproval: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1302876562, groupJID, requireApproval);
+    return $Call.ByID(3240271789, groupJID, requireApproval);
 }
 
 export function SetGroupLocked(groupJID: string, locked: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2792860884, groupJID, locked);
+    return $Call.ByID(3246029775, groupJID, locked);
 }
 
 export function SetGroupMemberAddMode(groupJID: string, mode: string): $CancellablePromise<void> {
-    return $Call.ByID(2093007872, groupJID, mode);
+    return $Call.ByID(1708197889, groupJID, mode);
 }
 
 export function SetGroupName(groupJID: string, name: string): $CancellablePromise<void> {
-    return $Call.ByID(1857631305, groupJID, name);
+    return $Call.ByID(4240103162, groupJID, name);
 }
 
 export function SetGroupPhoto(groupJID: string, base64Data: string): $CancellablePromise<void> {
-    return $Call.ByID(2687718282, groupJID, base64Data);
+    return $Call.ByID(1972165919, groupJID, base64Data);
 }
 
 export function SetGroupTopic(groupJID: string, topic: string): $CancellablePromise<void> {
-    return $Call.ByID(2318085, groupJID, topic);
+    return $Call.ByID(3476502600, groupJID, topic);
 }
 
 /**
@@ -947,7 +947,7 @@ export function SetGroupTopic(groupJID: string, topic: string): $CancellableProm
  * records the change locally.
  */
 export function SetMessagePinned(chatJID: string, senderJID: string, messageID: string, fromMe: boolean, pin: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1526296364, chatJID, senderJID, messageID, fromMe, pin);
+    return $Call.ByID(2229209575, chatJID, senderJID, messageID, fromMe, pin);
 }
 
 /**
@@ -957,7 +957,7 @@ export function SetMessagePinned(chatJID: string, senderJID: string, messageID: 
  * they stay in sync with changes coming from either side.
  */
 export function SetNotificationsEnabled(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(763073342, enabled);
+    return $Call.ByID(293064463, enabled);
 }
 
 /**
@@ -966,23 +966,23 @@ export function SetNotificationsEnabled(enabled: boolean): $CancellablePromise<v
  * value: "all", "contacts", "contact_blacklist", "none", "match_last_seen", "known"
  */
 export function SetPrivacySetting(settingType: string, value: string): $CancellablePromise<void> {
-    return $Call.ByID(2321936123, settingType, value);
+    return $Call.ByID(2730144514, settingType, value);
 }
 
 export function SetProxy(proxyURL: string): $CancellablePromise<void> {
-    return $Call.ByID(1761904229, proxyURL);
+    return $Call.ByID(4209049194, proxyURL);
 }
 
 export function SetPushName(name: string): $CancellablePromise<void> {
-    return $Call.ByID(3589517804, name);
+    return $Call.ByID(1474677669, name);
 }
 
 export function SetStatusMessage(text: string): $CancellablePromise<void> {
-    return $Call.ByID(1955251932, text);
+    return $Call.ByID(3819956167, text);
 }
 
 export function SetStatusPrivacy(value: string): $CancellablePromise<void> {
-    return $Call.ByID(3177687887, value);
+    return $Call.ByID(3728575232, value);
 }
 
 /**
@@ -990,7 +990,7 @@ export function SetStatusPrivacy(value: string): $CancellablePromise<void> {
  * backend only raises notifications while the window is in the background.
  */
 export function SetWindowFocused(focused: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2361109020, focused);
+    return $Call.ByID(14430055, focused);
 }
 
 /**
@@ -998,7 +998,7 @@ export function SetWindowFocused(focused: boolean): $CancellablePromise<void> {
  * The change is synced to other devices via app state.
  */
 export function StarMessage(chatJID: string, messageID: string, starred: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1939561056, chatJID, messageID, starred);
+    return $Call.ByID(689244325, chatJID, messageID, starred);
 }
 
 /**
@@ -1006,28 +1006,28 @@ export function StarMessage(chatJID: string, messageID: string, starred: boolean
  * the browser's identifier for the shared display surface.
  */
 export function StartCallScreenShare(callID: string, screenShareID: number): $CancellablePromise<void> {
-    return $Call.ByID(1587404018, callID, screenShareID);
+    return $Call.ByID(2665972813, callID, screenShareID);
 }
 
 /**
  * StartCallVideo requests an audio-to-video upgrade on the active call.
  */
 export function StartCallVideo(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(3895087274, callID);
+    return $Call.ByID(3135436977, callID);
 }
 
 /**
  * StopCallScreenShare stops screen sharing without touching camera video.
  */
 export function StopCallScreenShare(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(241485560, callID);
+    return $Call.ByID(4178877093, callID);
 }
 
 /**
  * StopCallVideo stops our outbound video while keeping audio and peer video.
  */
 export function StopCallVideo(callID: string): $CancellablePromise<void> {
-    return $Call.ByID(1475101040, callID);
+    return $Call.ByID(1118438313, callID);
 }
 
 /**
@@ -1035,7 +1035,7 @@ export function StopCallVideo(callID: string): $CancellablePromise<void> {
  * Login ID (LID) on the server.
  */
 export function StoreLIDPNMapping(firstJID: string, secondJID: string): $CancellablePromise<void> {
-    return $Call.ByID(1956776453, firstJID, secondJID);
+    return $Call.ByID(660993864, firstJID, secondJID);
 }
 
 /**
@@ -1044,11 +1044,11 @@ export function StoreLIDPNMapping(firstJID: string, secondJID: string): $Cancell
  * events for that user.
  */
 export function SubscribeContactPresence(jidStr: string): $CancellablePromise<void> {
-    return $Call.ByID(1908012012, jidStr);
+    return $Call.ByID(2526872951, jidStr);
 }
 
 export function SubscribeNewsletter(newsletterJID: string): $CancellablePromise<void> {
-    return $Call.ByID(1900957592, newsletterJID);
+    return $Call.ByID(619967581, newsletterJID);
 }
 
 /**
@@ -1056,11 +1056,11 @@ export function SubscribeNewsletter(newsletterJID: string): $CancellablePromise<
  * app state and records it locally for the chat list.
  */
 export function ToggleChatArchive(jidStr: string, archived: boolean): $CancellablePromise<void> {
-    return $Call.ByID(4033592683, jidStr, archived);
+    return $Call.ByID(3552232974, jidStr, archived);
 }
 
 export function ToggleChatLabel(jidStr: string, labelID: string, labeled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2977277787, jidStr, labelID, labeled);
+    return $Call.ByID(3734001630, jidStr, labelID, labeled);
 }
 
 /**
@@ -1068,7 +1068,7 @@ export function ToggleChatLabel(jidStr: string, labelID: string, labeled: boolea
  * app state so it syncs to the phone, then persisted locally.
  */
 export function ToggleChatMute(chatJID: string, muted: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3010118026, chatJID, muted);
+    return $Call.ByID(379840457, chatJID, muted);
 }
 
 /**
@@ -1076,11 +1076,11 @@ export function ToggleChatMute(chatJID: string, muted: boolean): $CancellablePro
  * app state and records it locally for the chat list.
  */
 export function ToggleChatPin(jidStr: string, pinned: boolean): $CancellablePromise<void> {
-    return $Call.ByID(181646234, jidStr, pinned);
+    return $Call.ByID(2014068975, jidStr, pinned);
 }
 
 export function ToggleMessageLabel(jidStr: string, messageID: string, labelID: string, labeled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2377828234, jidStr, messageID, labelID, labeled);
+    return $Call.ByID(1619267365, jidStr, messageID, labelID, labeled);
 }
 
 /**
@@ -1088,7 +1088,7 @@ export function ToggleMessageLabel(jidStr: string, messageID: string, labelID: s
  * the in-memory cache or from the server if ignoreCache is true.
  */
 export function TryFetchPrivacySettings(ignoreCache: boolean): $CancellablePromise<$models.PrivacySettingsResponse> {
-    return $Call.ByID(1326812359, ignoreCache).then(($result: any) => {
+    return $Call.ByID(3316594262, ignoreCache).then(($result: any) => {
         return $$createType40($result);
     });
 }
@@ -1097,15 +1097,15 @@ export function TryFetchPrivacySettings(ignoreCache: boolean): $CancellablePromi
  * UnblockContact unblocks a previously blocked contact.
  */
 export function UnblockContact(jidStr: string): $CancellablePromise<void> {
-    return $Call.ByID(2270564993, jidStr);
+    return $Call.ByID(536418874, jidStr);
 }
 
 export function UnlinkGroupFromCommunity(parentJID: string, childJID: string): $CancellablePromise<void> {
-    return $Call.ByID(1707645462, parentJID, childJID);
+    return $Call.ByID(3219456741, parentJID, childJID);
 }
 
 export function UnsubscribeNewsletter(newsletterJID: string): $CancellablePromise<void> {
-    return $Call.ByID(3508634273, newsletterJID);
+    return $Call.ByID(2916839728, newsletterJID);
 }
 
 /**
@@ -1115,7 +1115,7 @@ export function UnsubscribeNewsletter(newsletterJID: string): $CancellablePromis
  * never include profile bodies.
  */
 export function UpdateMyBusinessProfile(input: $models.BusinessProfileUpdateInput): $CancellablePromise<void> {
-    return $Call.ByID(1756513097, input);
+    return $Call.ByID(1680259084, input);
 }
 
 /**
@@ -1123,7 +1123,7 @@ export function UpdateMyBusinessProfile(input: $models.BusinessProfileUpdateInpu
  * elapses. Returns true if the client connected successfully.
  */
 export function WaitForConnection(timeoutSeconds: number): $CancellablePromise<boolean> {
-    return $Call.ByID(1166250447, timeoutSeconds);
+    return $Call.ByID(3125965210, timeoutSeconds);
 }
 
 // Private type creation functions

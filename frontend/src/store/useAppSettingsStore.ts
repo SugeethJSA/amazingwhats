@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { GetSettings, SaveSettings } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { GetSettings, SaveSettings } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { DEFAULT_EASES, THEME, applyThemeColors } from "../theme.config"
 import { cacheTheme, normalizeTheme, readCachedTheme } from "../lib/theme"
 import { useEaseStore } from "./useEaseStore"

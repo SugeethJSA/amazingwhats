@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/query"
 	"github.com/stretchr/testify/require"
 )
 

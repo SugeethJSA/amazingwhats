@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/query"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

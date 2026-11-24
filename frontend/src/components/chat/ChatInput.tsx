@@ -17,7 +17,7 @@ import {
   GetCachedAvatar,
   SendLocation,
   PickAttachmentFile,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import type { Message } from "../../store/types"
 import { useContactStore } from "../../store/useContactStore"
 import { useUIStore } from "../../store"

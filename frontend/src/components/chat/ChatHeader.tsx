@@ -11,7 +11,7 @@ import { MenuIcon, SearchIcon } from "../../assets/svgs/chat_icons"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import { runShortcut } from "../../lib/shortcuts"
 import { useChatStore, useChatMuted, useMessageStore, useUIStore } from "../../store"
-import { ClearChat } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { ClearChat } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 interface ChatHeaderProps {
   chatName: string

@@ -22,7 +22,7 @@ import {
   SendReaction,
   SetMessagePinned,
   StarMessage,
-} from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { ForwardDialog } from "./chat/ForwardDialog"
 import { CloseIcon, DownloadIcon, PhotosIcon } from "../assets/svgs/chat_icons"
 import { DeleteIcon, ForwardIcon, ReactIcon, ReplyIcon, StarIcon } from "../assets/svgs/message_menu_icons"

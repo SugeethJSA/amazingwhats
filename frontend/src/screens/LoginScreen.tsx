@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import Wordmark from "@/components/common/Wordmark"
-import { PairPhone } from "../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { PairPhone } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 const PAIR_WINDOW_SECONDS = 120
 

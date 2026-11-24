@@ -9,7 +9,7 @@ import {
   SettingsSection,
 } from "../../components/settings/ui-kit"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
-import { EditLabel } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { EditLabel } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 /** Stable numeric IDs are what the backend stores; names are for humans. */
 interface LabelColor {

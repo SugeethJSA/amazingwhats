@@ -28,7 +28,7 @@ These excerpts are the sources of truth for the versions and commands that follo
 
 ```go
 // go.mod:1-3
-module github.com/lugvitc/whats4linux
+module github.com/lugvitc/amazingwhats
 
 go 1.27.3
 ```
@@ -68,7 +68,7 @@ go 1.27.3
 
 | Line | What it does |
 |---|---|
-| `go.mod:1` | Declares the module path; it explains the `github.com/lugvitc/whats4linux/...` imports in Go files. |
+| `go.mod:1` | Declares the module path; it explains the `github.com/lugvitc/amazingwhats/...` imports in Go files. |
 | `go.mod:3` | Pins the Go language/toolchain version: 1.27.3. |
 | `build.yaml:37` | CI pins the same Go version, 1.27.3 — the two agree. |
 | `build.yaml:41` | Exact install command for the framework CLI at version 3.1.0. |

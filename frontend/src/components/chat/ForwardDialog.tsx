@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ForwardMessage } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { ForwardMessage } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useChatStore } from "../../store/useChatStore"
 import { useMessageStore, useUIStore } from "../../store"
 import { formatPhone, phoneFromJID } from "../../lib/utils"

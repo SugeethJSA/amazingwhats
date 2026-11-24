@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { AcceptGroupInviteLink } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { AcceptGroupInviteLink } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 
 interface InviteLinkDialogProps {
   onClose: () => void

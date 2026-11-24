@@ -11,7 +11,7 @@ import {
   SetMessagePinned,
   AcceptGroupInviteLink,
   StarMessage,
-} from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { MediaContent } from "./MediaContent"
 import { DownloadProgress } from "./DownloadProgress"
 import { QuotedMessage } from "./QuotedMessage"
@@ -35,7 +35,7 @@ import { useContactStore } from "../../store/useContactStore"
 import { useDownloadProgressStore } from "../../store/useDownloadProgressStore"
 import { useMessageStore, useUIStore } from "../../store"
 import type { Message } from "../../store/types"
-import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
+import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { isMe } from "../../lib/self"
 import { formatPhone, phoneFromJID, htmlToPlainText, sanitizeHtml } from "../../lib/utils"
 import { LRUCache } from "../../lib/lruCache"

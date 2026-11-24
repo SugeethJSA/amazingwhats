@@ -8,7 +8,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 // SavePollMetadata stores a poll's question and option names so incoming

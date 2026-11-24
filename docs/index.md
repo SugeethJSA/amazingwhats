@@ -53,7 +53,7 @@ app.RegisterService(application.NewService(api))
 
 ```ts
 // frontend/src/App.tsx:2
-import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { Login, GetCustomCSS, GetCustomJS, SetWindowFocused } from "../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 ```
 
 | Line | What it does |

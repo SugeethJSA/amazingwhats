@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	messagestore "github.com/lugvitc/whats4linux/internal/store"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	messagestore "github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	wastore "github.com/polymorfa/hypermeow/store"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	appstore "github.com/lugvitc/whats4linux/internal/store"
+	appstore "github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow"
 	"github.com/polymorfa/hypermeow/proto/waE2E"
 	"github.com/polymorfa/hypermeow/types"

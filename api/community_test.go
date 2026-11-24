@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/lugvitc/whats4linux/internal/misc"
-	"github.com/lugvitc/whats4linux/internal/query"
-	"github.com/lugvitc/whats4linux/internal/wa"
+	"github.com/lugvitc/amazingwhats/internal/misc"
+	"github.com/lugvitc/amazingwhats/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/wa"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/polymorfa/hypermeow"
 )

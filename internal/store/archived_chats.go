@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 // IsChatArchived reports whether the chat is currently archived. It mirrors

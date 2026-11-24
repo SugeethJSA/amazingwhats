@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/lugvitc/whats4linux/internal/query"
+	"github.com/lugvitc/amazingwhats/internal/query"
 )
 
 // SetChatMuted persists the mute state for a chat. mutedUntil is unix seconds:
