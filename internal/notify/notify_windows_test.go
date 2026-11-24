@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	toast "git.sr.ht/~jackmordaunt/go-toast"
@@ -231,9 +232,8 @@ func TestWindowsAvatarToastXML(t *testing.T) {
 		Body:      `line1 & <tag> "quoted"`,
 		Actions:   true,
 	}
-	appIcon := `C:\Icons\app&icon.png`
 	avatar := `C:\Temp\avatar&x.png`
-	raw := buildWindowsAvatarToastXML(opts, appIcon, avatar)
+	raw := buildWindowsAvatarToastXML(opts, avatar)
 
 	var doc struct {
 		Launch string `xml:"launch,attr"`
@@ -242,6 +242,7 @@ func TestWindowsAvatarToastXML(t *testing.T) {
 				Images []struct {
 					Src   string `xml:"src,attr"`
 					Place string `xml:"placement,attr"`
+					Crop  string `xml:"hint-crop,attr"`
 				} `xml:"image"`
 				Texts []string `xml:"text"`
 			} `xml:"binding"`
@@ -257,14 +258,17 @@ func TestWindowsAvatarToastXML(t *testing.T) {
 		t.Fatalf("avatar toast XML is not well formed: %v\n%s", err, raw)
 	}
 	images := doc.Visual.Binding.Images
-	if len(images) != 2 {
-		t.Fatalf("want 2 images, got %d: %s", len(images), raw)
+	if len(images) != 1 {
+		t.Fatalf("want 1 image (avatar badge), got %d: %s", len(images), raw)
 	}
-	if images[0].Place != "hero" || images[0].Src != avatar {
-		t.Errorf("hero image = %+v, want src %q", images[0], avatar)
+	if images[0].Place != "appLogoOverride" || images[0].Src != avatar {
+		t.Errorf("avatar badge = %+v, want appLogoOverride src %q", images[0], avatar)
 	}
-	if images[1].Place != "appLogoOverride" || images[1].Src != appIcon {
-		t.Errorf("app logo = %+v, want src %q", images[1], appIcon)
+	if images[0].Crop != "circle" {
+		t.Errorf("avatar badge crop = %q, want circle", images[0].Crop)
+	}
+	if strings.Contains(raw, `placement="hero"`) {
+		t.Errorf("avatar toast must not contain a hero banner: %s", raw)
 	}
 	texts := doc.Visual.Binding.Texts
 	if len(texts) != 2 || texts[0] != opts.Title || texts[1] != opts.Body {

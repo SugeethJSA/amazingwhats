@@ -191,11 +191,11 @@ func tempImagePath(data []byte) (string, error) {
 }
 
 // pushWindowsToastWithAvatar renders toast XML directly so the chat avatar can
-// be placed in the "hero" image slot. go-toast v1.1.2 only exposes the
-// appLogoOverride icon and uses that same path for registry branding, so a
-// plain toast.Notification can never show a per-chat image without corrupting
-// the app icon in the registry. All application metadata is still registered
-// with the real app icon; only the toast XML carries the avatar.
+// be placed in the appLogoOverride badge (the small top-left app-logo slot).
+// go-toast v1.1.2 uses that same path for registry branding, so a plain
+// toast.Notification would overwrite the app's identity icon with the contact's
+// avatar. We register the real app icon separately, then put the avatar only in
+// this toast's XML.
 func pushWindowsToastWithAvatar(opts Options, appIcon string, avatar []byte) error {
 	avatarPath, err := tempImagePath(avatar)
 	if err != nil {
@@ -208,19 +208,19 @@ func pushWindowsToastWithAvatar(opts Options, appIcon string, avatar []byte) err
 	}); err != nil {
 		return err
 	}
-	return wintoast.Push(buildWindowsAvatarToastXML(opts, appIcon, avatarPath), wintoast.PowershellFallback)
+	return wintoast.Push(buildWindowsAvatarToastXML(opts, avatarPath), wintoast.PowershellFallback)
 }
 
 // buildWindowsAvatarToastXML is a pure helper so the hand-built toast can be
 // unit-tested (well-formedness, hostiles, placement and argument round-trip).
-// Microsoft's ToastGeneric schema puts the hero image first in the binding.
-func buildWindowsAvatarToastXML(opts Options, appIcon, avatarPath string) string {
+// The avatar occupies the appLogoOverride badge; the real app icon is not in
+// the toast XML at all (it is registered via SetAppData above).
+func buildWindowsAvatarToastXML(opts Options, avatarPath string) string {
 	var b strings.Builder
 	b.WriteString(`<toast activationType="Foreground" launch="`)
 	b.WriteString(xmlAttribute(activationArgs(ActionOpen, opts)))
 	b.WriteString(`" duration="Short"><visual><binding template="ToastGeneric">`)
-	b.WriteString(`<image placement="hero" src="` + xmlAttribute(avatarPath) + `" />`)
-	b.WriteString(`<image placement="appLogoOverride" src="` + xmlAttribute(appIcon) + `" />`)
+	b.WriteString(`<image placement="appLogoOverride" hint-crop="circle" src="` + xmlAttribute(avatarPath) + `" />`)
 	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Title) + `]]></text>`)
 	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Body) + `]]></text>`)
 	b.WriteString(`</binding></visual>`)
@@ -248,7 +248,7 @@ func Notify(opts Options) error {
 	iconPath = safeIconPath(iconPath)
 
 	// The API layer fills Avatar for person/group chats; the Linux backend
-	// already renders it. Use the hero-image toast on Windows when available.
+	// already renders it. Use the avatar-as-badge toast on Windows when available.
 	avatar := opts.Avatar
 	if len(avatar) == 0 {
 		avatar = opts.Image
