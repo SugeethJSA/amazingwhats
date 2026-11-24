@@ -154,8 +154,9 @@ export function DownloadMedia(chatJID: string, messageID: string): $CancellableP
 /**
  * DownloadMediaToFile downloads any media type (document, video, audio, image) to the filesystem.
  * It streams the download to a temp file (never loading it fully into memory)
- * and prompts the user where to save it. Progress events are intentionally not
- * emitted: no frontend listener consumes them (D-AUD-003e).
+ * and prompts the user where to save it. Real byte-level progress is emitted as
+ * "download:progress" (see download_progress.go) plus terminal "download:done"
+ * / "download:error" events for per-message UI state.
  */
 export function DownloadMediaToFile(messageID: string): $CancellablePromise<void> {
     return $Call.ByID(4224587068, messageID);
