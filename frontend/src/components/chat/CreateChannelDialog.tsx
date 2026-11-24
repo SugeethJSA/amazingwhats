@@ -120,12 +120,12 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
         />
 
         {error && (
-          <p role="alert" className="mt-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+          <p role="alert" className="mt-2 text-xs text-danger-ink dark:text-danger-soft">
             {error}
           </p>
         )}
         {success && (
-          <p role="status" className="mt-2 text-xs text-[#1b9a58] dark:text-[#21c063]">
+          <p role="status" className="mt-2 text-xs text-green-dark dark:text-green">
             {success}
           </p>
         )}
@@ -144,7 +144,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
               onClick={handleCreate}
               disabled={!name.trim() || creating}
               aria-busy={creating}
-              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`rounded-lg bg-green px-4 py-2 text-sm font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {creating ? "Creating…" : "Create"}
             </button>

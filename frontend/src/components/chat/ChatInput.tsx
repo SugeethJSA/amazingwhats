@@ -186,7 +186,7 @@ const FilePreview = ({ file, fileType, onRemove, gifEnabled, onToggleGif }: File
         {FILE_TYPE_ICONS[fileType as keyof typeof FILE_TYPE_ICONS]}
         <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{file.name}</span>
         {fileType === "gif" && (
-          <span className="rounded bg-[#21c063]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[#21c063]">
+          <span className="rounded bg-green/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-green">
             GIF
           </span>
         )}
@@ -206,7 +206,7 @@ const FilePreview = ({ file, fileType, onRemove, gifEnabled, onToggleGif }: File
           "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
           FOCUS_RING,
           gifEnabled
-            ? "border-[#21c063] bg-[#21c063] text-[#0a1014]"
+            ? "border-green bg-green text-action-ink"
             : "border-gray-300 dark:border-white/15 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600",
         )}
       >
@@ -216,7 +216,7 @@ const FilePreview = ({ file, fileType, onRemove, gifEnabled, onToggleGif }: File
     <button
       type="button"
       onClick={onRemove}
-      className={`rounded p-1 text-[#b42318] hover:text-[#8a1c13] dark:text-[#fca5a5] ${FOCUS_RING}`}
+      className={`rounded p-1 text-danger-ink hover:text-danger-deep dark:text-danger-soft ${FOCUS_RING}`}
       title="Remove file"
       aria-label="Remove attached file"
     >
@@ -238,7 +238,7 @@ const ImagePreview = ({ imageSrc, onRemove }: ImagePreviewProps) => (
       onClick={onRemove}
       className={clsx(
         "absolute top-1 right-1",
-        "bg-[#ef4444] text-white rounded-full",
+        "bg-danger text-white rounded-full",
         "w-6 h-6 flex items-center justify-center",
         "hover:brightness-110 transition-colors",
         FOCUS_RING,
@@ -847,7 +847,7 @@ export function ChatInput({
                     className={clsx(
                       "h-full flex-1 rounded-sm transition-colors",
                       index < Math.ceil(voiceRecorder.level * 5)
-                        ? "bg-[#21c063]"
+                        ? "bg-green"
                         : "bg-gray-200 dark:bg-white/10",
                     )}
                   />
@@ -872,7 +872,7 @@ export function ChatInput({
               onClick={() => void handleStopVoiceRecording()}
               aria-label="Attach voice note"
               className={clsx(
-                "shrink-0 rounded-lg bg-[#21c063] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#1b9a58]",
+                "shrink-0 rounded-lg bg-green px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-green-dark",
                 FOCUS_RING,
               )}
             >
@@ -1083,7 +1083,7 @@ export function ChatInput({
                         {
                           label: "Document",
                           icon: <DocumentIcon />,
-                          color: "text-[#21c063]",
+                          color: "text-green",
                           act: async () => {
                             // Use the native GTK picker (no MIME filter) — the
                             // webview input with accept="*/*" offers no
@@ -1110,7 +1110,7 @@ export function ChatInput({
                         {
                           label: "Audio file",
                           icon: <AudioIcon />,
-                          color: "text-[#f59e0b]",
+                          color: "text-warning-bright",
                           act: () => void pickAudioFile(),
                         },
                         {
@@ -1225,7 +1225,7 @@ export function ChatInput({
                       setScheduleAt("")
                     }}
                     disabled={!scheduleAt || new Date(scheduleAt).getTime() <= Date.now()}
-                    className="rounded-lg bg-[#21c063] px-3 py-1 text-xs text-white disabled:opacity-40"
+                    className="rounded-lg bg-green px-3 py-1 text-xs text-white disabled:opacity-40"
                   >
                     Schedule
                   </button>
@@ -1246,7 +1246,7 @@ export function ChatInput({
             className={clsx(
               "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all duration-200",
               FOCUS_RING,
-              "bg-[#21c063] hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95",
+              "bg-green hover:scale-105 hover:bg-green-dark hover:shadow-md active:scale-95",
             )}
           >
             <SendIcon />
@@ -1258,7 +1258,7 @@ export function ChatInput({
             aria-label="Record voice message"
             title="Record voice message"
             className={clsx(
-              "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#21c063] text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95",
+              "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-green-dark hover:shadow-md active:scale-95",
               FOCUS_RING,
             )}
           >
@@ -1291,7 +1291,7 @@ export function ChatInput({
               >
                 Send location
               </h2>
-              <p className="mb-3 text-sm text-gray-600 dark:text-[#8696a0]">
+              <p className="mb-3 text-sm text-gray-600 dark:text-dark-muted">
                 Share your current location or enter coordinates.
               </p>
               <label
@@ -1343,7 +1343,7 @@ export function ChatInput({
                 onChange={event => setPlaceName(event.target.value)}
               />
               {locationError && (
-                <p role="alert" className="mb-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+                <p role="alert" className="mb-2 text-xs text-danger-ink dark:text-danger-soft">
                   {locationError}
                 </p>
               )}
@@ -1383,7 +1383,7 @@ export function ChatInput({
                     locationSending || isNaN(parseFloat(latInput)) || isNaN(parseFloat(lngInput))
                   }
                   aria-busy={locationSending}
-                  className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+                  className={`rounded-lg bg-green px-4 py-2 text-sm font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
                 >
                   {locationSending ? "Sending…" : "Send"}
                 </button>

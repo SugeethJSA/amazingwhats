@@ -18,7 +18,7 @@ export function SecurityNotificationsScreen() {
   return (
     <div className="flex flex-col gap-5">
       <SettingsCard className="p-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#21c063]/10 text-[#0b6b3a] dark:text-[#5fd385]">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green/10 text-green-deep dark:text-green-light">
           <ShieldIcon />
         </div>
         <div className="mt-4 text-lg font-semibold text-light-text dark:text-dark-text">
@@ -35,7 +35,7 @@ export function SecurityNotificationsScreen() {
               key={item}
               className="flex items-center gap-2.5 rounded-xl bg-black/[0.03] px-3.5 py-2 text-sm text-light-text dark:bg-white/[0.04] dark:text-dark-text"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#21c063]/15 text-[#0b6b3a] dark:text-[#5fd385]">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green/15 text-green-deep dark:text-green-light">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                   <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
@@ -46,7 +46,7 @@ export function SecurityNotificationsScreen() {
         </div>
         <button
           onClick={() => window.open("https://www.whatsapp.com/security/?lg=en", "_blank")}
-          className="mt-5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#0b6b3a] transition-colors hover:underline dark:text-[#5fd385]"
+          className="mt-5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-green-deep transition-colors hover:underline dark:text-green-light"
         >
           Learn more about WhatsApp security (opens external site)
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">

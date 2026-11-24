@@ -180,7 +180,7 @@ const GSAPMasterVisualizer = () => {
   }, [duration, refreshPreviewEase])
 
   return (
-    <div className="flex gap-8 p-10 bg-[#0e100f] h-fit text-[#bbbaa6] font-mono select-none">
+    <div className="flex gap-8 p-10 bg-dark-ink-deep h-fit text-neutral-warm font-mono select-none">
       {/* SIDEBAR */}
       <div className="w-1/4 space-y-6">
         <DropDown
@@ -234,17 +234,17 @@ const GSAPMasterVisualizer = () => {
 
       {/* EDITOR GRID */}
       <div className="flex-1 space-y-6">
-        <div className="relative aspect-square bg-black border border-[#42433d] p-12 overflow-visible shadow-2xl">
-          <div className="absolute inset-0 pointer-events-none text-lg uppercase tracking-widest text-[#7c7c6f]">
+        <div className="relative aspect-square bg-black border border-border-warm p-12 overflow-visible shadow-2xl">
+          <div className="absolute inset-0 pointer-events-none text-lg uppercase tracking-widest text-neutral-olive">
             <div className="absolute left-0 top-1/2 -rotate-90 origin-bottom-left whitespace-nowrap px-4">
               value:{" "}
-              <span ref={valueTextRef} className="text-[#0ae448]">
+              <span ref={valueTextRef} className="text-green-vivid">
                 0
               </span>
             </div>
             <div className="absolute bottom-2 left-0 w-full text-center">
               progress:{" "}
-              <span ref={progressTextRef} className="text-[#0ae448]">
+              <span ref={progressTextRef} className="text-green-vivid">
                 0.00
               </span>
             </div>
@@ -285,14 +285,14 @@ const GSAPMasterVisualizer = () => {
             />
           </svg>
 
-          <div className="absolute bottom-11.5 left-12 right-12 h-px bg-[#222]">
-            <div ref={horizontalFillRef} className="h-full bg-[#0ae448] scale-x-0 origin-left" />
+          <div className="absolute bottom-11.5 left-12 right-12 h-px bg-dark-surface-soft">
+            <div ref={horizontalFillRef} className="h-full bg-green-vivid scale-x-0 origin-left" />
           </div>
         </div>
       </div>
 
       {/* PREVIEW PANEL */}
-      <div className="w-1/4 flex items-center justify-center border-l border-[#42433d]/30">
+      <div className="w-1/4 flex items-center justify-center border-l border-border-warm/30">
         {!component && <div className="opacity-40 text-sm">Pick a component to preview</div>}
         {component === "ToggleButton" && (
           <ToggleButton isEnabled={true} onToggle={() => {}} ariaLabel="Preview toggle" />

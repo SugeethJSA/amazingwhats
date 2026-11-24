@@ -81,7 +81,7 @@ function SettingsSwitch({
       disabled={disabled}
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        checked ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
+        checked ? "bg-green" : "bg-gray-300 dark:bg-gray-600"
       }`}
     >
       <span
@@ -952,7 +952,7 @@ export function ChatInfo({
                             disabled={actionBusy}
                             className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50 ${
                               disappearTimer === opt.value
-                                ? "font-medium text-[#21c063]"
+                                ? "font-medium text-green"
                                 : "text-light-text dark:text-dark-text"
                             }`}
                           >
@@ -1055,7 +1055,7 @@ export function ChatInfo({
                           </div>
 
                           {participant.is_admin && (
-                            <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-[#C8ECC5] shrink-0">
+                            <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-tint shrink-0">
                               Admin
                             </span>
                           )}
@@ -1167,7 +1167,7 @@ export function ChatInfo({
                     <div className="mx-4 mb-3">
                       <input
                         autoFocus
-                        className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] text-light-text dark:text-dark-text mb-2`}
+                        className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-dark-subtle text-light-text dark:text-dark-text mb-2`}
                         value={addSearch}
                         onChange={e => {
                           const q = e.target.value
@@ -1309,7 +1309,7 @@ export function ChatInfo({
                         <button
                           onClick={handleSaveSubject}
                           disabled={actionBusy || !subjectDraft.trim()}
-                          className="rounded-md bg-[#21c063] px-3 py-1 text-sm font-medium text-[#0a1014] disabled:opacity-50"
+                          className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50"
                         >
                           Save
                         </button>
@@ -1413,7 +1413,7 @@ export function ChatInfo({
                             <button
                               onClick={handleSaveTopic}
                               disabled={actionBusy || !topicDraft.trim()}
-                              className="rounded-md bg-[#21c063] px-3 py-1 text-sm font-medium text-[#0a1014] disabled:opacity-50"
+                              className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50"
                             >
                               Save
                             </button>

@@ -553,7 +553,7 @@ export function MessageMenu({
                         type="button"
                         onClick={() => void handleLabel()}
                         disabled={!labelId.trim()}
-                        className="rounded-lg bg-[#21c063] px-2 py-1 text-xs font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg bg-green px-2 py-1 text-xs font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Add
                       </button>

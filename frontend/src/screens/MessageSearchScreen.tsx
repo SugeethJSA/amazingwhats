@@ -174,8 +174,8 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         "rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors shrink-0",
         focusRing,
         mediaFilter === f.value
-          ? "bg-[#21c063] text-[#0a1014] font-medium"
-          : "bg-gray-100 dark:bg-dark-secondary text-[#5a6670] dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-[#2a2c2c]",
+          ? "bg-green text-action-ink font-medium"
+          : "bg-gray-100 dark:bg-dark-secondary text-muted-subtle dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-dark-surface-mid",
       )}
     >
       {f.label}
@@ -206,7 +206,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
             type="search"
             placeholder="Search messages..."
             className={clsx(
-              "bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder-[#5a6670] dark:placeholder-[#8696a0]",
+              "bg-transparent border-none outline-none text-sm w-full text-light-text dark:text-dark-text placeholder-muted-subtle dark:placeholder-dark-muted",
               focusRing,
             )}
             value={query}
@@ -255,7 +255,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
             focusRing,
             showMoreFilters
               ? "bg-gray-200 dark:bg-dark-elevated text-light-text dark:text-dark-text font-medium"
-              : "text-[#5a6670] dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5",
+              : "text-muted-subtle dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5",
           )}
         >
           More filters
@@ -290,7 +290,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
           type="text"
           placeholder="Filter by sender..."
           className={clsx(
-            "w-full px-3 py-1.5 rounded-lg outline-none bg-light-tertiary dark:bg-dark-secondary text-sm text-light-text dark:text-dark-text placeholder-[#5a6670] dark:placeholder-[#8696a0]",
+            "w-full px-3 py-1.5 rounded-lg outline-none bg-light-tertiary dark:bg-dark-secondary text-sm text-light-text dark:text-dark-text placeholder-muted-subtle dark:placeholder-dark-muted",
             focusRing,
           )}
           value={senderFilter}
@@ -309,12 +309,12 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
 
         {error && (
           <div role="alert" className="p-4 text-center">
-            <p className="text-sm text-[#c62828] dark:text-[#ef4444]">{error}</p>
+            <p className="text-sm text-danger-strong dark:text-danger">{error}</p>
             <button
               type="button"
               onClick={retrySearch}
               className={clsx(
-                "mt-2 text-sm font-medium text-[#137a43] dark:text-[#21c063] hover:underline",
+                "mt-2 text-sm font-medium text-green-ink-muted dark:text-green hover:underline",
                 focusRing,
               )}
             >
@@ -328,7 +328,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
             <p className="text-sm font-medium text-light-text dark:text-dark-text">
               No messages found
             </p>
-            <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
+            <p className="mt-1 text-sm text-muted-subtle dark:text-dark-muted">
               Try a different word or remove a filter.
             </p>
           </div>
@@ -338,7 +338,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
             <p className="text-sm font-medium text-light-text dark:text-dark-text">
               Search your messages
             </p>
-            <p className="mt-1 text-sm text-[#5a6670] dark:text-dark-muted">
+            <p className="mt-1 text-sm text-muted-subtle dark:text-dark-muted">
               Type at least two characters to find a message.
             </p>
           </div>
@@ -358,7 +358,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
               <span className="text-sm font-medium text-light-text dark:text-dark-text truncate flex-1">
                 {r.chat_name || r.chat_jid.split("@")[0]}
               </span>
-              <span className="text-xs text-[#5a6670] dark:text-dark-muted shrink-0">
+              <span className="text-xs text-muted-subtle dark:text-dark-muted shrink-0">
                 {new Date(r.timestamp * 1000).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
@@ -366,7 +366,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
               </span>
             </div>
             <div className="flex items-center gap-2 w-full mt-0.5">
-              <span className="text-xs text-[#5a6670] dark:text-dark-muted shrink-0">
+              <span className="text-xs text-muted-subtle dark:text-dark-muted shrink-0">
                 {r.is_from_me ? "You" : r.sender_jid.split("@")[0]}
               </span>
               <span className="text-sm text-light-text dark:text-dark-text truncate">
@@ -375,7 +375,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
               </span>
             </div>
             {r.edited && (
-              <span className="text-xs text-[#5a6670] dark:text-dark-muted italic mt-0.5">
+              <span className="text-xs text-muted-subtle dark:text-dark-muted italic mt-0.5">
                 Edited
               </span>
             )}
@@ -385,7 +385,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
         {loading && (
           <div role="status" aria-live="polite" className="flex justify-center py-4">
             <div
-              className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#21c063]"
+              className="animate-spin rounded-full h-6 w-6 border-b-2 border-green"
               aria-hidden="true"
             />
             <span className="sr-only">Searching messages…</span>
@@ -397,7 +397,7 @@ export function MessageSearchScreen({ onClose }: MessageSearchScreenProps) {
             type="button"
             onClick={handleLoadMore}
             className={clsx(
-              "w-full py-3 text-sm font-medium text-[#137a43] dark:text-[#21c063] hover:bg-gray-50 dark:hover:bg-white/5",
+              "w-full py-3 text-sm font-medium text-green-ink-muted dark:text-green hover:bg-gray-50 dark:hover:bg-white/5",
               focusRing,
             )}
           >

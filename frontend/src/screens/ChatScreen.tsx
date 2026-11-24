@@ -211,7 +211,7 @@ interface HeaderProps {
 const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
     <Wordmark compact textClassName="text-xl" markClassName="h-6 w-6" />
-    <div className="flex items-center gap-1 text-gray-600 dark:text-[#8696a0]">
+    <div className="flex items-center gap-1 text-gray-600 dark:text-dark-muted">
       <button
         title="Search Messages"
         aria-label="Search messages"
@@ -256,14 +256,14 @@ const SearchBar = ({
 }: SearchBarProps) => (
   <div className="px-3 py-2 bg-light-bg dark:bg-dark-bg">
     <div className="bg-light-tertiary dark:bg-dark-secondary rounded-full flex items-center px-4 py-2">
-      <div className="text-gray-600 dark:text-[#8696a0] mr-4">
+      <div className="text-gray-600 dark:text-dark-muted mr-4">
         <SearchIcon />
       </div>
       <input
         type="text"
         placeholder={placeholder}
         aria-label={placeholder}
-        className="bg-transparent border-none text-sm w-full text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0]"
+        className="bg-transparent border-none text-sm w-full text-light-text dark:text-dark-text placeholder:text-gray-600 dark:placeholder:text-dark-subtle"
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -464,7 +464,7 @@ const ChatListItemContent = memo(
           )}
           <div className="flex-1 min-w-0">
             {communityName && (
-              <div className="text-[13px] leading-snug text-gray-600 dark:text-[#8696a0] truncate">
+              <div className="text-[13px] leading-snug text-gray-600 dark:text-dark-muted truncate">
                 {communityName}
               </div>
             )}
@@ -474,7 +474,7 @@ const ChatListItemContent = memo(
               </h3>
               <div className="flex items-center gap-1 shrink-0">
                 {muted && (
-                  <span className="text-gray-600 dark:text-[#8696a0]">
+                  <span className="text-gray-600 dark:text-dark-muted">
                     <MutedBellIcon />
                   </span>
                 )}
@@ -491,9 +491,9 @@ const ChatListItemContent = memo(
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="line-clamp-2 min-h-[2.25rem] min-w-0 flex-1 text-sm leading-snug text-gray-600 dark:text-[#8696a0] [&_p]:inline [&_p]:m-0">
+              <div className="line-clamp-2 min-h-[2.25rem] min-w-0 flex-1 text-sm leading-snug text-gray-600 dark:text-dark-muted [&_p]:inline [&_p]:m-0">
                 {chat.isFromMe && (
-                  <span className="mr-1 text-gray-600 dark:text-[#8696a0]">You: </span>
+                  <span className="mr-1 text-gray-600 dark:text-dark-muted">You: </span>
                 )}
                 {chat.sender && chat.type === "group" && !chat.isFromMe && (
                   <span className="mr-1">{chat.sender}: </span>
@@ -503,7 +503,7 @@ const ChatListItemContent = memo(
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(chat.subtitle) }}
                 />
               </div>
-              {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-[#8696a0]" />}
+              {chat.pinned && <PinIcon className="shrink-0 text-gray-600 dark:text-dark-muted" />}
               {chat.unreadCount ? (
                 <span className="shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-green text-action-ink text-xs font-semibold">
                   {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
@@ -519,7 +519,7 @@ const ChatListItemContent = memo(
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
           className={clsx(
-            "mr-1 flex shrink-0 items-center justify-center rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-[#8696a0] dark:hover:bg-white/10",
+            "mr-1 flex shrink-0 items-center justify-center rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10",
             "opacity-70 group-hover:opacity-100",
           )}
         >
@@ -582,7 +582,7 @@ interface EmptyStateProps {
 }
 
 const EmptyState = ({ hasChats, isLoading, onRefresh, message }: EmptyStateProps) => (
-  <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-[#8696a0] p-8">
+  <div className="flex flex-col items-center justify-center h-full text-gray-600 dark:text-dark-muted p-8">
     <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-green-muted text-green">
       <SearchIcon />
     </div>
@@ -698,7 +698,7 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
               if (e.key === "Escape") onClose()
             }}
             placeholder="Channel link or invite code"
-            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3"
+            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle mb-3"
           />
 
           {/* Search newsletters */}
@@ -706,11 +706,11 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search channels..."
-            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3"
+            className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle mb-3"
           />
 
           {searching && (
-            <p className="text-xs text-gray-600 dark:text-[#8696a0] mb-2">Searching...</p>
+            <p className="text-xs text-gray-600 dark:text-dark-muted mb-2">Searching...</p>
           )}
 
           {searchResults.length > 0 && (
@@ -803,13 +803,13 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
 const CallingIllustration = () => (
   <svg viewBox="0 0 220 150" className="h-32 w-48" fill="none" aria-hidden="true">
     <rect x="24" y="16" width="148" height="100" rx="14" className="fill-green" />
-    <rect x="34" y="26" width="128" height="78" rx="7" className="fill-white dark:fill-[#202c33]" />
+    <rect x="34" y="26" width="128" height="78" rx="7" className="fill-white dark:fill-dark-panel" />
     <rect x="44" y="38" width="62" height="9" rx="4.5" className="fill-green-muted" />
     <rect x="44" y="54" width="86" height="7" rx="3.5" className="fill-gray-200 dark:fill-white/10" />
     <rect x="44" y="67" width="72" height="7" rx="3.5" className="fill-gray-200 dark:fill-white/10" />
     <rect x="86" y="82" width="58" height="14" rx="7" className="fill-green" />
     <rect x="16" y="118" width="164" height="8" rx="4" className="fill-gray-200 dark:fill-white/10" />
-    <circle cx="178" cy="104" r="25" className="fill-green-muted dark:fill-[#005c4b]" />
+    <circle cx="178" cy="104" r="25" className="fill-green-muted dark:fill-teal-deep" />
     <path
       d="M178 91a6 6 0 0 0-6 6v4a6 6 0 0 0 6 6 22 22 0 0 0 11-3l4 4a3 3 0 0 0 4-4l-4-4a22 22 0 0 0 0-6l4-4a3 3 0 0 0-4-4l-4 4a22 22 0 0 0-11-3z"
       className="fill-green"
@@ -861,10 +861,10 @@ const QuickAction = ({ label, onClick, disabled, children }: QuickActionProps) =
     aria-label={label}
     className="group flex w-20 flex-col items-center gap-2 rounded-xl disabled:cursor-not-allowed disabled:opacity-50"
   >
-    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-light-tertiary text-gray-600 transition-colors group-hover:bg-green-muted dark:bg-dark-secondary dark:text-[#8696a0]">
+    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-light-tertiary text-gray-600 transition-colors group-hover:bg-green-muted dark:bg-dark-secondary dark:text-dark-muted">
       {children}
     </span>
-    <span className="text-center text-xs leading-tight text-gray-600 dark:text-[#8696a0]">
+    <span className="text-center text-xs leading-tight text-gray-600 dark:text-dark-muted">
       {label}
     </span>
   </button>
@@ -891,7 +891,7 @@ const WelcomeScreen = ({
       <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">
         Voice and video calling is now available
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-[#8696a0]">
+      <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-dark-muted">
         You can make and join calls from any chat. Open a conversation to get started.
       </p>
       <button
@@ -918,7 +918,7 @@ const WelcomeScreen = ({
       </QuickAction>
     </div>
 
-    <p className="mt-8 flex items-center gap-1.5 text-xs text-gray-600 dark:text-[#8696a0]">
+    <p className="mt-8 flex items-center gap-1.5 text-xs text-gray-600 dark:text-dark-muted">
       <LockIcon />
       Your personal messages are end-to-end encrypted
     </p>
@@ -1881,7 +1881,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           {!showArchived && view === "chats" && archivedCount > 0 && (
             <button
               onClick={() => setShowArchived(true)}
-              className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
+              className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-dark-tertiary"
             >
               <span className="flex w-12 justify-center text-green-ink">
                 <svg viewBox="0 0 24 24" width="20" height="20" className="fill-current">
@@ -1891,14 +1891,14 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
               <span className="flex-1 font-medium text-light-text dark:text-dark-text">
                 Archived
               </span>
-              <span className="text-xs text-gray-600 dark:text-[#8696a0]">{archivedCount}</span>
+              <span className="text-xs text-gray-600 dark:text-dark-muted">{archivedCount}</span>
             </button>
           )}
           {showArchived && (
             <div className="flex items-center gap-4 border-b border-gray-200 dark:border-white/5 px-4 py-3">
               <button
                 onClick={() => setShowArchived(false)}
-                className="text-gray-600 dark:text-[#8696a0] hover:text-gray-900 dark:hover:text-white"
+                className="text-gray-600 dark:text-dark-muted hover:text-gray-900 dark:hover:text-white"
                 aria-label="Back to chats"
               >
                 <GoBackIcon />
@@ -1972,7 +1972,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     <div
       className={clsx(
         "relative flex h-full flex-col",
-        selectedCommunity ? "bg-light-secondary dark:bg-dark-bg" : "bg-[#efeae2] dark:bg-dark-bg",
+        selectedCommunity ? "bg-light-secondary dark:bg-dark-bg" : "bg-chat-wallpaper dark:bg-dark-bg",
       )}
     >
       {showConversation ? (

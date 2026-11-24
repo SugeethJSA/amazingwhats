@@ -170,7 +170,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         {error && (
-          <p role="alert" className="mt-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+          <p role="alert" className="mt-2 text-xs text-danger-ink dark:text-danger-soft">
             {error}
           </p>
         )}
@@ -178,10 +178,10 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
         <div className="mt-2 flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center py-6" role="status" aria-label="Loading contacts">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#21c063] border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-green border-t-transparent" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-6 text-center text-sm text-gray-600 dark:text-[#8696a0]">
+            <div className="py-6 text-center text-sm text-gray-600 dark:text-dark-muted">
               No contacts found
             </div>
           ) : (
@@ -197,13 +197,13 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggle(jid)}
-                    className="accent-[#21c063] shrink-0"
+                    className="accent-green shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-sm text-light-text dark:text-dark-text">
                       {c.full_name || c.push_name || c.phno}
                     </div>
-                    <div className="truncate text-xs text-gray-600 dark:text-[#8696a0]">
+                    <div className="truncate text-xs text-gray-600 dark:text-dark-muted">
                       {c.phno}
                     </div>
                   </div>
@@ -226,7 +226,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
             onClick={handleCreate}
             disabled={!groupName.trim() || selected.size === 0 || creating}
             aria-busy={creating}
-            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`rounded-lg bg-green px-4 py-2 text-sm font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {creating ? "Creating…" : `Create group (${selected.size})`}
           </button>

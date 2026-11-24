@@ -114,7 +114,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
         <h2 id={titleId} className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
           Join Group by Link
         </h2>
-        <p className="mb-4 text-sm text-gray-600 dark:text-[#8696a0]">
+        <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
           Paste a WhatsApp group invite link or code
         </p>
         <label htmlFor="invite-link" className="sr-only">
@@ -134,12 +134,12 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
           className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400`}
         />
         {error && (
-          <p role="alert" className="mb-3 text-sm text-[#b42318] dark:text-[#fca5a5]">
+          <p role="alert" className="mb-3 text-sm text-danger-ink dark:text-danger-soft">
             {error}
           </p>
         )}
         {success && (
-          <p role="status" className="mb-3 text-sm text-[#1b9a58] dark:text-[#21c063]">
+          <p role="status" className="mb-3 text-sm text-green-dark dark:text-green">
             {success}
           </p>
         )}
@@ -156,7 +156,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
             onClick={() => void handleJoin()}
             disabled={busy || !input.trim()}
             aria-busy={busy}
-            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`rounded-lg bg-green px-4 py-2 text-sm font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {busy ? "Joining..." : "Join"}
           </button>

@@ -114,7 +114,7 @@ export function PollVoteDialog({
         </h3>
         <p className="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">{question}</p>
         {done ? (
-          <p role="status" className="mb-3 text-sm text-[#1b9a58] dark:text-[#21c063]">
+          <p role="status" className="mb-3 text-sm text-green-dark dark:text-green">
             Vote submitted!
           </p>
         ) : (
@@ -128,7 +128,7 @@ export function PollVoteDialog({
                 aria-pressed={selected.has(i)}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                   selected.has(i)
-                    ? "border-[#21c063] bg-[#21c063]/10 text-[#1b9a58] dark:text-[#21c063]"
+                    ? "border-green bg-green/10 text-green-dark dark:text-green"
                     : "border-gray-300 text-gray-900 hover:bg-gray-100 dark:border-dark-border dark:text-gray-100 dark:hover:bg-dark-tertiary"
                 }`}
               >
@@ -138,7 +138,7 @@ export function PollVoteDialog({
           </div>
         )}
         {error && (
-          <p role="alert" className="mb-2 text-xs text-[#b42318] dark:text-[#fca5a5]">
+          <p role="alert" className="mb-2 text-xs text-danger-ink dark:text-danger-soft">
             {error}
           </p>
         )}
@@ -156,7 +156,7 @@ export function PollVoteDialog({
               onClick={vote}
               disabled={selected.size === 0 || sending}
               aria-busy={sending}
-              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`rounded-lg bg-green px-4 py-2 text-sm font-medium text-action-ink transition-colors hover:bg-green-hover disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {sending ? "Voting…" : "Vote"}
             </button>

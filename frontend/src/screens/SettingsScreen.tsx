@@ -190,7 +190,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     if (!selectedCategory) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#21c063]/10 text-[#21c063] shadow-[0_0_40px_rgba(33,192,99,0.15)]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-green/10 text-green shadow-[0_0_40px_rgba(33,192,99,0.15)]">
             <SettingsIcon className="w-10 h-10" />
           </div>
           <div>
@@ -412,7 +412,7 @@ function SettingsMenuItem({
       onClick={onClick}
       className={clsx(
         "mx-2 my-0.5 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150",
-        isSelected ? "bg-[#21c063]/10" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
+        isSelected ? "bg-green/10" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
       )}
     >
       <div
@@ -421,7 +421,7 @@ function SettingsMenuItem({
           item.danger
             ? "bg-red-500/10 text-red-500"
             : isSelected
-              ? "bg-[#21c063]/15 text-[#0b6b3a] dark:text-[#5fd385]"
+              ? "bg-green/15 text-green-deep dark:text-green-light"
               : "bg-black/[0.04] text-light-muted dark:bg-white/[0.06] dark:text-dark-muted",
         )}
       >
@@ -434,7 +434,7 @@ function SettingsMenuItem({
             item.danger
               ? "text-red-500 dark:text-red-400"
               : isSelected
-                ? "text-[#0b6b3a] dark:text-[#5fd385]"
+                ? "text-green-deep dark:text-green-light"
                 : "text-light-text dark:text-dark-text",
           )}
         >
@@ -447,7 +447,7 @@ function SettingsMenuItem({
         )}
       </div>
       {isSelected && (
-        <span className="h-2 w-2 shrink-0 rounded-full bg-[#21c063] shadow-[0_0_8px_rgba(33,192,99,0.6)]" />
+        <span className="h-2 w-2 shrink-0 rounded-full bg-green shadow-[0_0_8px_rgba(33,192,99,0.6)]" />
       )}
     </button>
   )

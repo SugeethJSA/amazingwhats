@@ -116,7 +116,7 @@ export function ForwardDialog({ sourceJID, messageID, onClose }: ForwardDialogPr
         </div>
         <div className="flex-1 space-y-1 overflow-y-auto p-2">
           {chats.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-600 dark:text-[#8696a0]">
+            <p className="py-8 text-center text-sm text-gray-600 dark:text-dark-muted">
               No chats found
             </p>
           ) : (
@@ -140,7 +140,7 @@ export function ForwardDialog({ sourceJID, messageID, onClose }: ForwardDialogPr
                   <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                     {chat.name}
                   </div>
-                  <div className="truncate text-xs text-gray-600 dark:text-[#8696a0]">
+                  <div className="truncate text-xs text-gray-600 dark:text-dark-muted">
                     {chat.type === "group" ? "Group" : formatPhone(phoneFromJID(chat.id))}
                   </div>
                 </div>

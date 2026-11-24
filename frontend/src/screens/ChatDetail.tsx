@@ -1329,7 +1329,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               viewBox="0 0 24 24"
               width="16"
               height="16"
-              className="shrink-0 fill-current text-[#1b9a58] dark:text-[#21c063]"
+              className="shrink-0 fill-current text-green-dark dark:text-green"
             >
               <path d="M16 3a1 1 0 0 1 .95 1.31l-.9 2.72 3.42 3.42a1 1 0 0 1-.21 1.57l-3.62 2.07-1.9 4.75a1 1 0 0 1-1.64.33L9 16.07l-4.29 4.3-1.42-1.42 4.3-4.29-3.1-3.1a1 1 0 0 1 .33-1.64l4.75-1.9 2.07-3.62A1 1 0 0 1 12.5 4z" />
             </svg>
@@ -1342,7 +1342,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               }}
             />
             {pinnedMessages.length > 1 && (
-              <span className="shrink-0 text-xs text-gray-600 dark:text-[#8696a0]">
+              <span className="shrink-0 text-xs text-gray-600 dark:text-dark-muted">
                 {pinnedMessages.length}
               </span>
             )}
@@ -1355,7 +1355,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           <div className="chat-wallpaper absolute inset-0 pointer-events-none z-0" />
           {(initialLoad || !isReady) && (
             <div
-              className="absolute inset-0 flex items-center justify-center bg-[#efeae2] dark:bg-dark-bg z-50"
+              className="absolute inset-0 flex items-center justify-center bg-chat-wallpaper dark:bg-dark-bg z-50"
               role="status"
               aria-label="Loading messages"
             >
@@ -1366,7 +1366,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           {loadError && isReady && !initialLoad && (
             <div
               role="alert"
-              className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-[#efeae2] px-6 text-center dark:bg-dark-bg"
+              className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-chat-wallpaper px-6 text-center dark:bg-dark-bg"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -1377,7 +1377,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 aria-hidden="true"
-                className="shrink-0 text-[#5a6670] dark:text-dark-muted"
+                className="shrink-0 text-muted-subtle dark:text-dark-muted"
               >
                 <circle cx="12" cy="12" r="9" />
                 <path d="M12 7.5v5.5M12 16.5h.01" />
@@ -1386,7 +1386,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                 <p className="text-base font-semibold text-light-text dark:text-dark-text">
                   Couldn't load messages
                 </p>
-                <p className="mt-1 max-w-sm text-sm text-[#5a6670] dark:text-dark-muted">
+                <p className="mt-1 max-w-sm text-sm text-muted-subtle dark:text-dark-muted">
                   We couldn't load this conversation. Check your connection and try again.
                 </p>
               </div>
@@ -1409,7 +1409,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             tabIndex={scrollButtonVisible ? 0 : -1}
             className={clsx(
               // Initial hidden state; GSAP autoAlpha takes over visibility.
-              "invisible absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 dark:hover:bg-[#2a3942]",
+              "invisible absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 dark:hover:bg-hover-icons",
               !scrollButtonVisible && "pointer-events-none",
             )}
           >
@@ -1460,7 +1460,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           <div
             role="status"
             aria-live="polite"
-            className="mx-3 mb-2 rounded-xl border border-[#ef4444]/30 bg-[var(--color-danger-tint)] text-[var(--color-danger-ink)]"
+            className="mx-3 mb-2 rounded-xl border border-danger/30 bg-[var(--color-danger-tint)] text-[var(--color-danger-ink)]"
           >
             <p className="px-3 pt-2 text-xs font-semibold">
               Not sent ({failedSends.length}). Retry or dismiss each message.
@@ -1474,7 +1474,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                   <button
                     type="button"
                     onClick={() => retrySend(f.tempId)}
-                    className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10"
+                    className="shrink-0 rounded-lg border border-danger/40 px-2 py-1 text-xs font-semibold hover:bg-danger/10"
                   >
                     Retry
                   </button>
@@ -1482,7 +1482,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                     type="button"
                     onClick={() => dismissFailedSend(f.tempId)}
                     aria-label={`Dismiss unsent message: ${f.preview}`}
-                    className="shrink-0 rounded p-1 hover:bg-[#ef4444]/10"
+                    className="shrink-0 rounded p-1 hover:bg-danger/10"
                   >
                     <svg
                       viewBox="0 0 16 16"

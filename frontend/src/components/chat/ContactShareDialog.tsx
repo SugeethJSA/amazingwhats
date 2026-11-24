@@ -114,10 +114,10 @@ export function ContactShareDialog({ chatId, onClose }: { chatId: string; onClos
         <div className="mt-3 flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center py-6">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#21c063] border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-green border-t-transparent" />
             </div>
           ) : contacts.length === 0 ? (
-            <div className="py-6 text-center text-sm text-gray-500 dark:text-[#8696a0]">
+            <div className="py-6 text-center text-sm text-gray-500 dark:text-dark-muted">
               No contacts found
             </div>
           ) : (
@@ -132,10 +132,10 @@ export function ContactShareDialog({ chatId, onClose }: { chatId: string; onClos
                   <div className="truncate text-sm text-light-text dark:text-dark-text">
                     {c.full_name || c.push_name || c.phno}
                   </div>
-                  <div className="truncate text-xs text-gray-500 dark:text-[#8696a0]">{c.phno}</div>
+                  <div className="truncate text-xs text-gray-500 dark:text-dark-muted">{c.phno}</div>
                 </div>
                 {sendingJid === c.jid && (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#21c063] border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-green border-t-transparent" />
                 )}
               </button>
             ))

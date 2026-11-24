@@ -317,7 +317,7 @@ export function TextField({ label, wrapperClassName, className, ...props }: Text
 type ActionVariant = "primary" | "neutral" | "danger" | "ghost"
 
 const actionVariants: Record<ActionVariant, string> = {
-  primary: "bg-[#21c063] text-[#0a1014] hover:bg-[#1ea952] disabled:hover:bg-[#21c063]",
+  primary: "bg-green text-action-ink hover:bg-green-hover disabled:hover:bg-green",
   neutral:
     "bg-black/[0.05] text-light-text hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-dark-text dark:hover:bg-white/[0.13]",
   danger: "bg-red-500 text-white hover:bg-red-600 disabled:hover:bg-red-500",
@@ -361,7 +361,7 @@ export function StatusBanner({
     <div
       className={clsx(
         "rounded-xl px-3.5 py-2.5 text-[13px] font-medium animate-slide-up",
-        tone === "success" && "bg-[#21c063]/10 text-[#0b6b3a] dark:text-[#5fd385]",
+        tone === "success" && "bg-green/10 text-green-deep dark:text-green-light",
         tone === "error" && "bg-red-500/10 text-red-600 dark:text-red-400",
         tone === "info" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
       )}
@@ -382,7 +382,7 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-5 flex items-center gap-3.5">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#21c063]/10 text-[#21c063]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green/10 text-green">
         {icon}
       </div>
       <div className="min-w-0">

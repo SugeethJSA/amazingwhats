@@ -397,7 +397,7 @@ export function MediaHub() {
         if (event.target === event.currentTarget && !forwardFor) close()
       }}
     >
-      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111b21] text-gray-100 shadow-2xl">
+      <div className="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-light-text text-gray-100 shadow-2xl">
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
           <div className="min-w-0">
             <h2 id={titleId} className="text-base font-semibold">

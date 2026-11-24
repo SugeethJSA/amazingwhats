@@ -542,7 +542,7 @@ export function MessageItem({
               <button
                 onClick={handleAcceptInvite}
                 disabled={joinBusy || !!joinSuccess}
-                className="w-full rounded-lg bg-[#21c063] px-3 py-1.5 text-sm font-medium text-[#0a1014] hover:bg-[#1ea952] disabled:opacity-50 transition-colors"
+                className="w-full rounded-lg bg-green px-3 py-1.5 text-sm font-medium text-action-ink hover:bg-green-hover disabled:opacity-50 transition-colors"
               >
                 {joinBusy ? "Joining..." : joinSuccess ? "Joined ✓" : "Accept Invite"}
               </button>
@@ -583,7 +583,7 @@ export function MessageItem({
               ) : (
                 <button
                   onClick={() => setPollVoteOpen(true)}
-                  className="mt-2 w-full rounded-lg border border-[#21c063] bg-[#21c063]/10 px-3 py-1.5 text-sm font-medium text-[#21c063] hover:bg-[#21c063]/20 transition-colors"
+                  className="mt-2 w-full rounded-lg border border-green bg-green/10 px-3 py-1.5 text-sm font-medium text-green hover:bg-green/20 transition-colors"
                 >
                   Vote
                 </button>
@@ -741,7 +741,7 @@ export function MessageItem({
           {
             // Transition scoped to the highlighted row only — a blanket
             // transition on every row makes scrolling more expensive.
-            "bg-[#21C063]/50 dark:bg-[#21C063]/40 transition-colors duration-200":
+            "bg-green/50 dark:bg-green/40 transition-colors duration-200":
               highlightedMessageId === message.Info.ID,
           },
         )}
@@ -836,7 +836,7 @@ export function MessageItem({
                   onClick={() => sendReaction(emoji)}
                   className={clsx(
                     "rounded-full px-1 text-xl leading-none transition-all duration-150 hover:scale-125 hover:-translate-y-1",
-                    myReaction === emoji && "bg-[#21c063]/30 scale-110",
+                    myReaction === emoji && "bg-green/30 scale-110",
                   )}
                 >
                   {emoji}

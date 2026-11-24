@@ -159,7 +159,7 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
         <p className="text-center text-sm">{error}</p>
         <button
           onClick={load}
-          className="mt-4 px-4 py-2 bg-[#21c063] text-white rounded-lg hover:bg-[#1b9a58] text-sm"
+          className="mt-4 px-4 py-2 bg-green text-white rounded-lg hover:bg-green-dark text-sm"
         >
           Retry
         </button>
@@ -174,13 +174,13 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
         <p className="mt-4 text-center text-sm">
           {searchTerm ? "No communities match your search." : "You're not in any communities yet."}
         </p>
-        <p className="mt-2 text-center text-xs text-gray-600 dark:text-[#8696a0] max-w-[240px]">
+        <p className="mt-2 text-center text-xs text-gray-600 dark:text-dark-muted max-w-[240px]">
           Communities bring related groups together with a shared announcement channel.
         </p>
         {!searchTerm && (
           <button
             onClick={load}
-            className="mt-4 px-4 py-2 bg-[#21c063] text-white rounded-lg hover:bg-[#1b9a58] text-sm"
+            className="mt-4 px-4 py-2 bg-green text-white rounded-lg hover:bg-green-dark text-sm"
           >
             Refresh
           </button>
@@ -198,14 +198,14 @@ export function CommunityList({ searchTerm, selectedJid, onSelect }: CommunityLi
           onClick={() => onSelect(c)}
           className={clsx(
             "flex w-full items-center px-4 py-3 text-left cursor-pointer",
-            "hover:bg-gray-100 dark:hover:bg-[#202121]",
+            "hover:bg-gray-100 dark:hover:bg-dark-surface-alt",
             selectedJid === c.jid && "bg-gray-200 dark:bg-dark-tertiary",
           )}
         >
           <CommunityAvatar avatar={c.avatar_url} name={c.name} jid={c.jid} />
           <div className="ml-4 flex-1 min-w-0">
             <h3 className="text-light-text dark:text-dark-text font-medium truncate">{c.name}</h3>
-            <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">
+            <p className="text-sm text-gray-600 dark:text-dark-muted truncate">
               {c.group_count > 0
                 ? `${c.group_count} group${c.group_count === 1 ? "" : "s"}`
                 : c.topic || "Community"}
@@ -277,7 +277,7 @@ function CreateSubGroupDialog({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Group name"
-          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 ${FOCUS_RING}`}
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle mb-3 ${FOCUS_RING}`}
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
@@ -290,7 +290,7 @@ function CreateSubGroupDialog({
           <button
             onClick={handleCreate}
             disabled={loading || !name.trim()}
-            className="px-4 py-2 text-sm bg-[#21c063] text-white rounded-lg hover:bg-[#1b9a58] disabled:opacity-50"
+            className="px-4 py-2 text-sm bg-green text-white rounded-lg hover:bg-green-dark disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create"}
           </button>
@@ -401,7 +401,7 @@ export function CommunityHome({
         <div className="min-w-0 flex-1">
           <h2 className="font-medium text-light-text dark:text-dark-text truncate">{name}</h2>
           {memberCount > 0 && (
-            <p className="text-xs text-gray-600 dark:text-[#8696a0]">
+            <p className="text-xs text-gray-600 dark:text-dark-muted">
               {memberCount.toLocaleString()} member{memberCount === 1 ? "" : "s"}
             </p>
           )}
@@ -416,11 +416,11 @@ export function CommunityHome({
             {name}
           </h1>
           {topic ? (
-            <p className="mt-2 text-sm text-gray-600 dark:text-[#8696a0] text-center max-w-md whitespace-pre-wrap">
+            <p className="mt-2 text-sm text-gray-600 dark:text-dark-muted text-center max-w-md whitespace-pre-wrap">
               {topic}
             </p>
           ) : (
-            <p className="mt-2 text-sm text-gray-600 dark:text-[#8696a0] text-center">
+            <p className="mt-2 text-sm text-gray-600 dark:text-dark-muted text-center">
               Community · {memberCount > 0 ? `${memberCount.toLocaleString()} members` : "Groups"}
             </p>
           )}
@@ -441,7 +441,7 @@ export function CommunityHome({
             {/* Announcements */}
             {announcement && (
               <section className="mt-2 bg-white dark:bg-dark-secondary">
-                <div className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-[#008069] dark:text-[#21c063]">
+                <div className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-teal dark:text-green">
                   Announcements
                 </div>
                 <button
@@ -453,7 +453,7 @@ export function CommunityHome({
                       announcement.avatar_url,
                     )
                   }
-                  className="flex w-full items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#202121] text-left"
+                  className="flex w-full items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-surface-alt text-left"
                 >
                   <div
                     className="w-12 h-12 rounded-[12px] flex items-center justify-center shrink-0 overflow-hidden"
@@ -481,7 +481,7 @@ export function CommunityHome({
                     <h3 className="font-medium text-light-text dark:text-dark-text truncate">
                       {announcement.name || "Announcements"}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted truncate">
                       Only admins can send messages
                     </p>
                   </div>
@@ -492,23 +492,23 @@ export function CommunityHome({
             {/* Groups in community */}
             <section className="mt-2 bg-white dark:bg-dark-secondary pb-4">
               <div className="flex items-center justify-between px-4 py-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-[#008069] dark:text-[#21c063]">
+                <span className="text-xs font-medium uppercase tracking-wide text-teal dark:text-green">
                   Groups{groups.length > 0 ? ` · ${groups.length}` : ""}
                 </span>
                 <button
                   onClick={() => setShowCreateGroup(true)}
-                  className="text-xs px-3 py-1 rounded bg-[#21c063] text-[#0a1014] font-medium hover:bg-[#1b9a58]"
+                  className="text-xs px-3 py-1 rounded bg-green text-action-ink font-medium hover:bg-green-dark"
                 >
                   + New Group
                 </button>
               </div>
 
               {groups.length === 0 && !announcement ? (
-                <p className="px-4 py-6 text-sm text-gray-600 dark:text-[#8696a0] text-center">
+                <p className="px-4 py-6 text-sm text-gray-600 dark:text-dark-muted text-center">
                   No groups in this community yet.
                 </p>
               ) : groups.length === 0 ? (
-                <p className="px-4 py-4 text-sm text-gray-600 dark:text-[#8696a0]">
+                <p className="px-4 py-4 text-sm text-gray-600 dark:text-dark-muted">
                   No other groups linked.
                 </p>
               ) : (
@@ -517,7 +517,7 @@ export function CommunityHome({
                     key={g.jid}
                     type="button"
                     onClick={() => onOpenGroup(g.jid, g.name, g.avatar_url)}
-                    className="flex w-full items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#202121] text-left"
+                    className="flex w-full items-center px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-surface-alt text-left"
                   >
                     <div
                       className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center shrink-0"
@@ -543,7 +543,7 @@ export function CommunityHome({
                       <h3 className="font-medium text-light-text dark:text-dark-text truncate">
                         {g.name || "Group"}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-[#8696a0] truncate">Group</p>
+                      <p className="text-sm text-gray-600 dark:text-dark-muted truncate">Group</p>
                     </div>
                   </button>
                 ))
@@ -602,14 +602,14 @@ function CreateCommunityDialog({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Community name"
-          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 ${FOCUS_RING}`}
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle mb-3 ${FOCUS_RING}`}
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={3}
-          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] mb-3 resize-none ${FOCUS_RING}`}
+          className={`w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle mb-3 resize-none ${FOCUS_RING}`}
         />
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
@@ -622,7 +622,7 @@ function CreateCommunityDialog({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleCreate}
             disabled={loading || !name.trim()}
-            className="px-4 py-2 text-sm bg-[#21c063] text-white rounded-lg hover:bg-[#1b9a58] disabled:opacity-50"
+            className="px-4 py-2 text-sm bg-green text-white rounded-lg hover:bg-green-dark disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create"}
           </button>
@@ -648,12 +648,12 @@ export function CommunitiesWelcome() {
           Communities bring members together in topic-based groups and let admins send announcements
           to everyone.
         </p>
-        <p className="mt-4 text-sm text-gray-600 dark:text-[#8696a0] max-w-sm">
+        <p className="mt-4 text-sm text-gray-600 dark:text-dark-muted max-w-sm">
           Select a community from the list to view its announcement channel and groups.
         </p>
         <button
           onClick={() => setShowCreate(true)}
-          className="mt-6 px-6 py-2.5 bg-[#21c063] text-white rounded-lg hover:bg-[#1b9a58] text-sm font-medium transition-colors"
+          className="mt-6 px-6 py-2.5 bg-green text-white rounded-lg hover:bg-green-dark text-sm font-medium transition-colors"
         >
           Create Community
         </button>

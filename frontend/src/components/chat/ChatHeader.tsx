@@ -139,7 +139,7 @@ export function ChatHeader({
           <button
             onClick={onBack}
             aria-label="Back to chats"
-            className="mr-2 p-1.5 rounded-full transition-colors text-gray-600 dark:text-[#8696a0] hover:bg-black/5 dark:hover:bg-white/10 md:hidden"
+            className="mr-2 p-1.5 rounded-full transition-colors text-gray-600 dark:text-dark-muted hover:bg-black/5 dark:hover:bg-white/10 md:hidden"
           >
             <GoBackIcon />
           </button>
@@ -187,7 +187,7 @@ export function ChatHeader({
                 {typingDot("320ms")}
               </div>
             ) : chatSubtitle ? (
-              <div className="text-xs truncate text-gray-600 dark:text-[#8696a0]">
+              <div className="text-xs truncate text-gray-600 dark:text-dark-muted">
                 {chatSubtitle}
               </div>
             ) : null}
@@ -285,7 +285,7 @@ export function ChatHeader({
                     closeMenu()
                     setConfirmClear(true)
                   }}
-                  className={`${MENU_ITEM} mt-1 border-t border-black/[0.06] pt-3 text-[#b42318] dark:border-white/[0.08] dark:text-[#fca5a5]`}
+                  className={`${MENU_ITEM} mt-1 border-t border-black/[0.06] pt-3 text-danger-ink dark:border-white/[0.08] dark:text-danger-soft`}
                 >
                   Clear chat
                 </button>

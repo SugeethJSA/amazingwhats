@@ -393,7 +393,7 @@ export function CallsScreen({ onOpenChat }: { onOpenChat: (jid: string) => void 
     <div className="flex h-full flex-col bg-light-bg dark:bg-dark-bg">
       <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 dark:border-dark-border dark:bg-dark-bg">
         <div className="mb-3 flex items-center gap-2">
-          <span className="text-green-ink dark:text-[#5fd385]">
+          <span className="text-green-ink dark:text-green-light">
             <PhoneGlyph className="h-5 w-5" />
           </span>
           <h1 className="text-lg font-semibold tracking-tight text-light-text dark:text-dark-text">

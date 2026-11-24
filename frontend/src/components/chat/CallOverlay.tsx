@@ -1141,7 +1141,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
           title="Drag to move"
         >
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#21c063] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-green animate-pulse" />
           </div>
           <span className="text-xs text-gray-300">
             {activeCall.isGroup
@@ -1157,7 +1157,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         {/* Contact Avatar */}
         <div className="relative mb-3 flex items-center justify-center">
           {activeCall.status !== "active" && (
-            <div className="absolute inset-0 rounded-full bg-[#21c063]/20 animate-ping motion-reduce:animate-none" />
+            <div className="absolute inset-0 rounded-full bg-green/20 animate-ping motion-reduce:animate-none" />
           )}
           {activeCall.avatarUrl ? (
             <img
@@ -1357,7 +1357,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
               </button>
               <button
                 onClick={handleAccept}
-                className="w-12 h-12 rounded-full bg-[#21c063] text-white flex items-center justify-center shadow-lg shadow-[#21c063]/40 transition-transform hover:scale-105 active:scale-95 animate-pulse"
+                className="w-12 h-12 rounded-full bg-green text-white flex items-center justify-center shadow-lg shadow-green/40 transition-transform hover:scale-105 active:scale-95 animate-pulse"
                 aria-label="Accept call"
                 title="Accept Call"
               >
@@ -1398,7 +1398,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
               {pendingUpgrade && !screenSharing && (
                 <button
                   onClick={handleAcceptVideo}
-                  className="rounded-full bg-[#21c063]/25 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-[#21c063]/40 transition-colors"
+                  className="rounded-full bg-green/25 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-green/40 transition-colors"
                   aria-label="Accept video"
                   title="Accept video"
                 >
@@ -1583,7 +1583,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 onChange={e => setAddSearch(e.target.value)}
                 placeholder="Search contacts..."
                 autoFocus
-                className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] outline-none"
+                className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-dark-tertiary text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-600 dark:placeholder:text-dark-subtle outline-none"
               />
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -1613,7 +1613,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                       {chat.name}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-[#9aa8b0] truncate">
+                    <div className="text-xs text-gray-600 dark:text-dark-subtle truncate">
                       {chat.type === "group" ? "Group" : formatPhone(phoneFromJID(chat.id))}
                     </div>
                   </div>

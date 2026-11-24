@@ -158,7 +158,7 @@ const ChatsSettingsScreen = () => {
                             className={[
                               "h-7 w-7 shrink-0 rounded-full transition-transform",
                               labelColor === color.value
-                                ? "scale-110 ring-2 ring-[#21c063] ring-offset-2 dark:ring-offset-dark-secondary"
+                                ? "scale-110 ring-2 ring-green ring-offset-2 dark:ring-offset-dark-secondary"
                                 : "hover:scale-105",
                             ].join(" ")}
                             style={{ backgroundColor: color.color }}
