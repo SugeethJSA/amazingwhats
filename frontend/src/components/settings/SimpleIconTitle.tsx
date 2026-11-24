@@ -33,7 +33,6 @@ const SimpleIconTitle = ({
       onClick={handleClick}
       className={clsx(
         "flex w-full flex-row items-center gap-4 rounded-xl p-4 text-left",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
         clickable
           ? "cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           : "cursor-default",

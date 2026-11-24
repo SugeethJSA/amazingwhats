@@ -3,9 +3,6 @@ import { SendPoll } from "../../../bindings/github.com/lugvitc/whats4linux/api/a
 
 const MAX_OPTIONS = 12
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
-
 export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () => void }) {
   const [question, setQuestion] = useState("")
   const [options, setOptions] = useState<string[]>(["", ""])
@@ -85,7 +82,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
   const inputCls =
     "w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none " +
     "placeholder:text-gray-600 dark:placeholder:text-gray-400 " +
-    "focus:border-[var(--color-focus-ring)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] " +
+    "focus:border-[var(--color-focus-ring)] " +
     "text-light-text dark:text-dark-text"
 
   return (
@@ -140,7 +137,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
                   type="button"
                   onClick={() => removeOption(i)}
                   aria-label={`Remove option ${i + 1}`}
-                  className={`shrink-0 rounded p-1 text-light-muted hover:text-[#b42318] dark:text-dark-muted dark:hover:text-[#fca5a5] ${FOCUS_RING}`}
+                  className={`shrink-0 rounded p-1 text-light-muted hover:text-[#b42318] dark:text-dark-muted dark:hover:text-[#fca5a5]`}
                 >
                   ×
                 </button>
@@ -153,7 +150,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
           <button
             type="button"
             onClick={() => setOptions(prev => [...prev, ""])}
-            className={`mt-2 rounded text-sm text-[#1b9a58] hover:underline dark:text-[#21c063] ${FOCUS_RING}`}
+            className={`mt-2 rounded text-sm text-[#1b9a58] hover:underline dark:text-[#21c063]`}
           >
             + Add option
           </button>
@@ -179,7 +176,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5`}
           >
             Cancel
           </button>
@@ -188,7 +185,7 @@ export function PollDialog({ chatId, onClose }: { chatId: string; onClose: () =>
             onClick={send}
             disabled={!valid || sending}
             aria-busy={sending}
-            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {sending ? "Sending…" : "Send poll"}
           </button>

@@ -5,9 +5,6 @@ import {
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import * as api from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
-
 export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
   const [contacts, setContacts] = useState<api.Contact[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,7 +109,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
   const inputCls =
     "w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none " +
     "placeholder:text-gray-600 dark:placeholder:text-gray-400 " +
-    "focus:border-[var(--color-focus-ring)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] " +
+    "focus:border-[var(--color-focus-ring)] " +
     "text-light-text dark:text-dark-text"
 
   return (
@@ -220,7 +217,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5`}
           >
             Cancel
           </button>
@@ -229,7 +226,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
             onClick={handleCreate}
             disabled={!groupName.trim() || selected.size === 0 || creating}
             aria-busy={creating}
-            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {creating ? "Creating…" : `Create group (${selected.size})`}
           </button>

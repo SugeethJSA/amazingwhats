@@ -38,10 +38,10 @@ const VideoCallIcon = () => (
 )
 
 const ACTION_BUTTON =
-  "p-2 rounded-full transition-colors text-light-muted hover:text-light-text hover:bg-black/5 dark:text-dark-muted dark:hover:text-dark-text dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+  "p-2 rounded-full transition-colors text-light-muted hover:text-light-text hover:bg-black/5 dark:text-dark-muted dark:hover:text-dark-text dark:hover:bg-white/10"
 
 const MENU_ITEM =
-  "flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-sm transition-colors text-light-text hover:bg-black/5 focus-visible:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:text-dark-text dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
+  "flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-sm transition-colors text-light-text hover:bg-black/5 focus-visible:bg-black/5 dark:text-dark-text dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
 
 export function ChatHeader({
   chatName,
@@ -139,7 +139,7 @@ export function ChatHeader({
           <button
             onClick={onBack}
             aria-label="Back to chats"
-            className="mr-2 p-1.5 rounded-full transition-colors text-gray-600 dark:text-[#8696a0] hover:bg-black/5 dark:hover:bg-white/10 md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="mr-2 p-1.5 rounded-full transition-colors text-gray-600 dark:text-[#8696a0] hover:bg-black/5 dark:hover:bg-white/10 md:hidden"
           >
             <GoBackIcon />
           </button>
@@ -149,7 +149,7 @@ export function ChatHeader({
           type="button"
           onClick={onInfoClick}
           aria-label={`Open chat info for ${chatName}`}
-          className="flex items-center gap-3 min-w-0 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+          className="flex items-center gap-3 min-w-0 rounded-xl text-left"
         >
           {/* Avatar with presence dot */}
           <div className="relative shrink-0">

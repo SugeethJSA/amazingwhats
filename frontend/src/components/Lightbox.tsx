@@ -34,9 +34,6 @@ type DisplayKind = "image" | "video"
 type Popover = "reaction" | "more" | null
 type ConfirmAction = "delete" | "revoke" | null
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-
 /* ------------------------------------------------------------------ icons */
 
 // New glyphs not present in the shared inline-SVG sets. All inherit color so
@@ -117,7 +114,6 @@ function ActionButton({ label, title, onClick, disabled, pressed, children }: Ac
       }}
       className={clsx(
         "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white/85 transition-colors hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-35",
-        FOCUS_RING,
         pressed && "bg-white/20 text-white",
       )}
     >
@@ -149,7 +145,6 @@ function NavArrow({
       className={clsx(
         "absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition-colors hover:bg-black/75 hover:text-white disabled:cursor-not-allowed disabled:opacity-25",
         direction === "prev" ? "left-3" : "right-3",
-        FOCUS_RING,
       )}
     >
       <ViewerIcon>{direction === "prev" ? <PrevIcon /> : <NextIcon />}</ViewerIcon>
@@ -575,7 +570,7 @@ export function Lightbox() {
             onClick={close}
             aria-label="Close viewer"
             title="Close (Esc)"
-            className={`flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition-colors hover:bg-white/15 hover:text-white ${FOCUS_RING}`}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition-colors hover:bg-white/15 hover:text-white`}
           >
             <ViewerIcon><CloseIcon /></ViewerIcon>
           </button>
@@ -749,7 +744,7 @@ export function Lightbox() {
               aria-label={`React with ${emoji}`}
               title={emoji}
               onClick={() => handleReact(emoji)}
-              className={`flex h-9 w-9 items-center justify-center rounded-xl text-xl transition-transform hover:scale-110 hover:bg-white/10 ${FOCUS_RING}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl text-xl transition-transform hover:scale-110 hover:bg-white/10`}
             >
               {emoji}
             </button>
@@ -773,7 +768,7 @@ export function Lightbox() {
               setConfirmAction("delete")
               setPopover(null)
             }}
-            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10 ${FOCUS_RING}`}
+            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10`}
           >
             <ViewerIcon><DeleteIcon /></ViewerIcon>
             Delete for me
@@ -788,7 +783,7 @@ export function Lightbox() {
                 setConfirmAction("revoke")
                 setPopover(null)
               }}
-              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10 ${FOCUS_RING}`}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10`}
             >
               <ViewerIcon><RevokeIcon /></ViewerIcon>
               Revoke for everyone
@@ -815,7 +810,7 @@ export function Lightbox() {
               aria-label="Cancel"
               title="Cancel"
               onClick={() => setConfirmAction(null)}
-              className={`rounded-lg px-3 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white ${FOCUS_RING}`}
+              className={`rounded-lg px-3 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white`}
             >
               Cancel
             </button>
@@ -825,7 +820,7 @@ export function Lightbox() {
               title={confirmAction === "revoke" ? "Confirm revoke" : "Confirm delete"}
               onClick={handleConfirmDelete}
               disabled={busy}
-              className={`rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+              className={`rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {confirmAction === "revoke" ? "Revoke" : "Delete"}
             </button>

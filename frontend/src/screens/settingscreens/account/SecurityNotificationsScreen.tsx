@@ -46,7 +46,7 @@ export function SecurityNotificationsScreen() {
         </div>
         <button
           onClick={() => window.open("https://www.whatsapp.com/security/?lg=en", "_blank")}
-          className="mt-5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#0b6b3a] transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:text-[#5fd385]"
+          className="mt-5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#0b6b3a] transition-colors hover:underline dark:text-[#5fd385]"
         >
           Learn more about WhatsApp security (opens external site)
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">

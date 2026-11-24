@@ -88,13 +88,13 @@ const ComponentColorSelector = () => {
         {selectedComponent && (
           <div className="flex flex-col gap-2 mt-4">
             <button
-              className="min-h-9 w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+              className="min-h-9 w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
               onClick={saveChanges}
             >
               Save Settings
             </button>
             <button
-              className="min-h-9 w-full py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:opacity-90 transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+              className="min-h-9 w-full py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:opacity-90 transition-colors text-sm"
               onClick={resetToDefaults}
             >
               Reset to Defaults

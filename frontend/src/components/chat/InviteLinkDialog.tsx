@@ -8,9 +8,6 @@ interface InviteLinkDialogProps {
 
 const INVITE_URL_PREFIX = "https://chat.whatsapp.com/"
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
-
 function extractInviteCode(input: string): string {
   const trimmed = input.trim()
   if (trimmed.startsWith(INVITE_URL_PREFIX)) {
@@ -134,7 +131,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="https://chat.whatsapp.com/... or invite code"
-          className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400 ${FOCUS_RING}`}
+          className={`mb-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 outline-none placeholder:text-gray-600 dark:bg-dark-tertiary dark:text-gray-100 dark:placeholder:text-gray-400`}
         />
         {error && (
           <p role="alert" className="mb-3 text-sm text-[#b42318] dark:text-[#fca5a5]">
@@ -150,7 +147,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className={`px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-tertiary ${FOCUS_RING}`}
+            className={`px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-tertiary`}
           >
             Cancel
           </button>
@@ -159,7 +156,7 @@ export function InviteLinkDialog({ onClose }: InviteLinkDialogProps) {
             onClick={() => void handleJoin()}
             disabled={busy || !input.trim()}
             aria-busy={busy}
-            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+            className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {busy ? "Joining..." : "Join"}
           </button>

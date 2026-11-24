@@ -56,11 +56,6 @@ import { useMuteStore } from "../../store/useMuteStore"
 import { InviteLinkDialog } from "./InviteLinkDialog"
 import type { ContactActionTarget } from "../../hooks/useContactActions"
 
-// Shared keyboard-focus treatment: 2px outline at 2px offset in the global
-// --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-
 /**
  * Accessible on/off control for group settings. A real button keeps Enter and
  * Space working, while role="switch" communicates the state to assistive tech.
@@ -85,7 +80,7 @@ function SettingsSwitch({
       aria-label={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         checked ? "bg-[#21c063]" : "bg-gray-300 dark:bg-gray-600"
       }`}
     >
@@ -1172,7 +1167,7 @@ export function ChatInfo({
                     <div className="mx-4 mb-3">
                       <input
                         autoFocus
-                        className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] text-light-text dark:text-dark-text mb-2 ${FOCUS_RING}`}
+                        className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-[#9aa8b0] text-light-text dark:text-dark-text mb-2`}
                         value={addSearch}
                         onChange={e => {
                           const q = e.target.value
@@ -1299,7 +1294,7 @@ export function ChatInfo({
                     <div className="p-4 flex flex-col gap-2">
                       <input
                         autoFocus
-                        className={`w-full rounded-lg border border-gray-300 dark:border-white/10 bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text ${FOCUS_RING}`}
+                        className={`w-full rounded-lg border border-gray-300 dark:border-white/10 bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text`}
                         value={subjectDraft}
                         onChange={e => setSubjectDraft(e.target.value)}
                         placeholder="Group subject"
@@ -1402,7 +1397,7 @@ export function ChatInfo({
                         <div className="p-4 flex flex-col gap-2 border-t border-gray-200 dark:border-dark-tertiary">
                           <textarea
                             autoFocus
-                            className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text resize-none ${FOCUS_RING}`}
+                            className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text resize-none`}
                             rows={3}
                             value={topicDraft}
                             onChange={e => setTopicDraft(e.target.value)}

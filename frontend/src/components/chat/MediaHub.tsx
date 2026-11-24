@@ -37,9 +37,6 @@ interface HubItem {
   gif_playback: boolean
 }
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-
 function dayLabel(timestamp: number): string {
   const ms = timestamp < 1e12 ? timestamp * 1000 : timestamp
   const date = new Date(ms)
@@ -164,7 +161,7 @@ function MediaThumbnailCell({ item, selected, onToggle, onOpen }: MediaThumbnail
         onClick={() => onOpen(item, src)}
         aria-label={`Open ${label}`}
         title={label}
-        className={`absolute inset-0 flex h-full w-full items-center justify-center ${FOCUS_RING}`}
+        className={`absolute inset-0 flex h-full w-full items-center justify-center`}
       >
         {src ? (
           <img src={src} alt="" decoding="async" loading="lazy" className="h-full w-full object-cover" />
@@ -182,7 +179,7 @@ function MediaThumbnailCell({ item, selected, onToggle, onOpen }: MediaThumbnail
         checked={selected}
         onChange={() => onToggle(item.message_id)}
         aria-label={`Select ${label}`}
-        className={`absolute left-1.5 top-1.5 z-10 h-4 w-4 cursor-pointer rounded border-white/40 bg-black/45 accent-emerald-500 ${FOCUS_RING}`}
+        className={`absolute left-1.5 top-1.5 z-10 h-4 w-4 cursor-pointer rounded border-white/40 bg-black/45 accent-emerald-500`}
       />
     </div>
   )
@@ -414,7 +411,7 @@ export function MediaHub() {
             onClick={close}
             aria-label="Close media hub"
             title="Close"
-            className={`rounded-lg px-2 py-1 text-2xl leading-none text-gray-300 hover:bg-white/10 ${FOCUS_RING}`}
+            className={`rounded-lg px-2 py-1 text-2xl leading-none text-gray-300 hover:bg-white/10`}
           >
             ×
           </button>
@@ -432,7 +429,7 @@ export function MediaHub() {
                   setTab(name)
                   setSelected(new Set())
                 }}
-                className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${tab === name ? "bg-emerald-600/30 text-emerald-200" : "text-gray-400 hover:text-gray-100"} ${FOCUS_RING}`}
+                className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${tab === name ? "bg-emerald-600/30 text-emerald-200" : "text-gray-400 hover:text-gray-100"}`}
               >
                 {name}
               </button>
@@ -470,7 +467,7 @@ export function MediaHub() {
             }
             aria-label={allVisibleSelected ? "Clear selection" : "Select all visible"}
             title={allVisibleSelected ? "Clear selection" : "Select all visible"}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10 ${FOCUS_RING}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -490,7 +487,7 @@ export function MediaHub() {
           <button
             type="button"
             onClick={close}
-            className={`rounded-lg px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10 ${FOCUS_RING}`}
+            className={`rounded-lg px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10`}
           >
             Cancel
           </button>
@@ -585,7 +582,7 @@ export function MediaHub() {
               onClick={() =>
                 void runAction("Delete", item => DeleteForMe(item.chat_jid, item.message_id))
               }
-              className={`rounded-lg px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-40 ${FOCUS_RING}`}
+              className={`rounded-lg px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-40`}
             >
               Delete
             </button>
@@ -595,7 +592,7 @@ export function MediaHub() {
               onClick={() =>
                 void runAction("Star", item => StarMessage(item.chat_jid, item.message_id, true))
               }
-              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40 ${FOCUS_RING}`}
+              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40`}
             >
               Star
             </button>
@@ -609,7 +606,7 @@ export function MediaHub() {
                     : DownloadMediaToFile(item.message_id),
                 )
               }
-              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40 ${FOCUS_RING}`}
+              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40`}
             >
               Download
             </button>
@@ -620,7 +617,7 @@ export function MediaHub() {
                 const first = selectedItems[0]
                 if (first) setForwardFor(first)
               }}
-              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40 ${FOCUS_RING}`}
+              className={`rounded-lg px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40`}
             >
               Forward
             </button>

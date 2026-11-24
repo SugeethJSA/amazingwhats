@@ -5,9 +5,6 @@ interface CreateChannelDialogProps {
   onClose: () => void
 }
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
-
 export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -102,7 +99,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
         <input
           id="channel-name"
           autoFocus
-          className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[var(--color-focus-ring)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:placeholder:text-gray-400 dark:focus:border-[var(--color-focus-ring)] text-light-text dark:text-dark-text"
+          className="mb-3 w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[var(--color-focus-ring)] dark:placeholder:text-gray-400 dark:focus:border-[var(--color-focus-ring)] text-light-text dark:text-dark-text"
           value={name}
           onChange={event => setName(event.target.value)}
           placeholder="Channel name"
@@ -115,7 +112,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
         </label>
         <textarea
           id="channel-description"
-          className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[var(--color-focus-ring)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:placeholder:text-gray-400 text-light-text dark:text-dark-text resize-none"
+          className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-gray-600 focus:border-[var(--color-focus-ring)] dark:placeholder:text-gray-400 text-light-text dark:text-dark-text resize-none"
           rows={3}
           value={description}
           onChange={event => setDescription(event.target.value)}
@@ -137,7 +134,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5`}
           >
             {success ? "Close" : "Cancel"}
           </button>
@@ -147,7 +144,7 @@ export function CreateChannelDialog({ onClose }: CreateChannelDialogProps) {
               onClick={handleCreate}
               disabled={!name.trim() || creating}
               aria-busy={creating}
-              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {creating ? "Creating…" : "Create"}
             </button>

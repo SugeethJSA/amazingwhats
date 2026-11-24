@@ -157,7 +157,6 @@ const ChatsSettingsScreen = () => {
                             onClick={() => setLabelColor(color.value)}
                             className={[
                               "h-7 w-7 shrink-0 rounded-full transition-transform",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
                               labelColor === color.value
                                 ? "scale-110 ring-2 ring-[#21c063] ring-offset-2 dark:ring-offset-dark-secondary"
                                 : "hover:scale-105",

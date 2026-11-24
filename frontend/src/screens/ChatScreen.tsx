@@ -196,7 +196,6 @@ const ChevronDownIcon = () => (
 const chipClassName = (active: boolean) =>
   clsx(
     "shrink-0 rounded-full border px-3 py-1 text-xs transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]",
     active
       ? "border-transparent bg-green-muted font-medium text-green-ink"
       : "border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-dark-border dark:text-dark-muted dark:hover:bg-white/5",
@@ -860,7 +859,7 @@ const QuickAction = ({ label, onClick, disabled, children }: QuickActionProps) =
     onClick={onClick}
     disabled={disabled}
     aria-label={label}
-    className="group flex w-20 flex-col items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+    className="group flex w-20 flex-col items-center gap-2 rounded-xl disabled:cursor-not-allowed disabled:opacity-50"
   >
     <span className="flex h-12 w-12 items-center justify-center rounded-full bg-light-tertiary text-gray-600 transition-colors group-hover:bg-green-muted dark:bg-dark-secondary dark:text-[#8696a0]">
       {children}
@@ -898,7 +897,7 @@ const WelcomeScreen = ({
       <button
         type="button"
         onClick={onGoToCalls}
-        className="mt-6 rounded-full bg-light-tertiary px-5 py-2 text-sm font-medium text-light-text transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:bg-dark-tertiary dark:text-dark-text dark:hover:bg-white/10"
+        className="mt-6 rounded-full bg-light-tertiary px-5 py-2 text-sm font-medium text-light-text transition-colors hover:bg-gray-200 dark:bg-dark-tertiary dark:text-dark-text dark:hover:bg-white/10"
       >
         Go to Calls
       </button>
@@ -1816,7 +1815,6 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                   onClick={() => setMoreFiltersOpen(open => !open)}
                   className={clsx(
                     "flex h-7 w-8 items-center justify-center rounded-full border transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]",
                     MORE_FILTERS.includes(chatFilter)
                       ? "border-transparent bg-green-muted text-green-ink"
                       : "border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-dark-border dark:text-dark-muted dark:hover:bg-white/5",
@@ -1839,7 +1837,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                         onClick={() => chooseMoreFilter(filter)}
                         className={clsx(
                           "flex w-full items-center justify-between gap-4 px-3 py-2 text-left text-sm transition-colors",
-                          "focus-visible:outline-none focus-visible:bg-gray-100 dark:focus-visible:bg-white/5",
+                          "focus-visible:bg-gray-100 dark:focus-visible:bg-white/5",
                           "text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5",
                         )}
                       >
@@ -1852,7 +1850,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                       type="button"
                       role="menuitem"
                       onClick={() => chooseMoreFilter("all")}
-                      className="flex w-full px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                      className="flex w-full px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
                     >
                       All chats
                     </button>

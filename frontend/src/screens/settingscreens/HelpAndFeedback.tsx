@@ -48,7 +48,7 @@ function LinkRow({
     <button
       type="button"
       onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
-      className="flex min-h-14 w-full cursor-pointer items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-white/[0.04]"
+      className="flex min-h-14 w-full cursor-pointer items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-light-muted dark:bg-white/[0.06] dark:text-dark-muted">
         {icon}

@@ -1323,7 +1323,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               handleQuotedClick(target.message_id)
             }}
             aria-label={`Pinned message, ${pinnedMessages.length} total. Activate to jump to the next one.`}
-            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)] dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
+            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
           >
             <svg
               viewBox="0 0 24 24"
@@ -1393,7 +1393,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               <button
                 type="button"
                 onClick={retryInitialLoad}
-                className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-light-text hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:border-white/10 dark:bg-dark-secondary dark:text-dark-text dark:hover:bg-white/5"
+                className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-light-text hover:bg-gray-50 dark:border-white/10 dark:bg-dark-secondary dark:text-dark-text dark:hover:bg-white/5"
               >
                 Retry
               </button>
@@ -1409,7 +1409,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             tabIndex={scrollButtonVisible ? 0 : -1}
             className={clsx(
               // Initial hidden state; GSAP autoAlpha takes over visibility.
-              "invisible absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-[#2a3942]",
+              "invisible absolute bottom-4 right-8 bg-white dark:bg-received-bubble-dark-bg p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 z-100 hover:bg-gray-100 dark:hover:bg-[#2a3942]",
               !scrollButtonVisible && "pointer-events-none",
             )}
           >
@@ -1474,7 +1474,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                   <button
                     type="button"
                     onClick={() => retrySend(f.tempId)}
-                    className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                    className="shrink-0 rounded-lg border border-[#ef4444]/40 px-2 py-1 text-xs font-semibold hover:bg-[#ef4444]/10"
                   >
                     Retry
                   </button>
@@ -1482,7 +1482,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                     type="button"
                     onClick={() => dismissFailedSend(f.tempId)}
                     aria-label={`Dismiss unsent message: ${f.preview}`}
-                    className="shrink-0 rounded p-1 hover:bg-[#ef4444]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                    className="shrink-0 rounded p-1 hover:bg-[#ef4444]/10"
                   >
                     <svg
                       viewBox="0 0 16 16"

@@ -7,11 +7,6 @@ import ToggleButton from "./ToggleButton"
    Cards, rows, segmented/menu selects, inputs and buttons share the same
    design tokens as the rest of the app (light/dark aware). */
 
-// Shared keyboard-focus treatment: 2px outline at 2px offset in the global
-// --color-focus-ring token (>=3:1 on both canvases). No component-local ring.
-const FOCUS_RING =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
-
 const cardCls =
   "rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-dark-secondary shadow-[0_1px_2px_rgba(0,0,0,0.04)] overflow-hidden"
 
@@ -113,7 +108,7 @@ export function SettingRow({
       className={clsx(
         "flex items-center gap-3 px-4 py-3.5",
         clickable &&
-          "cursor-pointer transition-colors hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)] dark:hover:bg-white/[0.04]",
+          "cursor-pointer transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
       )}
     >
       {icon && (
@@ -245,7 +240,6 @@ export function SelectMenu<T extends string>({
         disabled={disabled}
         className={clsx(
           "flex min-h-8 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
           "bg-black/[0.04] text-light-text hover:bg-black/[0.08]",
           "dark:bg-white/[0.06] dark:text-dark-text dark:hover:bg-white/[0.1]",
           disabled && "cursor-not-allowed opacity-40",
@@ -278,7 +272,6 @@ export function SelectMenu<T extends string>({
               }}
               className={clsx(
                 "flex min-h-9 w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[13px] transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-focus-ring)]",
                 "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
                 o.value === value
                   ? "text-light-text dark:text-dark-text"
@@ -314,7 +307,6 @@ export function TextField({ label, wrapperClassName, className, ...props }: Text
           "w-full rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-transparent",
           "px-3 py-2 text-sm text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted",
           "transition-colors",
-          FOCUS_RING,
           className,
         )}
       />
@@ -348,7 +340,6 @@ export function ActionButton({
       {...props}
       className={clsx(
         "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary",
         "disabled:cursor-not-allowed disabled:opacity-40",
         actionVariants[variant],
         className,

@@ -10,9 +10,6 @@ interface PollVoteDialogProps {
   onVote?: () => void
 }
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-secondary"
-
 export function PollVoteDialog({
   chatId,
   messageId,
@@ -129,7 +126,7 @@ export function PollVoteDialog({
                 type="button"
                 onClick={() => toggle(i)}
                 aria-pressed={selected.has(i)}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${FOCUS_RING} ${
+                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                   selected.has(i)
                     ? "border-[#21c063] bg-[#21c063]/10 text-[#1b9a58] dark:text-[#21c063]"
                     : "border-gray-300 text-gray-900 hover:bg-gray-100 dark:border-dark-border dark:text-gray-100 dark:hover:bg-dark-tertiary"
@@ -149,7 +146,7 @@ export function PollVoteDialog({
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+            className={`rounded-lg px-4 py-2 text-sm text-light-muted dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5`}
           >
             {done ? "Close" : "Cancel"}
           </button>
@@ -159,7 +156,7 @@ export function PollVoteDialog({
               onClick={vote}
               disabled={selected.size === 0 || sending}
               aria-busy={sending}
-              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+              className={`rounded-lg bg-[#21c063] px-4 py-2 text-sm font-medium text-[#0a1014] transition-colors hover:bg-[#1ea952] disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {sending ? "Voting…" : "Vote"}
             </button>

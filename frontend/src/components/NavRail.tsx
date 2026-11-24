@@ -62,7 +62,7 @@ interface RailItem {
 }
 
 const ITEM_BASE =
-  "flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-bg"
+  "flex h-11 w-11 items-center justify-center rounded-full transition-colors"
 
 /**
  * Persistent WhatsApp-style left rail. Every entry maps to a real destination
