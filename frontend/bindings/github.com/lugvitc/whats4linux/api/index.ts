@@ -22,6 +22,7 @@ export {
     LinkPreviewResult,
     MediaHubItem,
     MessageContent,
+    NewsletterHistoryEntry,
     NewsletterInfo,
     NewsletterMessageItem,
     OnWhatsAppResult,

@@ -5,6 +5,10 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as store$0 from "../internal/store/models.js";
+
 export class BlockedContact {
     "jid": string;
     "name": string;
@@ -739,6 +743,41 @@ export class MessageContent {
     }
 }
 
+/**
+ * NewsletterHistoryEntry is a channel post fetched from the server and
+ * persisted through the normal message pipeline. ServerID is the newsletter
+ * server ID; the local DB has no server_id column, so the frontend uses it as
+ * the cursor for the next backwards page.
+ */
+export class NewsletterHistoryEntry {
+    "server_id": number;
+    "message": store$0.DecodedMessage;
+
+    /** Creates a new NewsletterHistoryEntry instance. */
+    constructor($$source: Partial<NewsletterHistoryEntry> = {}) {
+        if (!("server_id" in $$source)) {
+            this["server_id"] = 0;
+        }
+        if (!("message" in $$source)) {
+            this["message"] = (new store$0.DecodedMessage());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new NewsletterHistoryEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): NewsletterHistoryEntry {
+        const $$createField1_0 = $$createType7;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("message" in $$parsedSource) {
+            $$parsedSource["message"] = $$createField1_0($$parsedSource["message"]);
+        }
+        return new NewsletterHistoryEntry($$parsedSource as Partial<NewsletterHistoryEntry>);
+    }
+}
+
 export class NewsletterInfo {
     "jid": string;
     "name": string;
@@ -816,8 +855,8 @@ export class NewsletterMessageItem {
      * Creates a new NewsletterMessageItem instance from a string or object.
      */
     static createFrom($$source: any = {}): NewsletterMessageItem {
-        const $$createField5_0 = $$createType7;
-        const $$createField6_0 = $$createType8;
+        const $$createField5_0 = $$createType8;
+        const $$createField6_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("reaction_counts" in $$parsedSource) {
             $$parsedSource["reaction_counts"] = $$createField5_0($$parsedSource["reaction_counts"]);
@@ -956,8 +995,8 @@ export class PollVotesResult {
      * Creates a new PollVotesResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PollVotesResult {
-        const $$createField1_0 = $$createType10;
-        const $$createField3_0 = $$createType11;
+        const $$createField1_0 = $$createType11;
+        const $$createField3_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("options" in $$parsedSource) {
             $$parsedSource["options"] = $$createField1_0($$parsedSource["options"]);
@@ -1181,7 +1220,7 @@ export class StickerPackResult {
      * Creates a new StickerPackResult instance from a string or object.
      */
     static createFrom($$source: any = {}): StickerPackResult {
-        const $$createField4_0 = $$createType13;
+        const $$createField4_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stickers" in $$parsedSource) {
             $$parsedSource["stickers"] = $$createField4_0($$parsedSource["stickers"]);
@@ -1227,10 +1266,11 @@ const $$createType3 = Contact.createFrom;
 const $$createType4 = GroupParticipant.createFrom;
 const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = $Create.Array($Create.Any);
-const $$createType7 = $Create.Map($Create.Any, $Create.Any);
+const $$createType7 = store$0.DecodedMessage.createFrom;
 const $$createType8 = $Create.Map($Create.Any, $Create.Any);
-const $$createType9 = PollOptionVotes.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = $Create.Array($Create.Any);
-const $$createType12 = StickerPackItem.createFrom;
-const $$createType13 = $Create.Array($$createType12);
+const $$createType9 = $Create.Map($Create.Any, $Create.Any);
+const $$createType10 = PollOptionVotes.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = $Create.Array($Create.Any);
+const $$createType13 = StickerPackItem.createFrom;
+const $$createType14 = $Create.Array($$createType13);

@@ -198,9 +198,21 @@ export function FetchMessagesPaged(jid: string, limit: number, beforeTimestamp: 
     });
 }
 
+/**
+ * FetchNewsletterHistory loads older posts of a WhatsApp channel from the
+ * server, stores them in messages.db and returns the decoded rows. The server
+ * returns posts newest-first; that order is preserved here and the frontend is
+ * responsible for merging/sorting them with what it already has.
+ */
+export function FetchNewsletterHistory(jidStr: string, count: number, beforeServerID: number): $CancellablePromise<$models.NewsletterHistoryEntry[]> {
+    return $Call.ByID(4650144, jidStr, count, beforeServerID).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
 export function FetchStickerPack(packID: string): $CancellablePromise<$models.StickerPackResult | null> {
     return $Call.ByID(1595411839, packID).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -225,7 +237,7 @@ export function GenerateMessageID(): $CancellablePromise<string> {
  */
 export function GetBlockList(): $CancellablePromise<$models.BlockedContact[]> {
     return $Call.ByID(2894734616).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType11($result);
     });
 }
 
@@ -234,7 +246,7 @@ export function GetBlockList(): $CancellablePromise<$models.BlockedContact[]> {
  */
 export function GetBotList(): $CancellablePromise<types$0.BotListInfo[]> {
     return $Call.ByID(850244428).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
@@ -243,13 +255,13 @@ export function GetBotList(): $CancellablePromise<types$0.BotListInfo[]> {
  */
 export function GetBotProfiles(botList: types$0.BotListInfo[]): $CancellablePromise<types$0.BotProfileInfo[]> {
     return $Call.ByID(2675721990, botList).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType15($result);
     });
 }
 
 export function GetBusinessProfile(jidStr: string): $CancellablePromise<{ [_ in string]?: any }> {
     return $Call.ByID(3955438522, jidStr).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
@@ -271,7 +283,7 @@ export function GetCachedImage(messageID: string): $CancellablePromise<string> {
  */
 export function GetCachedImages(messageIDs: string[]): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(1025588667, messageIDs).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType17($result);
     });
 }
 
@@ -280,7 +292,7 @@ export function GetCachedImages(messageIDs: string[]): $CancellablePromise<{ [_ 
  */
 export function GetCallStats(callID: string): $CancellablePromise<$models.CallStats | null> {
     return $Call.ByID(4228566562, callID).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -290,13 +302,13 @@ export function GetCallStats(callID: string): $CancellablePromise<$models.CallSt
  */
 export function GetChannelList(): $CancellablePromise<$models.ChatElement[]> {
     return $Call.ByID(1864165994).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
 export function GetChatList(): $CancellablePromise<$models.ChatElement[]> {
     return $Call.ByID(1316708077).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -305,7 +317,7 @@ export function GetChatList(): $CancellablePromise<$models.ChatElement[]> {
  */
 export function GetCommunityDetails(jidStr: string): $CancellablePromise<$models.CommunityDetails> {
     return $Call.ByID(1129934254, jidStr).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
@@ -316,13 +328,13 @@ export function GetCommunityDetails(jidStr: string): $CancellablePromise<$models
  */
 export function GetCommunityList(): $CancellablePromise<$models.CommunitySummary[]> {
     return $Call.ByID(2472579632).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
 export function GetContact(jid: types$0.JID): $CancellablePromise<$models.Contact | null> {
     return $Call.ByID(3970448201, jid).then(($result: any) => {
-        return $$createType23($result);
+        return $$createType25($result);
     });
 }
 
@@ -344,7 +356,7 @@ export function GetDisappearingTimer(chatJID: string): $CancellablePromise<numbe
 
 export function GetGroupInfo(jidStr: string): $CancellablePromise<$models.Group> {
     return $Call.ByID(2804449142, jidStr).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
@@ -354,7 +366,7 @@ export function GetGroupInviteLink(groupJID: string): $CancellablePromise<string
 
 export function GetGroupJoinRequests(groupJID: string): $CancellablePromise<$models.GroupJoinRequest[]> {
     return $Call.ByID(3056538116, groupJID).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType28($result);
     });
 }
 
@@ -376,7 +388,7 @@ export function GetJIDUser(jid: types$0.JID): $CancellablePromise<string> {
  */
 export function GetLinkPreview(messageID: string): $CancellablePromise<$models.LinkPreviewResult | null> {
     return $Call.ByID(4167060133, messageID).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType30($result);
     });
 }
 
@@ -396,7 +408,7 @@ export function GetLinkPreviewImage(messageID: string): $CancellablePromise<stri
  */
 export function GetMediaHubItems(kind: string): $CancellablePromise<$models.MediaHubItem[]> {
     return $Call.ByID(627420108, kind).then(($result: any) => {
-        return $$createType30($result);
+        return $$createType32($result);
     });
 }
 
@@ -411,25 +423,25 @@ export function GetMyJID(): $CancellablePromise<string> {
 
 export function GetNewsletterByInvite(inviteCode: string): $CancellablePromise<$models.NewsletterInfo | null> {
     return $Call.ByID(4076892084, inviteCode).then(($result: any) => {
-        return $$createType32($result);
+        return $$createType34($result);
     });
 }
 
 export function GetNewsletterInfo(jidStr: string): $CancellablePromise<$models.NewsletterInfo | null> {
     return $Call.ByID(204452320, jidStr).then(($result: any) => {
-        return $$createType32($result);
+        return $$createType34($result);
     });
 }
 
 export function GetNewsletterMessageUpdates(jidStr: string, count: number, afterServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
     return $Call.ByID(1998699339, jidStr, count, afterServerID).then(($result: any) => {
-        return $$createType34($result);
+        return $$createType36($result);
     });
 }
 
 export function GetNewsletterMessages(jidStr: string, count: number, beforeServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
     return $Call.ByID(2070087224, jidStr, count, beforeServerID).then(($result: any) => {
-        return $$createType34($result);
+        return $$createType36($result);
     });
 }
 
@@ -442,7 +454,7 @@ export function GetNotificationsEnabled(): $CancellablePromise<boolean> {
 
 export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.PinnedMessage[]> {
     return $Call.ByID(1768915369, chatJID).then(($result: any) => {
-        return $$createType36($result);
+        return $$createType38($result);
     });
 }
 
@@ -453,7 +465,7 @@ export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.
  */
 export function GetPollVotes(chatJID: string, pollMessageID: string): $CancellablePromise<$models.PollVotesResult> {
     return $Call.ByID(3001685323, chatJID, pollMessageID).then(($result: any) => {
-        return $$createType37($result);
+        return $$createType39($result);
     });
 }
 
@@ -462,7 +474,7 @@ export function GetPollVotes(chatJID: string, pollMessageID: string): $Cancellab
  */
 export function GetPrivacySettings(): $CancellablePromise<$models.PrivacySettingsResponse> {
     return $Call.ByID(1473344212).then(($result: any) => {
-        return $$createType38($result);
+        return $$createType40($result);
     });
 }
 
@@ -483,13 +495,13 @@ export function GetProfileColor(jidStr: string): $CancellablePromise<string> {
  */
 export function GetRecentCalls(limit: number): $CancellablePromise<store$0.CallLogEntry[]> {
     return $Call.ByID(4214551437, limit).then(($result: any) => {
-        return $$createType40($result);
+        return $$createType42($result);
     });
 }
 
 export function GetSearchSuggestions(query: string, limit: number): $CancellablePromise<string[]> {
     return $Call.ByID(2991969524, query, limit).then(($result: any) => {
-        return $$createType41($result);
+        return $$createType43($result);
     });
 }
 
@@ -506,25 +518,25 @@ export function GetSelfAvatar(recache: boolean): $CancellablePromise<string> {
 
 export function GetSettings(): $CancellablePromise<{ [_ in string]?: any }> {
     return $Call.ByID(949349650).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
 export function GetStatusPrivacy(): $CancellablePromise<$models.StatusPrivacyEntry[]> {
     return $Call.ByID(416277147).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
 export function GetSubscribedNewsletters(): $CancellablePromise<$models.NewsletterInfo[]> {
     return $Call.ByID(972602877).then(($result: any) => {
-        return $$createType44($result);
+        return $$createType46($result);
     });
 }
 
 export function GetUserInfo(jidStrs: string[]): $CancellablePromise<$models.UserInfoResult[]> {
     return $Call.ByID(749068144, jidStrs).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
@@ -554,7 +566,7 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 
 export function IsOnWhatsApp(phoneNumbers: string[]): $CancellablePromise<$models.OnWhatsAppResult[]> {
     return $Call.ByID(2901109790, phoneNumbers).then(($result: any) => {
-        return $$createType48($result);
+        return $$createType50($result);
     });
 }
 
@@ -663,7 +675,7 @@ export function PairPhone(phone: string): $CancellablePromise<string> {
  */
 export function PickAttachmentFile(): $CancellablePromise<$models.PickedFile | null> {
     return $Call.ByID(2333101227).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType52($result);
     });
 }
 
@@ -721,13 +733,13 @@ export function ResetConnection(): $CancellablePromise<void> {
 
 export function ResolveBusinessMessageLink(code: string): $CancellablePromise<$models.BusinessLinkResult | null> {
     return $Call.ByID(3573562060, code).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType54($result);
     });
 }
 
 export function ResolveContactQRLink(code: string): $CancellablePromise<$models.ContactQRLinkResult | null> {
     return $Call.ByID(89436650, code).then(($result: any) => {
-        return $$createType54($result);
+        return $$createType56($result);
     });
 }
 
@@ -762,13 +774,13 @@ export function SearchContacts(query: string): $CancellablePromise<$models.Conta
 
 export function SearchMessages(params: $models.SearchParams): $CancellablePromise<$models.SearchResult[]> {
     return $Call.ByID(711367617, params).then(($result: any) => {
-        return $$createType56($result);
+        return $$createType58($result);
     });
 }
 
 export function SearchNewsletters(query: string): $CancellablePromise<$models.ChatElement[]> {
     return $Call.ByID(1374403199, query).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -1065,7 +1077,7 @@ export function ToggleMessageLabel(jidStr: string, messageID: string, labelID: s
  */
 export function TryFetchPrivacySettings(ignoreCache: boolean): $CancellablePromise<$models.PrivacySettingsResponse> {
     return $Call.ByID(1326812359, ignoreCache).then(($result: any) => {
-        return $$createType38($result);
+        return $$createType40($result);
     });
 }
 
@@ -1099,54 +1111,56 @@ const $$createType2 = wa$0.Group.createFrom;
 const $$createType3 = $Create.Array($$createType2);
 const $$createType4 = store$0.DecodedMessage.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.StickerPackResult.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.BlockedContact.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = types$0.BotListInfo.createFrom;
+const $$createType6 = $models.NewsletterHistoryEntry.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.StickerPackResult.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $models.BlockedContact.createFrom;
 const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = types$0.BotProfileInfo.createFrom;
+const $$createType12 = types$0.BotListInfo.createFrom;
 const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = $Create.Map($Create.Any, $Create.Any);
-const $$createType15 = $Create.Map($Create.Any, $Create.Any);
-const $$createType16 = $models.CallStats.createFrom;
-const $$createType17 = $Create.Nullable($$createType16);
-const $$createType18 = $models.ChatElement.createFrom;
-const $$createType19 = $Create.Array($$createType18);
-const $$createType20 = $models.CommunityDetails.createFrom;
-const $$createType21 = $models.CommunitySummary.createFrom;
-const $$createType22 = $Create.Array($$createType21);
-const $$createType23 = $Create.Nullable($$createType0);
-const $$createType24 = $models.Group.createFrom;
-const $$createType25 = $models.GroupJoinRequest.createFrom;
-const $$createType26 = $Create.Array($$createType25);
-const $$createType27 = $models.LinkPreviewResult.createFrom;
-const $$createType28 = $Create.Nullable($$createType27);
-const $$createType29 = $models.MediaHubItem.createFrom;
-const $$createType30 = $Create.Array($$createType29);
-const $$createType31 = $models.NewsletterInfo.createFrom;
-const $$createType32 = $Create.Nullable($$createType31);
-const $$createType33 = $models.NewsletterMessageItem.createFrom;
-const $$createType34 = $Create.Array($$createType33);
-const $$createType35 = store$0.PinnedMessage.createFrom;
+const $$createType14 = types$0.BotProfileInfo.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = $Create.Map($Create.Any, $Create.Any);
+const $$createType17 = $Create.Map($Create.Any, $Create.Any);
+const $$createType18 = $models.CallStats.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = $models.ChatElement.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = $models.CommunityDetails.createFrom;
+const $$createType23 = $models.CommunitySummary.createFrom;
+const $$createType24 = $Create.Array($$createType23);
+const $$createType25 = $Create.Nullable($$createType0);
+const $$createType26 = $models.Group.createFrom;
+const $$createType27 = $models.GroupJoinRequest.createFrom;
+const $$createType28 = $Create.Array($$createType27);
+const $$createType29 = $models.LinkPreviewResult.createFrom;
+const $$createType30 = $Create.Nullable($$createType29);
+const $$createType31 = $models.MediaHubItem.createFrom;
+const $$createType32 = $Create.Array($$createType31);
+const $$createType33 = $models.NewsletterInfo.createFrom;
+const $$createType34 = $Create.Nullable($$createType33);
+const $$createType35 = $models.NewsletterMessageItem.createFrom;
 const $$createType36 = $Create.Array($$createType35);
-const $$createType37 = $models.PollVotesResult.createFrom;
-const $$createType38 = $models.PrivacySettingsResponse.createFrom;
-const $$createType39 = store$0.CallLogEntry.createFrom;
-const $$createType40 = $Create.Array($$createType39);
-const $$createType41 = $Create.Array($Create.Any);
-const $$createType42 = $models.StatusPrivacyEntry.createFrom;
-const $$createType43 = $Create.Array($$createType42);
-const $$createType44 = $Create.Array($$createType31);
-const $$createType45 = $models.UserInfoResult.createFrom;
-const $$createType46 = $Create.Array($$createType45);
-const $$createType47 = $models.OnWhatsAppResult.createFrom;
+const $$createType37 = store$0.PinnedMessage.createFrom;
+const $$createType38 = $Create.Array($$createType37);
+const $$createType39 = $models.PollVotesResult.createFrom;
+const $$createType40 = $models.PrivacySettingsResponse.createFrom;
+const $$createType41 = store$0.CallLogEntry.createFrom;
+const $$createType42 = $Create.Array($$createType41);
+const $$createType43 = $Create.Array($Create.Any);
+const $$createType44 = $models.StatusPrivacyEntry.createFrom;
+const $$createType45 = $Create.Array($$createType44);
+const $$createType46 = $Create.Array($$createType33);
+const $$createType47 = $models.UserInfoResult.createFrom;
 const $$createType48 = $Create.Array($$createType47);
-const $$createType49 = $models.PickedFile.createFrom;
-const $$createType50 = $Create.Nullable($$createType49);
-const $$createType51 = $models.BusinessLinkResult.createFrom;
+const $$createType49 = $models.OnWhatsAppResult.createFrom;
+const $$createType50 = $Create.Array($$createType49);
+const $$createType51 = $models.PickedFile.createFrom;
 const $$createType52 = $Create.Nullable($$createType51);
-const $$createType53 = $models.ContactQRLinkResult.createFrom;
+const $$createType53 = $models.BusinessLinkResult.createFrom;
 const $$createType54 = $Create.Nullable($$createType53);
-const $$createType55 = $models.SearchResult.createFrom;
-const $$createType56 = $Create.Array($$createType55);
+const $$createType55 = $models.ContactQRLinkResult.createFrom;
+const $$createType56 = $Create.Nullable($$createType55);
+const $$createType57 = $models.SearchResult.createFrom;
+const $$createType58 = $Create.Array($$createType57);
