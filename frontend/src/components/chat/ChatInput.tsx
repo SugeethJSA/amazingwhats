@@ -88,6 +88,40 @@ const ScheduleIcon = () => (
   </svg>
 )
 
+/** Local, original glyphs — no bundled brand assets. */
+const AudioIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+    <path d="M12 3a1 1 0 0 1 1 1v11.55a3.5 3.5 0 1 1-2-3.16V7.5l8 2v7.05a3.5 3.5 0 1 1-2-3.16V8.2a1 1 0 0 0-.75-.97l-5-1.25A1 1 0 0 1 12 3Z" />
+  </svg>
+)
+
+const MicIcon = () => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+    <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v5.5A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h2v1H9v-1h2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z" />
+  </svg>
+)
+
+/** Guess a usable audio MIME when the native picker does not report one. */
+const audioMimeForName = (name: string): string => {
+  const ext = name.toLowerCase().split(".").pop() ?? ""
+  const map: Record<string, string> = {
+    mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    aac: "audio/aac",
+    ogg: "audio/ogg",
+    oga: "audio/ogg",
+    wav: "audio/wav",
+    flac: "audio/flac",
+    opus: "audio/opus",
+    webm: "audio/webm",
+  }
+  return map[ext] ?? "audio/mpeg"
+}
+
+const isAudioPick = (mimetype: string, name: string): boolean =>
+  mimetype.toLowerCase().startsWith("audio/") ||
+  /\.(mp3|m4a|aac|ogg|oga|wav|flac|opus|webm)$/i.test(name)
+
 // Contact names are inserted into a RegExp for mention highlighting. Escape
 // regex metacharacters so a name like " Ada (work) [admin]" cannot throw.
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -247,6 +281,35 @@ export function ChatInput({
   const [scheduleAt, setScheduleAt] = useState("")
 
   const addNotification = useUIStore(state => state.addNotification)
+
+  // Real audio attach flow: the native GTK picker (PickAttachmentFile) returns
+  // base64 bytes; we accept the file only when it is audio, then hand it to the
+  // exact same onFileSelect path used by Document/Photos, so the existing
+  // send pipeline handles it. There is no recording binding in this backend.
+  const pickAudioFile = async () => {
+    try {
+      const picked = await PickAttachmentFile()
+      if (!picked?.base64) return
+      if (!isAudioPick(picked.mimetype || "", picked.name || "")) {
+        addNotification("Choose an audio file to send.", { tone: "warning", durationMs: 5000 })
+        return
+      }
+      const binary = atob(picked.base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const mimetype = picked.mimetype || audioMimeForName(picked.name || "")
+      const file = new File([bytes], picked.name, { type: mimetype })
+      onFileSelect({
+        target: { files: [file] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>)
+    } catch (err) {
+      console.error("Failed to pick audio file:", err)
+      addNotification("Couldn't attach audio. Please try again.", {
+        tone: "error",
+        durationMs: 6000,
+      })
+    }
+  }
 
   const locationTitleId = useId()
   const locationPanelRef = useRef<HTMLDivElement>(null)
@@ -887,6 +950,12 @@ export function ChatInput({
                           },
                         },
                         {
+                          label: "Audio",
+                          icon: <AudioIcon />,
+                          color: "text-[#f59e0b]",
+                          act: () => void pickAudioFile(),
+                        },
+                        {
                           label: "Poll",
                           icon: <PollIcon />,
                           color: "text-purple-500",
@@ -1008,22 +1077,35 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Send Button - separate green circle outside the pill */}
-        <button
-          type="button"
-          onClick={onSendMessage}
-          disabled={!hasContent}
-          aria-label="Send message"
-          className={clsx(
-            "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all duration-200",
-            FOCUS_RING,
-            hasContent
-              ? "bg-[#21c063] hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95"
-              : "cursor-not-allowed bg-[#21c063]/40 scale-95 opacity-60",
-          )}
-        >
-          <SendIcon />
-        </button>
+        {/* Empty draft: the right slot is a real audio-attach shortcut (native
+            picker -> existing file pipeline). With content it becomes Send. */}
+        {hasContent ? (
+          <button
+            type="button"
+            onClick={onSendMessage}
+            aria-label="Send message"
+            className={clsx(
+              "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all duration-200",
+              FOCUS_RING,
+              "bg-[#21c063] hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95",
+            )}
+          >
+            <SendIcon />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void pickAudioFile()}
+            aria-label="Attach audio"
+            title="Attach audio"
+            className={clsx(
+              "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#21c063] text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95",
+              FOCUS_RING,
+            )}
+          >
+            <MicIcon />
+          </button>
+        )}
       </div>
 
       {pollOpen && <PollDialog chatId={chatId} onClose={() => setPollOpen(false)} />}
