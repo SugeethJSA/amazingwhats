@@ -14,8 +14,10 @@ import { Lightbox } from "./components/Lightbox"
 import { NavRail } from "./components/NavRail"
 import { MediaHub } from "./components/chat/MediaHub"
 import { CallOverlay } from "./components/chat/CallOverlay"
+import { DownloadProgress } from "./components/chat/DownloadProgress"
 
 import { useUIStore, useMessageStore } from "./store"
+import { useDownloadProgressStore } from "./store/useDownloadProgressStore"
 import type { Notification } from "./store/useUIStore"
 import { useAppSettingsStore } from "./store/useAppSettingsStore"
 import { applyThemeClass } from "./lib/theme"
@@ -138,6 +140,45 @@ function connectionView(status: string): ConnectionView {
  */
 type HistorySyncView =
   { phase: "idle" } | { phase: "syncing"; percent: number } | { phase: "failed" }
+
+/**
+ * Global view of in-flight downloads for triggers that live outside a message
+ * bubble (MessageMenu, Lightbox, MediaHub). It subscribes on its own so byte
+ * events re-render only this small panel, never the whole App tree. Top-right
+ * keeps it clear of the bottom-left toast stack, the connection pill and the
+ * top-centre history-sync strip.
+ */
+function GlobalDownloadsPanel() {
+  const entries = useDownloadProgressStore(state => state.entries)
+  const active = Object.entries(entries).filter(([, entry]) => entry.phase === "downloading")
+  if (active.length === 0) return null
+
+  return (
+    <section
+      aria-label="Downloads"
+      className="fixed right-4 top-16 z-[45] max-h-[40vh] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-black/5 bg-[var(--color-light-bg)] p-3 text-[var(--color-light-text)] shadow-lg dark:border-white/10 dark:bg-[var(--color-dark-secondary)] dark:text-[var(--color-dark-text)]"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+    >
+      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide opacity-75">
+        Downloads
+      </h2>
+      <div className="flex flex-col gap-2">
+        {active.map(([messageId, entry]) => (
+          <div key={messageId}>
+            {/* The events carry no filename, so use a neutral label only. */}
+            <div className="mb-1 truncate text-[11px] font-medium">Downloading file…</div>
+            <DownloadProgress
+              downloaded={entry.downloaded}
+              total={entry.total}
+              percent={entry.percent}
+              compact
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 function App() {
   const screen = useUIStore(state => state.screen)
@@ -292,6 +333,49 @@ function App() {
       addNotification(`Downloaded: ${name || "file"}`, { tone: "success", durationMs: 3000 })
     })
 
+    // Real byte-level progress. These events carry no filename and no error
+    // text; the store copies only the numbers the backend actually measured.
+    // A fresh `start` is issued when a message re-enters the downloading phase
+    // (e.g. a second download of the same message), never on every chunk.
+    const unsubDownloadProgress = EventsOn(
+      "download:progress",
+      (data: {
+        messageId?: string
+        downloaded?: number
+        total?: number
+        percent?: number
+      }) => {
+        const messageId = typeof data?.messageId === "string" ? data.messageId : ""
+        if (!messageId) return
+        // `download:start` is authoritative. A progress chunk for an unknown
+        // or already-finished download is ignored rather than starting a
+        // phantom bar that could never be cleared.
+        const store = useDownloadProgressStore.getState()
+        if (store.entries[messageId]?.phase !== "downloading") return
+        store.update(messageId, data)
+      },
+    )
+    const unsubDownloadStart = EventsOn(
+      "download:start",
+      (data: { messageId?: string }) => {
+        const messageId = typeof data?.messageId === "string" ? data.messageId : ""
+        if (messageId) useDownloadProgressStore.getState().start(messageId)
+      },
+    )
+    const unsubDownloadDone = EventsOn(
+      "download:done",
+      (data: { messageId?: string; cancelled?: boolean }) => {
+        const messageId = typeof data?.messageId === "string" ? data.messageId : ""
+        if (!messageId) return
+        useDownloadProgressStore.getState().finish(messageId, data.cancelled === true)
+      },
+    )
+    const unsubDownloadError = EventsOn("download:error", (data: { messageId?: string }) => {
+      const messageId = typeof data?.messageId === "string" ? data.messageId : ""
+      if (!messageId) return
+      useDownloadProgressStore.getState().fail(messageId)
+    })
+
     // Surface backend errors to the user as toast notifications.
     const unsubError = EventsOn("wa:error", (msg: string) => {
       addNotification(sanitizeErrorMessage(msg), { tone: "error", durationMs: 6000 })
@@ -383,6 +467,10 @@ function App() {
       unsubQR()
       unsubStatus()
       unsubDownload()
+      unsubDownloadProgress()
+      unsubDownloadStart()
+      unsubDownloadDone()
+      unsubDownloadError()
       unsubError()
       unsubIdentity()
       unsubUpdateAvailable()
@@ -451,6 +539,7 @@ function App() {
       )}
       <Lightbox />
       <MediaHub />
+      <GlobalDownloadsPanel />
       {/* Global transient toast stack. Bottom-left keeps security/identity
           warnings over the chat-list column, away from the chat header and the
           composer (which live at the top and bottom of the conversation pane).

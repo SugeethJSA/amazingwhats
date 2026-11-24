@@ -13,6 +13,7 @@ import {
   StarMessage,
 } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { MediaContent } from "./MediaContent"
+import { DownloadProgress } from "./DownloadProgress"
 import { QuotedMessage } from "./QuotedMessage"
 import { ReactionBubble, ReactionDetails } from "./Reactions"
 import { LinkPreview } from "./LinkPreview"
@@ -31,6 +32,7 @@ import {
   UserAvatar,
 } from "../../assets/svgs/chat_icons"
 import { useContactStore } from "../../store/useContactStore"
+import { useDownloadProgressStore } from "../../store/useDownloadProgressStore"
 import { useMessageStore, useUIStore } from "../../store"
 import type { Message } from "../../store/types"
 import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/whats4linux/api/models.js"
@@ -142,6 +144,28 @@ function SenderAvatar({
     >
       {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <UserAvatar />}
     </button>
+  )
+}
+
+/**
+ * Inline progress for one message. Kept as its own tiny component so a byte
+ * event updates only this node, not the whole (expensive) message row. The
+ * boolean is a stable primitive selector: for every other message it stays
+ * `false`, so no bars are rendered and no rows re-render.
+ */
+function InlineDownloadProgress({ messageId }: { messageId: string }) {
+  const isDownloading = useDownloadProgressStore(
+    state => state.entries[messageId]?.phase === "downloading",
+  )
+  const downloaded = useDownloadProgressStore(state => state.entries[messageId]?.downloaded ?? -1)
+  const total = useDownloadProgressStore(state => state.entries[messageId]?.total ?? -1)
+  const percent = useDownloadProgressStore(state => state.entries[messageId]?.percent ?? -1)
+  if (!isDownloading) return null
+
+  return (
+    <div className="mt-1.5">
+      <DownloadProgress downloaded={downloaded} total={total} percent={percent} compact />
+    </div>
   )
 }
 
@@ -904,6 +928,7 @@ export function MessageItem({
             <QuotedMessage contextInfo={contextInfo} onQuotedClick={onQuotedClick} />
           )}
           <div className="text-sm break-words whitespace-pre-wrap">{renderContent()}</div>
+          <InlineDownloadProgress messageId={message.Info.ID} />
           {!isTextContent && <div className="mt-1 flex justify-end">{timeMeta(false)}</div>}
 
           {/* Reactions */}
