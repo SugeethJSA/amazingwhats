@@ -82,7 +82,7 @@ function useMediaQuery(query: string) {
  */
 function readSavedLabelNames(): Record<string, string> {
   try {
-    const raw = localStorage.getItem("whats4linux.labelNames")
+    const raw = localStorage.getItem("amazingwhats.labelNames")
     if (!raw) return {}
     const parsed: unknown = JSON.parse(raw)
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)

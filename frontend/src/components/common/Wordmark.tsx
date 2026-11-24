@@ -10,8 +10,8 @@ export interface WordmarkProps {
 }
 
 /**
- * Shared product wordmark: the bundled chat mark beside "Whats4Linux", with
- * the accent on "4Linux". The whole lockup carries one accessible name; the
+ * Shared product wordmark: the bundled chat mark beside "amazingwhats", with
+ * the accent on "whats". The whole lockup carries one accessible name; the
  * mark is decorative. `compact` scales it down for dense chrome.
  */
 export default function Wordmark({
@@ -23,7 +23,7 @@ export default function Wordmark({
   return (
     <span
       role="img"
-      aria-label="Whats4Linux"
+      aria-label="amazingwhats"
       className={`inline-flex items-center ${compact ? "gap-1.5" : "gap-2.5"} ${className}`}
     >
       <img
@@ -38,7 +38,7 @@ export default function Wordmark({
           textClassName || (compact ? "text-sm" : "text-lg")
         }`}
       >
-        Whats<span className="text-green-ink">4Linux</span>
+        amazing<span className="text-green-ink">whats</span>
       </span>
     </span>
   )

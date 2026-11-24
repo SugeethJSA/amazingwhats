@@ -53,7 +53,7 @@ type Notify = (message: string, options?: NotificationOptions) => number
 
 // Label names are a local convenience only — the backend speaks in label IDs.
 // Keeping the pairing lets a numeric ID always be recovered by its human name.
-const LABEL_NAMES_KEY = "whats4linux.labelNames"
+const LABEL_NAMES_KEY = "amazingwhats.labelNames"
 type LabelNames = Record<string, string>
 
 function readLabelNames(): LabelNames {

@@ -11,7 +11,7 @@ import { sanitizeHtml } from "../../lib/utils"
 
 const STATUS_JID = "status@broadcast"
 const STORY_MS = 5000
-const SEEN_KEY = "whats4linux.statusSeen"
+const SEEN_KEY = "amazingwhats.statusSeen"
 
 // Keyboard focus uses the shared --color-focus-ring token from style.css in
 // both the light status list and the dark story viewer. The token has a light

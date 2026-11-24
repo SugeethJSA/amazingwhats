@@ -79,7 +79,7 @@ const HelpAndFeedback = () => {
           <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
             <LinkRow
               title="Report a problem"
-              description="Open an issue on the Whats4Linux GitHub tracker to report a bug or send feedback. Opens in your browser."
+              description="Open an issue on the amazingwhats GitHub tracker to report a bug or send feedback. Opens in your browser."
               href={ISSUE_URL}
               icon={<BugIcon />}
               tag="First-party"
@@ -87,20 +87,20 @@ const HelpAndFeedback = () => {
           </div>
         </SettingsCard>
         <p className="px-1 text-[13px] leading-relaxed text-light-text dark:text-dark-text">
-          For questions about Whats4Linux itself, use the project tracker above. The Meta and
+          For questions about amazingwhats itself, use the project tracker above. The Meta and
           WhatsApp links below are external sites operated by WhatsApp; they cover the account,
           pairing, and encryption side of the network, not this application.
         </p>
       </SettingsSection>
 
-      <SettingsSection title="About Whats4Linux">
+      <SettingsSection title="About amazingwhats">
         <SettingsCard className="p-5">
           <div className="space-y-3 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
             <p>
               <strong className="font-semibold text-light-text dark:text-dark-text">
                 Local by default.
               </strong>{" "}
-              Your messages and media stay on this device. Whats4Linux has no telemetry and sends no
+              Your messages and media stay on this device. amazingwhats has no telemetry and sends no
               analytics anywhere.
             </p>
             <p>
@@ -114,9 +114,9 @@ const HelpAndFeedback = () => {
               <strong className="font-semibold text-light-text dark:text-dark-text">
                 Where your data lives.
               </strong>{" "}
-              Everything is kept locally in a <code className={CODE_CLS}>whats4linux</code> folder
+              Everything is kept locally in a <code className={CODE_CLS}>amazingwhats</code> folder
               inside your operating system's user config directory — for example{" "}
-              <code className={CODE_CLS}>~/.config/whats4linux</code> on Linux. That includes the
+              <code className={CODE_CLS}>~/.config/amazingwhats</code> on Linux. That includes the
               local SQLite databases and the media cache. Removing that folder removes local data,
               so back it up first if you rely on it.
             </p>

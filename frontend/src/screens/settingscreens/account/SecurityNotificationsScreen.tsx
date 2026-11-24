@@ -61,7 +61,7 @@ export function SecurityNotificationsScreen() {
         </h3>
         <p className="mt-1.5 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
           Security code change alerts are managed by WhatsApp and are always active for this
-          session. There is no separate switch for them in Whats4Linux, so nothing here can be
+          session. There is no separate switch for them in amazingwhats, so nothing here can be
           turned off by mistake.
         </p>
       </SettingsCard>

@@ -22,7 +22,7 @@ export interface ScheduledMessage {
   createdAt: number
 }
 
-const STORAGE_KEY = "whats4linux.scheduledMessages"
+const STORAGE_KEY = "amazingwhats.scheduledMessages"
 const TICK_MS = 10_000
 
 type SendFn = (chatId: string, payload: ScheduledPayload) => Promise<unknown>

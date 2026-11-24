@@ -61,7 +61,7 @@ const LogOut = () => {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Log out of Whats4Linux?"
+        title="Log out of amazingwhats?"
         description="You will need to scan a QR code or enter a pairing code again to reconnect."
         confirmLabel="Log out"
         cancelLabel="Cancel"

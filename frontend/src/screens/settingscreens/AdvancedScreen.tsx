@@ -303,7 +303,7 @@ const AdvancedScreen = () => {
 
       <p className="px-1 text-[13px] leading-relaxed text-light-muted dark:text-dark-muted">
         <span className="font-semibold text-light-text dark:text-dark-text">
-          Custom JS runs only in Whats4Linux, on this device.
+          Custom JS runs only in amazingwhats, on this device.
         </span>{" "}
         It can change how the interface looks and behaves, but it is an unsupported experiment: a
         bad script can break the UI until you remove it. Only paste code you understand and trust.

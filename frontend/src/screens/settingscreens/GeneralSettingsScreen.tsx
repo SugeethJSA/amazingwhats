@@ -30,14 +30,14 @@ const GeneralSettingsScreen = () => {
       <SettingsSection title="Startup and session">
         <RowList>
           <SwitchRow
-            title="Start Whats4Linux at login"
-            description="Launch Whats4Linux automatically when you sign in to your computer"
+            title="Start amazingwhats at login"
+            description="Launch amazingwhats automatically when you sign in to your computer"
             enabled={startAtLogin}
             onToggle={() => updateSetting("startAtLogin", !startAtLogin)}
           />
           <SwitchRow
             title="Minimize to system tray"
-            description="Keep Whats4Linux running after closing the application window"
+            description="Keep amazingwhats running after closing the application window"
             enabled={minimizeToTray}
             onToggle={() => updateSetting("minimizeToTray", !minimizeToTray)}
           />
