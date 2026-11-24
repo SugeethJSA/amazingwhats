@@ -85,6 +85,13 @@ func normalizeUserJIDString(raw string) (types.JID, error) {
 	return types.NewJID(digits, types.DefaultUserServer), nil
 }
 
+// canonicalUserJID resolves a user JID to its PN form for DISPLAY purposes:
+// contact-name lookup, phone formatting and chat-list titles. It intentionally
+// collapses LID->PN via GetPNForLID and must NOT be used to derive a group
+// participant's identity, where the stable LID is the canonical form (see
+// groupParticipantIdentities in group.go / D-AUD-008f). Existing callers such
+// as poll vote self-JID handling rely on this PN-canonical behaviour, so the
+// function's behaviour is deliberately unchanged.
 func canonicalUserJID(ctx context.Context, client *whatsmeow.Client, jid types.JID) types.JID {
 	if jid.ActualAgent() == types.LIDDomain {
 		if pn, err := client.Store.LIDs.GetPNForLID(ctx, jid); err == nil {

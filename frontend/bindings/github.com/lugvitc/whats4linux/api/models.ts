@@ -540,9 +540,10 @@ export class GroupParticipant {
     "is_admin": boolean;
 
     /**
-     * ActionJID is the participant's primary JID as reported by whatsmeow
-     * (often an LID). Group promote/demote/remove actions must use this exact
-     * identifier; Contact.JID stays the PN-canonical form for display/lookup.
+     * ActionJID is the participant's stable canonical identity: the LID when
+     * HyperMeow/WhatsApp knows one, otherwise the PN. Group
+     * promote/demote/remove actions must use this exact identifier;
+     * Contact.JID stays the PN-canonical form for display/lookup.
      */
     "action_jid"?: string;
 

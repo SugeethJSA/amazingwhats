@@ -121,8 +121,17 @@ func (a *Api) GetGroupJoinRequests(groupJID string) ([]GroupJoinRequest, error) 
 	}
 	out := make([]GroupJoinRequest, 0, len(reqs))
 	for _, r := range reqs {
+		// JID is the Approve/Reject action target, so keep the stable LID
+		// (resolved via the device LID map) instead of letting a PN report
+		// lose the identity. Requester stays a display name from the
+		// reported JID; only the action identity is canonicalized.
+		canonical, _ := groupParticipantIdentities(a.ctx, a.waClient, r.JID)
+		actionJID := canonical.String()
+		if actionJID == "" {
+			actionJID = r.JID.String()
+		}
 		out = append(out, GroupJoinRequest{
-			JID:         r.JID.String(),
+			JID:         actionJID,
 			Requester:   a.contactNameForJID(r.JID),
 			RequestedAt: r.RequestedAt.Unix(),
 		})
@@ -234,7 +243,12 @@ func (a *Api) SetGroupDescription(groupJID, description string) error {
 	if strings.HasSuffix(groupJID, "@g.us") {
 		info, err := a.waClient.GetGroupInfo(a.ctx, jid)
 		if err == nil && info.IsParent {
-			return a.waClient.SetGroupDescription(a.ctx, jid, description)
+			// SetGroupDescription is only a deprecated alias for
+			// SetGroupTopic(ctx, jid, "", "", description) in HyperMeow, so
+			// call the current API directly. The branch is kept to preserve
+			// the historical parent-community handling. The exported Api
+			// method name stays for the Wails binding.
+			return a.waClient.SetGroupTopic(a.ctx, jid, "", "", description)
 		}
 	}
 	return a.waClient.SetGroupTopic(a.ctx, jid, "", "", description)

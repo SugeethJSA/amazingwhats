@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -30,10 +31,86 @@ type Group struct {
 type GroupParticipant struct {
 	Contact Contact `json:"contact"`
 	IsAdmin bool    `json:"is_admin"`
-	// ActionJID is the participant's primary JID as reported by whatsmeow
-	// (often an LID). Group promote/demote/remove actions must use this exact
-	// identifier; Contact.JID stays the PN-canonical form for display/lookup.
+	// ActionJID is the participant's stable canonical identity: the LID when
+	// HyperMeow/WhatsApp knows one, otherwise the PN. Group
+	// promote/demote/remove actions must use this exact identifier;
+	// Contact.JID stays the PN-canonical form for display/lookup.
 	ActionJID string `json:"action_jid,omitempty"`
+}
+
+// isLIDIdentityJID reports whether jid is an LID-form user identity (the lid
+// or hosted-lid server). LIDs are the stable Signal identity and are preferred
+// over phone numbers for participant addressing.
+func isLIDIdentityJID(jid types.JID) bool {
+	if jid.IsEmpty() {
+		return false
+	}
+	agent := jid.ActualAgent()
+	return agent == types.LIDDomain || agent == types.HostedLIDDomain
+}
+
+// canonicalGroupParticipantJID is the pure selection policy for group
+// participants. It takes the two already-resolved forms of one identity and
+// returns:
+//
+//   - canonical: the stable identity used for participant keys, admin actions,
+//     mute/reaction addressing and de-duplication. A valid LID always wins;
+//     the PN is only a fallback when no LID is known.
+//   - display: the PN used for contact-name lookup and phone formatting. When
+//     no PN is known the LID is returned so the caller still has something to
+//     show.
+//
+// Keeping the policy pure makes it unit-testable without a live client;
+// groupParticipantIdentities resolves the two inputs via the device LID map
+// and delegates the choice here.
+func canonicalGroupParticipantJID(lid, pn types.JID) (canonical, display types.JID) {
+	hasLID := isLIDIdentityJID(lid)
+	hasPN := !pn.IsEmpty() && !isLIDIdentityJID(pn)
+	switch {
+	case hasLID && hasPN:
+		return lid.ToNonAD(), pn.ToNonAD()
+	case hasLID:
+		return lid.ToNonAD(), lid.ToNonAD()
+	case hasPN:
+		return pn.ToNonAD(), pn.ToNonAD()
+	default:
+		return types.EmptyJID, types.EmptyJID
+	}
+}
+
+// groupParticipantIdentities resolves a participant's reported JID into its
+// stable canonical identity and its display PN using the device LID/PN map.
+// HyperMeow reports group participants with a primary JID that is often
+// already an LID, but it can be a PN. Device.GetAltJID returns the opposite
+// form (LID->PN or PN->LID); resolving both here is what stops a PN report
+// from silently discarding the stable LID (D-AUD-008f). When no alternate is
+// known we keep the reported form instead of inventing or dropping an
+// identity. It deliberately does NOT call canonicalUserJID: that helper is
+// the display-name policy used by contacts/chat-list call sites and must keep
+// resolving LID->PN unchanged.
+func groupParticipantIdentities(ctx context.Context, client *whatsmeow.Client, reported types.JID) (canonical, display types.JID) {
+	reported = reported.ToNonAD()
+	// canonicalGroupParticipantJID takes (lid, pn) in that order. A reported
+	// JID can be either form, so route it into the correct slot before the
+	// pure selector sees it — otherwise a PN fallback lands in the lid slot
+	// and is discarded as empty.
+	fallback := func() (types.JID, types.JID) {
+		if isLIDIdentityJID(reported) {
+			return canonicalGroupParticipantJID(reported, types.EmptyJID)
+		}
+		return canonicalGroupParticipantJID(types.EmptyJID, reported)
+	}
+	if client == nil || client.Store == nil {
+		return fallback()
+	}
+	alt, err := client.Store.GetAltJID(ctx, reported)
+	if err != nil || alt.IsEmpty() {
+		return fallback()
+	}
+	if isLIDIdentityJID(reported) {
+		return canonicalGroupParticipantJID(reported, alt)
+	}
+	return canonicalGroupParticipantJID(alt, reported)
 }
 
 func (a *Api) FetchGroups() ([]wa.Group, error) {
@@ -91,8 +168,9 @@ func (a *Api) GetGroupInfo(jidStr string) (Group, error) {
 	}
 
 	// buildContact uses the PN-canonical JID only for the contact-name lookup
-	// and phone-number display. The participant's original (primary) JID is
-	// carried separately in GroupParticipant.ActionJID for group actions, so
+	// and phone-number display (same policy as the chat list / contact lookups).
+	// A participant's stable identity is carried separately in
+	// GroupParticipant.ActionJID, resolved by groupParticipantIdentities so
 	// a LID is never silently replaced by its PN.
 	buildContact := func(jid types.JID) Contact {
 		displayJID := canonicalUserJID(a.ctx, a.waClient, jid)
@@ -122,10 +200,17 @@ func (a *Api) GetGroupInfo(jidStr string) (Group, error) {
 
 	participants := make([]GroupParticipant, 0, len(GroupInfo.Participants))
 	for _, p := range GroupInfo.Participants {
+		// Display/contact lookup stays PN-canonical via buildContact; the
+		// action identity is resolved to the stable LID when one is known.
+		canonical, _ := groupParticipantIdentities(a.ctx, a.waClient, p.JID)
+		actionJID := canonical.String()
+		if actionJID == "" {
+			actionJID = p.JID.String()
+		}
 		participants = append(participants, GroupParticipant{
 			Contact:   buildContact(p.JID),
 			IsAdmin:   p.IsAdmin,
-			ActionJID: p.JID.String(),
+			ActionJID: actionJID,
 		})
 	}
 	parentJID := ""
@@ -303,7 +388,7 @@ func (a *Api) CreateCommunity(name, description string) (string, error) {
 	if description != "" {
 		jid, parseErr := types.ParseJID(groupInfo.JID.String())
 		if parseErr == nil {
-			if descErr := a.waClient.SetGroupDescription(a.ctx, jid, description); descErr != nil {
+			if descErr := a.waClient.SetGroupTopic(a.ctx, jid, "", "", description); descErr != nil {
 				slog.Warn(fmt.Sprintf("Failed to set community description: %v", descErr), "source", "communities")
 			}
 		}
