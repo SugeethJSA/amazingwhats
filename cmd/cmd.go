@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const AppName = "whats4linux"
+const AppName = "amazingwhats"
 
 // BuildArgs contains build-time information passed to the CLI application.
 // These values are typically injected during the build process via ldflags
@@ -49,7 +49,7 @@ func GetApp(assets fs.FS, bArgs BuildArgs) *cli.App {
 		HelpName:               AppName,
 		Usage:                  "An unofficial WhatsApp client.",
 		Version:                fmt.Sprintf("%s-%s", bArgs.Version, bArgs.BuildType),
-		UsageText:              "whats4linux <command> [arguments...]",
+		UsageText:              "amazingwhats <command> [arguments...]",
 		Description:            DESCRIPTION,
 		CustomAppHelpTemplate:  HelpTempl,
 		OnUsageError:           common.UsageErrorCallback,

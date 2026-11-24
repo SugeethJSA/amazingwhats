@@ -15,8 +15,8 @@ func TestConstants(t *testing.T) {
 		got  any
 		want any
 	}{
-		{"AppName", AppName, "whats4linux"},
-		{"AppID", AppID, "net.lugvitc.whats4linux"},
+		{"AppName", AppName, "amazingwhats"},
+		{"AppID", AppID, "net.lugvitc.amazingwhats"},
 		{"configDirPerm", configDirPerm, 0700},
 		{"secretFilePerm", secretFilePerm, 0600},
 	}

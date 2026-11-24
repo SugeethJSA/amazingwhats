@@ -101,7 +101,7 @@ func safeIconPath(path string) string {
 		warnFailureOnce("reading notification icon", err)
 		return embeddedIconPath()
 	}
-	dir, err := os.MkdirTemp("", "whats4linux-notify-icon-")
+	dir, err := os.MkdirTemp("", "amazingwhats-notify-icon-")
 	if err != nil {
 		warnFailureOnce("creating safe icon directory", err)
 		return embeddedIconPath()
@@ -177,7 +177,7 @@ func tempImagePath(data []byte) (string, error) {
 	case "image/webp":
 		ext = ".webp"
 	}
-	dir, err := os.MkdirTemp("", "whats4linux-notify-image-")
+	dir, err := os.MkdirTemp("", "amazingwhats-notify-image-")
 	if err != nil {
 		return "", err
 	}

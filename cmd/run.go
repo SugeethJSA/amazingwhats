@@ -34,6 +34,9 @@ func assetHandler(assets fs.FS) http.Handler {
 
 func run(assets fs.FS) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
+		// Legacy config migration runs inside misc.defaultConfigDir() at package
+		// init, before internal/settings reads it. It is non-fatal and idempotent.
+
 		// v3 service lifecycle: the Api service loads and closes the settings
 		// file in ServiceStartup / ServiceShutdown so the handle stays open for
 		// the whole application lifetime.
@@ -111,7 +114,7 @@ func run(assets fs.FS) cli.ActionFunc {
 		// when call events fire. This window is intentionally separate from
 		// the single-instance/tray restore path used for the main window.
 		callWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-			Title:       "Whats4Linux Call",
+			Title:       "amazingwhats Call",
 			URL:         "/call.html",
 			Width:       420,
 			Height:      560,

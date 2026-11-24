@@ -23,9 +23,9 @@ Supported Flags:{{range .VisibleFlags}}
 `
 
 const DESCRIPTION = `
-Whats4Linux is an unofficial WhatsApp client for Linux, 
+amazingwhats is an unofficial WhatsApp client for Linux, 
 built using Wails and whatsmeow. It provides a native desktop experience for 
 WhatsApp users on Linux systems, offering features such as notifications, 
 system tray integration, and enhanced performance compared to web-based clients. 
 
-Please note that Whats4Linux is not affiliated with or endorsed by WhatsApp Inc.`
+Please note that amazingwhats is not affiliated with or endorsed by WhatsApp Inc.`

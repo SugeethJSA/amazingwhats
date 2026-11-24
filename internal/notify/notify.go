@@ -19,7 +19,7 @@ import (
 
 const (
 	// AppName is the application identity shown by every notification backend.
-	AppName = "Whats4Linux"
+	AppName = "amazingwhats"
 
 	// ActionOpen raises wa:open_chat for the notification's chat.
 	ActionOpen = "open"
@@ -98,7 +98,7 @@ func writeAppIcon() (string, error) {
 
 	// A fresh private directory avoids writable-path/symlink races in the
 	// shared temp folder; it lives for the process lifetime (a few KB).
-	dir, err := os.MkdirTemp("", "whats4linux-notify-")
+	dir, err := os.MkdirTemp("", "amazingwhats-notify-")
 	if err != nil {
 		iconPathErr = fmt.Errorf("create notification icon dir: %w", err)
 		return "", iconPathErr

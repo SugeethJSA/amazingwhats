@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 )
 
-const AppName = "whats4linux"
-const AppID = "net.lugvitc.whats4linux"
+const AppName = "amazingwhats"
+const AppID = "net.lugvitc.amazingwhats"
 
 // Config files and the session database hold long-lived credentials, so the
 // config directory is owner-only and secret files are owner-read/write only.
@@ -57,6 +57,13 @@ func defaultConfigDir() string {
 	// support it (notably Windows).
 	if err := os.Chmod(cdr, configDirPerm); err != nil {
 		log.Printf("misc: could not restrict config directory permissions: %v", err)
+	}
+	// Migrate BEFORE any consumer package init reads ConfigDir (notably
+	// internal/settings), so upgraded installs pick up old settings on first run.
+	// Failure is logged and startup continues; migration is idempotent and safe
+	// to retry.
+	if err := migrateLegacyConfig(cdr); err != nil {
+		log.Printf("misc: legacy config migration failed: %v", err)
 	}
 	return cdr
 }
