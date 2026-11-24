@@ -635,7 +635,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
 
     if (!isComposingRef.current) {
       isComposingRef.current = true
-      setTypingIndicator(chatId, true)
+      // Only notify the network. The peer indicator in the store is driven
+      // exclusively by wa:chat_presence events, so our own typing can never
+      // be mistaken for someone else typing.
       SendChatPresence(chatId, "composing", "").catch(() => {})
     }
 
@@ -643,7 +645,6 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     const timeout = setTimeout(() => {
       isComposingRef.current = false
       SendChatPresence(chatId, "paused", "").catch(() => {})
-      setTypingIndicator(chatId, false)
     }, 1500)
     setTypingTimeout(timeout)
   }
@@ -1075,16 +1076,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     if (!chatId || chatType !== "contact") return
 
     SubscribeContactPresence(chatId).catch(() => {})
-
-    const unsubPresence = EventsOn(
-      "wa:chat_presence",
-      (data: { chatId: string; state: string; media?: string }) => {
-        if (data?.chatId === chatId) {
-          const isTyping = data.state === "composing" || data.state === "recording"
-          useUIStore.getState().setTypingIndicator(chatId, isTyping, data.media)
-        }
-      },
-    )
+    // wa:chat_presence is handled once, globally, in useWailsEvents. It now
+    // carries sender/isFromMe so it can drive the store for every chat without
+    // a second, contact-only listener here.
 
     const unsubOnline = EventsOn("wa:presence", (data: { jid: string; unavailable: boolean }) => {
       if (data?.jid === chatId || data?.jid.split("@")[0] === chatId.split("@")[0]) {
@@ -1093,7 +1087,6 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     })
 
     return () => {
-      unsubPresence()
       unsubOnline()
       useUIStore.getState().setTypingIndicator(chatId, false)
     }
@@ -1290,7 +1283,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               isAnnounceGroup={isAnnounceGroup}
               typing={
                 typingIndicator?.isTyping
-                  ? { name: chatName, jid: chatId, media: typingIndicator.media }
+                  ? {
+                      // The typing peer, never the chat (group subject) name.
+                      jid: typingIndicator.sender || chatId,
+                      media: typingIndicator.media,
+                    }
                   : null
               }
             />

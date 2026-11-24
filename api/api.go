@@ -1398,10 +1398,21 @@ func (a *Api) mainEventHandler(evt any) {
 			a.startBackground(a.reconnectLoop)
 		}
 	case *events.Receipt:
+		// The UI matches on the bare protocol values ("read", "delivered",
+		// "played"). GoString() returns "types.ReceiptTypeRead" etc., which
+		// never matched, so ticks stayed at single-check forever.
+		status := string(v.Type)
+		switch status {
+		case "": // HyperMeow uses "" for the delivered receipt
+			status = "delivered"
+		case "played-self":
+			status = "played"
+		}
 		a.app.Event.Emit("wa:message_receipt", map[string]any{
 			"chatId":     v.Chat.String(),
-			"status":     v.Type.GoString(),
+			"status":     status,
 			"messageIDs": v.MessageIDs,
+			"sender":     v.Sender.String(),
 		})
 	case *events.Contact:
 		action := v.Action
@@ -1414,10 +1425,16 @@ func (a *Api) mainEventHandler(evt any) {
 	case *events.PushName, *events.BusinessName:
 		a.app.Event.Emit("wa:chat_list_refresh")
 	case *events.ChatPresence:
+		// Carry the sender and the library's IsFromMe flag. Without them the
+		// frontend cannot tell a peer typing from our own echoed chatstate,
+		// and groups show the group name as the "typing" contact.
 		a.app.Event.Emit("wa:chat_presence", map[string]any{
-			"chatId": v.Chat.String(),
-			"state":  string(v.State),
-			"media":  string(v.Media),
+			"chatId":   v.Chat.String(),
+			"sender":   v.Sender.String(),
+			"isFromMe": v.IsFromMe,
+			"isGroup":  v.IsGroup,
+			"state":    string(v.State),
+			"media":    string(v.Media),
 		})
 	case *events.IdentityChange:
 		// AutoTrustIdentity stays enabled for WhatsApp-Web parity, but the

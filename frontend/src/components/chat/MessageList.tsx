@@ -3,6 +3,7 @@ import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso"
 import type { Message } from "../../store/types"
 import { dayKey, formatDateSeparator, getAvatarColor } from "../../lib/utils"
 import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
+import { useContactStore } from "../../store/useContactStore"
 import { MessageItem } from "./MessageItem"
 import type { ContactActionTarget } from "../../hooks/useContactActions"
 
@@ -32,7 +33,7 @@ interface MessageListProps {
   highlightedMessageId?: string | null
   isAnnounceGroup?: boolean
   /** Active peer typing indicator, rendered as a bubble at the end of the list. */
-  typing?: { name: string; jid: string; media?: string } | null
+  typing?: { jid: string; media?: string } | null
 }
 
 export interface MessageListHandle {
@@ -48,7 +49,7 @@ const OVERSCAN = { top: 800, bottom: 800 }
 
 interface ListContext {
   isLoading?: boolean
-  typing?: { name: string; jid: string; media?: string } | null
+  typing?: { jid: string; media?: string } | null
 }
 
 // Components must be stable module-level references: an inline object/arrow
@@ -95,11 +96,31 @@ function TypingAvatar({ jid, name }: { jid: string; name: string }) {
 // bottom), so the typing bubble sits directly under the last message.
 const ListFooter: Components<Message, ListContext>["Footer"] = ({ context }) => {
   const typing = context?.typing
+  const jid = typing?.jid ?? ""
+  const getContactName = useContactStore(state => state.getContactName)
+  const [name, setName] = useState("")
+  useEffect(() => {
+    let alive = true
+    setName("")
+    if (jid) {
+      getContactName(jid)
+        .then(resolved => {
+          if (alive) setName(resolved || jid.split("@")[0])
+        })
+        .catch(() => {
+          if (alive) setName(jid.split("@")[0])
+        })
+    }
+    return () => {
+      alive = false
+    }
+  }, [jid, getContactName])
   if (!typing) return <div className="h-2" />
   const label = typing.media === "audio" ? "recording a voice message" : "typing"
+  const displayName = name || jid.split("@")[0]
   return (
     <div className="flex items-end gap-2 px-2 pb-2 pt-1" role="status" aria-live="polite">
-      <TypingAvatar jid={typing.jid} name={typing.name} />
+      <TypingAvatar jid={typing.jid} name={displayName} />
       <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-white px-3 py-2 shadow-sm dark:bg-dark-secondary">
         <div className="flex items-center gap-1" aria-hidden="true">
           <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "0ms" }} />
@@ -107,7 +128,7 @@ const ListFooter: Components<Message, ListContext>["Footer"] = ({ context }) => 
           <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "320ms" }} />
         </div>
         <span className="text-[11px] text-gray-500 dark:text-gray-400">
-          {typing.name} {label}
+          {displayName} {label}
         </span>
       </div>
     </div>

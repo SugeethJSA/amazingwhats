@@ -8,6 +8,8 @@ interface TypingState {
   at: number
   /** Presence media from wa:chat_presence, e.g. "audio" for voice recording. */
   media?: string
+  /** JID of the peer who is typing. Never the local user or the group JID. */
+  sender?: string
 }
 
 interface OnlineState {
@@ -92,7 +94,13 @@ interface UIStore {
   setSidebarOpen: (open: boolean) => void
   setShowEmojiPicker: (show: boolean) => void
   setChatInfoOpen: (open: boolean) => void
-  setTypingIndicator: (chatId: string, isTyping: boolean, media?: string) => void
+  setTypingIndicator: (
+    chatId: string,
+    isTyping: boolean,
+    media?: string,
+    sender?: string,
+    isFromMe?: boolean,
+  ) => void
   setOnlineStatus: (userId: string, isOnline: boolean) => void
   /** Backward compatible: `addNotification(message)` still works. */
   addNotification: (message: string, options?: NotificationOptions) => number
@@ -155,11 +163,16 @@ export const useUIStore = create<UIStore>(set => ({
   setShowEmojiPicker: show => set({ showEmojiPicker: show }),
   setChatInfoOpen: open => set({ chatInfoOpen: open }),
 
-  setTypingIndicator: (chatId, isTyping, media) =>
+  setTypingIndicator: (chatId, isTyping, media, sender, isFromMe) =>
     set(state => {
       const next = { ...state.typingIndicators }
+      // Never show our own echoed chatstate as a peer typing indicator.
+      if (isFromMe) {
+        delete next[chatId]
+        return { typingIndicators: next }
+      }
       if (isTyping) {
-        next[chatId] = { isTyping: true, at: Date.now(), media }
+        next[chatId] = { isTyping: true, at: Date.now(), media, sender }
       } else {
         delete next[chatId]
       }

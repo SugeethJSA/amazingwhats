@@ -198,10 +198,20 @@ export function useWailsEvents() {
     // 2. Chat Typing / Presence Events
     const unsubChatPresence = EventsOn(
       "wa:chat_presence",
-      (data: { chatId: string; state: string; media?: string }) => {
+      (data: {
+        chatId: string
+        state: string
+        media?: string
+        sender?: string
+        isFromMe?: boolean
+      }) => {
         if (!data?.chatId) return
+        // A group JID is never a person who can type; ignore malformed events.
+        if (data.sender && data.sender === data.chatId) return
         const isTyping = data.state === "composing" || data.state === "recording"
-        useUIStore.getState().setTypingIndicator(data.chatId, isTyping, data.media)
+        useUIStore
+          .getState()
+          .setTypingIndicator(data.chatId, isTyping, data.media, data.sender, data.isFromMe)
       },
     )
 
