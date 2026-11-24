@@ -136,7 +136,7 @@ type Api struct {
 	healthCheckWg  sync.WaitGroup
 }
 
-// repairGroupNames heals whats4linux_groups rows that are missing or were
+// repairGroupNames heals amazingwhats_groups rows that are missing or were
 // stored with an empty name during early history sync. It runs in the
 // background after the client connects (never on the GetChatList hot path,
 // which must stay local-only and instant) and tells the frontend to reload

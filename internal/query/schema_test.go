@@ -187,7 +187,7 @@ var expectedTableOwner = map[string]string{
 	"reactions":          "CreateReactionsTable",
 	"read_receipts":      "CreateReadReceiptsTable",
 	"link_previews":      "CreateLinkPreviewsTable",
-	"whats4linux_groups": "CreateGroupsTable",
+	"amazingwhats_groups": "CreateGroupsTable",
 	"image_index":        "CreateImageIndexTable",
 }
 
@@ -206,7 +206,7 @@ var expectedTableColumns = map[string][]string{
 	"reactions":          {"id", "message_id", "sender_id", "emoji"},
 	"read_receipts":      {"chat_jid", "read_after_timestamp"},
 	"link_previews":      {"message_id", "url", "title", "description", "thumbnail", "direct_path", "media_key", "file_sha256", "file_enc_sha256"},
-	"whats4linux_groups": {"jid", "name", "topic", "owner_jid", "participant_count", "parent_jid", "parent_name", "is_parent", "is_default_sub"},
+	"amazingwhats_groups": {"jid", "name", "topic", "owner_jid", "participant_count", "parent_jid", "parent_name", "is_parent", "is_default_sub"},
 	"image_index":        {"message_id", "sha256", "mime", "width", "height", "created_at"},
 }
 

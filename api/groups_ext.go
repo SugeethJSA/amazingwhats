@@ -13,7 +13,7 @@ import (
 )
 
 // groupMetaIndex is an in-memory snapshot of the locally stored group
-// metadata (whats4linux_groups in app.db). It is built with a single batch
+// metadata (amazingwhats_groups in app.db). It is built with a single batch
 // query so GetChatList never issues one SQLite point-query per group, and a
 // missing row is just a map miss instead of an error that used to be logged
 // once per group per poll.

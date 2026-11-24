@@ -10,7 +10,7 @@ import (
 func TestCreateGroupsTable(t *testing.T) {
 	t.Parallel()
 	ddl := query.CreateGroupsTable
-	mustContain(t, ddl, "CREATE TABLE IF NOT EXISTS whats4linux_groups")
+	mustContain(t, ddl, "CREATE TABLE IF NOT EXISTS amazingwhats_groups")
 	for _, col := range []string{
 		"jid TEXT PRIMARY KEY", "name TEXT", "topic TEXT", "owner_jid TEXT",
 		"participant_count INTEGER", "parent_jid TEXT DEFAULT ''",
@@ -30,10 +30,10 @@ func TestGroupAlterStatements(t *testing.T) {
 		sql  string
 		want string
 	}{
-		{"parent jid", query.AlterGroupsAddParentJID, "ALTER TABLE whats4linux_groups ADD COLUMN parent_jid TEXT DEFAULT '';"},
-		{"parent name", query.AlterGroupsAddParentName, "ALTER TABLE whats4linux_groups ADD COLUMN parent_name TEXT DEFAULT '';"},
-		{"is parent", query.AlterGroupsAddIsParent, "ALTER TABLE whats4linux_groups ADD COLUMN is_parent INTEGER DEFAULT 0;"},
-		{"is default sub", query.AlterGroupsAddIsDefaultSub, "ALTER TABLE whats4linux_groups ADD COLUMN is_default_sub INTEGER DEFAULT 0;"},
+		{"parent jid", query.AlterGroupsAddParentJID, "ALTER TABLE amazingwhats_groups ADD COLUMN parent_jid TEXT DEFAULT '';"},
+		{"parent name", query.AlterGroupsAddParentName, "ALTER TABLE amazingwhats_groups ADD COLUMN parent_name TEXT DEFAULT '';"},
+		{"is parent", query.AlterGroupsAddIsParent, "ALTER TABLE amazingwhats_groups ADD COLUMN is_parent INTEGER DEFAULT 0;"},
+		{"is default sub", query.AlterGroupsAddIsDefaultSub, "ALTER TABLE amazingwhats_groups ADD COLUMN is_default_sub INTEGER DEFAULT 0;"},
 	}
 
 	for _, tt := range tests {
@@ -57,8 +57,8 @@ func TestInsertOrReplaceGroup(t *testing.T) {
 	sql := query.InsertOrReplaceGroup
 	mustHavePlaceholders(t, sql, 9)
 	table, cols := insertTableAndColumns(sql)
-	if table != "whats4linux_groups" {
-		t.Errorf("insert target = %q, want whats4linux_groups", table)
+	if table != "amazingwhats_groups" {
+		t.Errorf("insert target = %q, want amazingwhats_groups", table)
 	}
 	want := []string{
 		"jid", "name", "topic", "owner_jid", "participant_count",
@@ -72,7 +72,7 @@ func TestInsertOrReplaceGroup(t *testing.T) {
 			t.Errorf("insert column[%d] = %q, want %q", i, cols[i], want[i])
 		}
 	}
-	mustContain(t, sql, "INSERT OR REPLACE INTO whats4linux_groups")
+	mustContain(t, sql, "INSERT OR REPLACE INTO amazingwhats_groups")
 }
 
 func TestGroupReadQueries(t *testing.T) {
@@ -90,10 +90,10 @@ func TestGroupReadQueries(t *testing.T) {
 		count        int
 		checkColumns bool
 	}{
-		{"all groups", query.SelectAllGroups, []string{"FROM whats4linux_groups;"}, 0, true},
-		{"by jid", query.SelectGroupByJID, []string{"FROM whats4linux_groups", "WHERE jid = ?;"}, 1, true},
+		{"all groups", query.SelectAllGroups, []string{"FROM amazingwhats_groups;"}, 0, true},
+		{"by jid", query.SelectGroupByJID, []string{"FROM amazingwhats_groups", "WHERE jid = ?;"}, 1, true},
 		{"communities", query.SelectCommunities, []string{"WHERE is_parent = 1", "ORDER BY name COLLATE NOCASE;"}, 0, true},
-		{"count by parent", query.CountGroupsByParent, []string{"SELECT COUNT(*) FROM whats4linux_groups WHERE parent_jid = ?;"}, 1, false},
+		{"count by parent", query.CountGroupsByParent, []string{"SELECT COUNT(*) FROM amazingwhats_groups WHERE parent_jid = ?;"}, 1, false},
 	}
 
 	for _, tt := range tests {

@@ -66,20 +66,20 @@ func TestGroupsSchemaStatements(t *testing.T) {
 		contains  []string
 	}{
 		{
-			name:     "create table targets whats4linux_groups",
+			name:     "create table targets amazingwhats_groups",
 			stmt:     query.CreateGroupsTable,
-			contains: []string{"CREATE TABLE IF NOT EXISTS whats4linux_groups", "jid TEXT PRIMARY KEY"},
+			contains: []string{"CREATE TABLE IF NOT EXISTS amazingwhats_groups", "jid TEXT PRIMARY KEY"},
 		},
 		{
 			name:      "upsert has nine placeholders",
 			stmt:      query.InsertOrReplaceGroup,
 			wantParam: 9,
-			contains:  []string{"INSERT OR REPLACE INTO whats4linux_groups", "is_default_sub"},
+			contains:  []string{"INSERT OR REPLACE INTO amazingwhats_groups", "is_default_sub"},
 		},
 		{
 			name:     "select all has no placeholders",
 			stmt:     query.SelectAllGroups,
-			contains: []string{"FROM whats4linux_groups", "COALESCE(is_parent, 0)"},
+			contains: []string{"FROM amazingwhats_groups", "COALESCE(is_parent, 0)"},
 		},
 		{
 			name:      "select by jid has one placeholder",
@@ -134,7 +134,7 @@ func TestGroupsMigrationStatements(t *testing.T) {
 			msg := strings.ToLower(err.Error())
 			assert.Contains(t, msg, "duplicate column")
 			assert.Contains(t, msg, tt.column)
-			assert.Contains(t, strings.ToLower(tt.stmt), "alter table whats4linux_groups add column")
+			assert.Contains(t, strings.ToLower(tt.stmt), "alter table amazingwhats_groups add column")
 		})
 	}
 }

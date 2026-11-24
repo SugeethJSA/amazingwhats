@@ -33,9 +33,16 @@ func NewAppDatabase(ctx context.Context) (*AppDatabase, error) {
 }
 
 func (cw *AppDatabase) Initialise(client *whatsmeow.Client) error {
+	// Rename the legacy table before any statement references the new name.
+	// Running CreateGroupsTable first would create a new empty table and
+	// orphan the existing rows, so this must stay ahead of it.
+	if err := cw.migrateGroupsTableName(); err != nil {
+		return err
+	}
+
 	_, err := cw.db.Exec(query.CreateGroupsTable)
 	if err != nil {
-		return fmt.Errorf("failed to create whats4linux_groups table: %w", err)
+		return fmt.Errorf("failed to create amazingwhats_groups table: %w", err)
 	}
 
 	// Best-effort migrations for existing installs.
@@ -56,6 +63,56 @@ func (cw *AppDatabase) Initialise(client *whatsmeow.Client) error {
 	err = cw.FetchAndStoreGroups(client)
 	if err != nil {
 		return fmt.Errorf("failed to fetch and store groups: %w", err)
+	}
+	return nil
+}
+
+// tableExists reports whether a table of the given name is present in the
+// main SQLite schema.
+func (cw *AppDatabase) tableExists(name string) (bool, error) {
+	var count int
+	err := cw.db.QueryRow(
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`,
+		name,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// migrateGroupsTableName renames the legacy groups table to its new name
+// without losing any rows. It is deliberately idempotent:
+//   - new table already present (including when both exist): no-op, so no
+//     data is deleted and a partially migrated DB is left as-is;
+//   - neither table present: no-op, CreateGroupsTable will create the new one;
+//   - only the legacy table present: rename it in place, preserving rows,
+//     columns and any associated indexes/triggers (SQLite rewrites their
+//     references on ALTER TABLE ... RENAME TO).
+func (cw *AppDatabase) migrateGroupsTableName() error {
+	const (
+		newName    = "amazingwhats_groups"
+		legacyName = "whats4linux_groups"
+	)
+
+	newExists, err := cw.tableExists(newName)
+	if err != nil {
+		return fmt.Errorf("check %s table: %w", newName, err)
+	}
+	if newExists {
+		return nil
+	}
+
+	legacyExists, err := cw.tableExists(legacyName)
+	if err != nil {
+		return fmt.Errorf("check %s table: %w", legacyName, err)
+	}
+	if !legacyExists {
+		return nil
+	}
+
+	if _, err := cw.db.Exec(`ALTER TABLE ` + legacyName + ` RENAME TO ` + newName); err != nil {
+		return fmt.Errorf("rename %s to %s: %w", legacyName, newName, err)
 	}
 	return nil
 }
@@ -110,7 +167,7 @@ func (cw *AppDatabase) FetchAndStoreGroups(client *whatsmeow.Client) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Clear stale rows so left groups / unlinked parents disappear.
-	if _, err := tx.Exec(`DELETE FROM whats4linux_groups`); err != nil {
+	if _, err := tx.Exec(`DELETE FROM amazingwhats_groups`); err != nil {
 		return fmt.Errorf("failed to clear groups: %w", err)
 	}
 
@@ -309,7 +366,7 @@ func (cw *AppDatabase) ParentCommunityName(parentJID string) string {
 	// Fall back to any child row that cached parent_name.
 	var name string
 	_ = cw.db.QueryRow(
-		`SELECT parent_name FROM whats4linux_groups WHERE parent_jid = ? AND parent_name != '' LIMIT 1`,
+		`SELECT parent_name FROM amazingwhats_groups WHERE parent_jid = ? AND parent_name != '' LIMIT 1`,
 		parentJID,
 	).Scan(&name)
 	return name
