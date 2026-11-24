@@ -99,6 +99,21 @@ type Api struct {
 	groupRepairInFlight atomic.Bool
 	appStateResync      atomic.Bool
 
+	// appStateRetryMu coalesces bursts of AppStateSyncError events into a
+	// single delayed resync. appStateResync (above) is the in-flight guard;
+	// these fields stop a resync that keeps failing from driving a tight
+	// error -> retry -> error loop.
+	appStateRetryMu      sync.Mutex
+	appStateRetryPending bool
+	appStateRetryAt      time.Time
+
+	// connectionHandlerID tracks the HyperMeow connection-lifecycle observer
+	// that receives each connection's original ConnectContext. It is an
+	// additional authority signal for the reconnect machinery; the generic
+	// event handler still owns all UI/status emission.
+	connectionHandlerID  uint32
+	connectionHandlerSet bool
+
 	// reconnectMu guards the single app-level reconnect loop slot. whatsmeow
 	// already auto-reconnects, so at most one app-level fallback loop may be
 	// active and a Connected event supersedes it.
@@ -238,6 +253,62 @@ func (a *Api) resyncAppState() {
 		} else if n, _ := res.RowsAffected(); n > 0 {
 			slog.Info(fmt.Sprintf("Purged %d empty stubs", n), "source", "contacts")
 		}
+	}
+}
+
+const (
+	// appStateRetryDebounce coalesces a burst of AppStateSyncError events
+	// (whatsmeow can emit one per failed patch) into a single resync.
+	appStateRetryDebounce = 3 * time.Second
+	// appStateRetryCooldown caps the retry rate so a collection that keeps
+	// failing cannot produce an unbounded error -> retry -> error cycle.
+	appStateRetryCooldown = 30 * time.Second
+)
+
+// scheduleAppStateRetry queues exactly one delayed resync for a burst of
+// AppStateSyncError events. appStateRetryPending coalesces events that arrive
+// close together, appStateResync prevents overlapping a resync already in
+// flight, and the cooldown bounds retries over time. The event's error text is
+// deliberately never logged here: it may contain raw JIDs or other data.
+func (a *Api) scheduleAppStateRetry() {
+	if a.appStateResync.Load() {
+		return
+	}
+	a.appStateRetryMu.Lock()
+	now := time.Now()
+	if a.appStateRetryPending || now.Sub(a.appStateRetryAt) < appStateRetryCooldown {
+		a.appStateRetryMu.Unlock()
+		return
+	}
+	a.appStateRetryPending = true
+	a.appStateRetryAt = now
+	a.appStateRetryMu.Unlock()
+
+	queued := a.startBackground(func() {
+		defer func() {
+			a.appStateRetryMu.Lock()
+			a.appStateRetryPending = false
+			a.appStateRetryMu.Unlock()
+		}()
+		ctx := a.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		select {
+		case <-time.After(appStateRetryDebounce):
+		case <-ctx.Done():
+			return
+		}
+		if a.isShuttingDown() || a.appStateResync.Load() {
+			return
+		}
+		a.resyncAppState()
+	})
+	if !queued {
+		// Don't wedge the guard if the worker queue was full or we are closing.
+		a.appStateRetryMu.Lock()
+		a.appStateRetryPending = false
+		a.appStateRetryMu.Unlock()
 	}
 }
 
@@ -434,6 +505,84 @@ func (a *Api) clientIsConnected() bool {
 	client := a.waClient
 	a.lifecycleMu.Unlock()
 	return client != nil && client.IsConnected()
+}
+
+// registerConnectionObserver installs the HyperMeow connection-lifecycle
+// observer on the current client. It is installed at client creation
+// (ServiceStartup), not per login: the observer is client-scoped and must also
+// see events produced by whatsmeow's auto-reconnect. The generic event handler
+// registered in Login is left untouched.
+func (a *Api) registerConnectionObserver() {
+	a.lifecycleMu.Lock()
+	defer a.lifecycleMu.Unlock()
+	if a.waClient == nil || a.connectionHandlerSet {
+		return
+	}
+	a.connectionHandlerID = a.waClient.AddConnectionEventHandler(func(connectCtx context.Context, evt any) {
+		a.handleConnectionLifecycle(connectCtx, evt)
+	})
+	a.connectionHandlerSet = true
+}
+
+// unregisterConnectionObserver removes the lifecycle observer from the client.
+// An already-dispatched callback can still arrive with its original context,
+// which handleConnectionLifecycle treats as non-authoritative once shuttingDown
+// is set.
+func (a *Api) unregisterConnectionObserver(client *whatsmeow.Client) {
+	if client == nil {
+		return
+	}
+	a.lifecycleMu.Lock()
+	defer a.lifecycleMu.Unlock()
+	if !a.connectionHandlerSet {
+		return
+	}
+	client.RemoveConnectionEventHandler(a.connectionHandlerID)
+	a.connectionHandlerSet = false
+}
+
+// handleConnectionLifecycle is an ADDITIONAL authority signal for the app
+// reconnect machinery; it deliberately emits no UI status because the generic
+// mainEventHandler already does. connectCtx is the context of the connection
+// that produced evt and may already be cancelled when a delayed event is
+// dispatched, in which case the event must not be trusted.
+func (a *Api) handleConnectionLifecycle(connectCtx context.Context, evt any) {
+	if connectCtx == nil || connectCtx.Err() != nil || a.isShuttingDown() {
+		return
+	}
+	switch evt.(type) {
+	case *events.Connected:
+		// A live connection owns the socket now. Supersede any app-level
+		// fallback loop without emitting a second status event.
+		a.supersedeReconnectLoop()
+	case *events.Disconnected, *events.LoggedOut:
+		// Teardown (store deletion on logout) races the event dispatch, so
+		// re-check both authority and the real socket state before queuing the
+		// fallback. The generic handler still runs and may queue its own loop;
+		// beginReconnectLoop's single slot makes that duplicate harmless.
+		a.lifecycleMu.Lock()
+		client := a.waClient
+		loggedOut := client == nil || client.Store == nil || client.Store.ID == nil
+		a.lifecycleMu.Unlock()
+		if loggedOut || a.clientIsConnected() {
+			return // whatsmeow auto-reconnect may already have restored the socket
+		}
+		a.startBackground(func() {
+			// Re-validate inside the worker: by now a LoggedOut teardown has
+			// normally cleared the session, so no loop starts against it.
+			if a.isShuttingDown() || a.clientIsConnected() {
+				return
+			}
+			a.lifecycleMu.Lock()
+			c := a.waClient
+			stillLoggedIn := c != nil && c.Store != nil && c.Store.ID != nil
+			a.lifecycleMu.Unlock()
+			if !stillLoggedIn {
+				return
+			}
+			a.reconnectLoop()
+		})
+	}
 }
 
 func (a *Api) emitError(msg string) {
@@ -753,6 +902,10 @@ func (a *Api) ServiceShutdown() error {
 		a.eventHandlerSet = false
 	}
 	a.lifecycleMu.Unlock()
+	// Connection observers are removed under their own lock. An already
+	// dispatched callback can still arrive, but the shuttingDown check in
+	// handleConnectionLifecycle makes it a no-op.
+	a.unregisterConnectionObserver(client)
 
 	if loginCancel != nil {
 		loginCancel()
@@ -876,6 +1029,10 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		a.failStartup(fmt.Errorf("create WhatsApp client: %w", err))
 		return nil
 	}
+	// Install the connection lifecycle observer on the freshly created client.
+	// It is an additional authority signal for the reconnect machinery and is
+	// removed in ServiceShutdown alongside the generic event handler.
+	a.registerConnectionObserver()
 	a.messageStore, err = store.NewMessageStore()
 	if err != nil {
 		a.failStartup(fmt.Errorf("open message store: %w", err))
@@ -1286,6 +1443,18 @@ func (a *Api) mainEventHandler(evt any) {
 		a.app.Event.Emit("wa:appstate_sync_complete", map[string]any{
 			"name": string(v.Name),
 		})
+
+	case *events.AppStateSyncError:
+		// HyperMeow dispatches this AFTER releasing the app-state sync lock, so
+		// a retry may safely call FetchAppState. Full-sync failures are the
+		// important case: they leave the local version reset and mutations
+		// undelivered. Log only the collection name and flags — the wrapped
+		// error may contain raw JIDs or other private data.
+		slog.Warn("App state sync failed",
+			"name", string(v.Name),
+			"fullSync", v.FullSync,
+			"source", "appstate")
+		a.scheduleAppStateRetry()
 
 	case *events.StreamReplaced:
 		slog.Warn("Stream replaced — another device took over", "source", "connection")
