@@ -13,6 +13,15 @@ function ChatsIcon() {
   )
 }
 
+/** Original inline phone glyph — no Meta/WhatsApp artwork. */
+function CallsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+      <path d="M6.6 3.2a1.6 1.6 0 0 0-1.58 1.34l-.72 4.1a1.6 1.6 0 0 0 .46 1.4l2.1 2.05a13.9 13.9 0 0 0 5.05 5.05l2.05 2.1a1.6 1.6 0 0 0 1.4.46l4.1-.72a1.6 1.6 0 0 0 1.34-1.58v-1.9a1.6 1.6 0 0 0-1.75-1.59l-2.4.27a1.6 1.6 0 0 0-1.36.98l-.42 1.02a10.7 10.7 0 0 1-3.4-3.4l1.02-.42a1.6 1.6 0 0 0 .98-1.36l.27-2.4A1.6 1.6 0 0 0 12.2 4.8h-1.9a1.6 1.6 0 0 0-1.6-1.6H6.6z" />
+    </svg>
+  )
+}
+
 function StatusIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
@@ -57,18 +66,19 @@ const ITEM_BASE =
 
 /**
  * Persistent WhatsApp-style left rail. Every entry maps to a real destination
- * already in the app; there are deliberately no Calls / Tools placeholders
- * because neither has a view or a backend binding to open.
+ * in the app — Chats, Calls, Status, Channels, Communities and Settings.
  */
 export function NavRail() {
   const screen = useUIStore(state => state.screen)
   const sidebarView = useUIStore(state => state.sidebarView)
   const setScreen = useUIStore(state => state.setScreen)
   const setSidebarView = useUIStore(state => state.setSidebarView)
+  const setSettingsCategoryIntent = useUIStore(state => state.setSettingsCategoryIntent)
   const selfAvatar = useSelfAvatarStore(state => state.selfAvatar)
 
   const items: RailItem[] = [
     { view: "chats", label: "Chats", icon: <ChatsIcon /> },
+    { view: "calls", label: "Calls", icon: <CallsIcon /> },
     { view: "status", label: "Status", icon: <StatusIcon /> },
     { view: "channels", label: "Channels", icon: <ChannelsIcon /> },
     { view: "communities", label: "Communities", icon: <CommunitiesIcon /> },
@@ -144,6 +154,9 @@ export function NavRail() {
         aria-label="Profile and Account"
         title="Profile"
         onClick={() => {
+          // The intent survives until the lazy SettingsScreen reads it, so the
+          // Account category is selected even if that screen is not mounted yet.
+          setSettingsCategoryIntent("account")
           setScreen("settings")
           window.dispatchEvent(new CustomEvent("wa:open-settings-category", { detail: "account" }))
         }}

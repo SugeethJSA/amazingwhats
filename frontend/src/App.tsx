@@ -234,6 +234,7 @@ function App() {
     }
     const openProfile = () => {
       if (useUIStore.getState().screen === "login") return
+      useUIStore.getState().setSettingsCategoryIntent("account")
       useUIStore.getState().setScreen("settings")
       window.dispatchEvent(new CustomEvent("wa:open-settings-category", { detail: "account" }))
     }

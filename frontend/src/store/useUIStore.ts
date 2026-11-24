@@ -20,7 +20,7 @@ interface OnlineState {
 export type AppScreen = "login" | "chats" | "settings"
 
 /** Sidebar destination backing the persistent left navigation rail. */
-export type SidebarView = "chats" | "communities" | "channels" | "status"
+export type SidebarView = "chats" | "calls" | "communities" | "channels" | "status"
 
 export type NotificationTone = "info" | "success" | "error" | "warning"
 
@@ -89,6 +89,12 @@ interface UIStore {
   setScreen: (screen: AppScreen) => void
   sidebarView: SidebarView
   setSidebarView: (view: SidebarView) => void
+  /**
+   * Category a settings navigation asked for before the lazy SettingsScreen
+   * mounted. Consumers read it in their initial state, then clear it on mount.
+   */
+  settingsCategoryIntent: string | null
+  setSettingsCategoryIntent: (category: string | null) => void
   sidebarOpen: boolean
   showEmojiPicker: boolean
   chatInfoOpen: boolean
@@ -140,6 +146,8 @@ export const useUIStore = create<UIStore>(set => ({
   setScreen: screen => set({ screen }),
   sidebarView: "chats",
   setSidebarView: sidebarView => set({ sidebarView }),
+  settingsCategoryIntent: null,
+  setSettingsCategoryIntent: settingsCategoryIntent => set({ settingsCategoryIntent }),
   sidebarOpen: true,
   showEmojiPicker: false,
   chatInfoOpen: false,

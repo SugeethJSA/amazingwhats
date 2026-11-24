@@ -13,6 +13,7 @@ import HelpAndFeedback from "./settingscreens/HelpAndFeedback"
 import LogOut from "./settingscreens/LogOut"
 import AdvancedScreen from "./settingscreens/AdvancedScreen"
 import { useSelfAvatarStore } from "../store/useSelfAvatarStore.ts"
+import { useUIStore } from "../store/useUIStore"
 import {
   AccountIcon,
   BackIcon,
@@ -128,12 +129,20 @@ const SETTINGS_GROUPS: { label: string; ids: SettingsCategory[] }[] = [
 ]
 
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
-  const [selectedCategory, setSelectedCategory] = useState<SettingsCategory | null>(null)
+  // A Profile / Ctrl+Alt+P navigation can be dispatched before this lazy
+  // screen mounts, so the window listener below would miss it. Read the
+  // store-held intent during the first render instead.
+  const [selectedCategory, setSelectedCategory] = useState<SettingsCategory | null>(() => {
+    const intent = useUIStore.getState().settingsCategoryIntent
+    return intent === "account" ? (intent as SettingsCategory) : null
+  })
   const [searchTerm, setSearchTerm] = useState("")
   const [profile, setProfile] = useState<api.Contact | null>(null)
   const [nestedScreen, setNestedScreen] = useState<ReactNode | null>(null)
   const selfAvatar = useSelfAvatarStore(s => s.selfAvatar)
   const setSelfAvatar = useSelfAvatarStore(s => s.setSelfAvatar)
+  const settingsCategoryIntent = useUIStore(s => s.settingsCategoryIntent)
+  const setSettingsCategoryIntent = useUIStore(s => s.setSettingsCategoryIntent)
 
   const loadAvatar = useCallback(async () => {
     try {
@@ -148,6 +157,15 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     GetProfile("").then(setProfile)
     loadAvatar()
   }, [loadAvatar])
+
+  // Consume the navigation intent whenever it changes, not only on mount:
+  // clicking Profile while Settings is already mounted must not leave a stale
+  // intent that re-selects Account on a later plain Settings navigation.
+  useEffect(() => {
+    if (!settingsCategoryIntent) return
+    if (settingsCategoryIntent === "account") setSelectedCategory("account")
+    setSettingsCategoryIntent(null)
+  }, [settingsCategoryIntent, setSettingsCategoryIntent])
 
   // "Profile and About" (Ctrl+Alt+P) opens settings directly on the Account
   // category. The event is dispatched by the App-level shortcut handler.

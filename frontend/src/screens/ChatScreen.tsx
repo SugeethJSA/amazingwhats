@@ -50,6 +50,7 @@ import {
   ResizableHandle,
 } from "../components/common/resizable"
 import { MessageSearchScreen } from "./MessageSearchScreen"
+import { CallsScreen } from "../components/chat/CallsScreen"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import Wordmark from "@/components/common/Wordmark"
 
@@ -1077,11 +1078,11 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     [addNotification],
   )
 
-  // There is no Calls view or call-picker trigger in this app: MakeCall needs
-  // a JID. Steer the user to a conversation instead of rendering a dead button.
+  // The welcome-screen shortcut now opens the real call log; calls can be
+  // placed back from there.
   const handleGoToCalls = useCallback(() => {
-    showToast("Calls start from a chat — open a conversation to make or join one.")
-  }, [showToast])
+    setView("calls")
+  }, [setView])
 
   // The attach flow lives in ChatDetail and needs an open chat to send to.
   const handleSendDocument = useCallback(() => {
@@ -1750,7 +1751,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             onSearch={() => setShowSearch(true)}
             avatar={selfAvatar}
           />
-          {view !== "status" && (
+          {view !== "status" && view !== "calls" && (
             <SearchBar
               value={searchTerm}
               onChange={setSearchTerm}
@@ -1909,7 +1910,23 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           )}
 
           <div className="flex-1 overflow-y-auto">
-            {view === "status" ? (
+            {view === "calls" ? (
+              <CallsScreen
+                onOpenChat={jid => {
+                  // Open the related conversation in the right pane. Calls
+                  // keeps its own list pane, so no view switch is needed here.
+                  const existing = getChat(jid)
+                  const chat: ChatItem = existing ?? {
+                    id: jid,
+                    name: jid.split("@")[0] || jid,
+                    subtitle: "",
+                    type: jid.endsWith("@g.us") ? "group" : "contact",
+                  }
+                  selectChat(chat)
+                  clearUnreadCount(jid)
+                }}
+              />
+            ) : view === "status" ? (
               <StatusList onOpen={setStoryGroup} />
             ) : view === "communities" ? (
               <CommunityList
