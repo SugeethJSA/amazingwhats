@@ -1455,6 +1455,14 @@ func (a *Api) mainEventHandler(evt any) {
 	case *events.GroupInfo:
 		a.startBackground(func() { a.handleGroupInfoEvent(v) })
 
+	case *events.AppState:
+		// Generic app-state mutation. Other indexes are already handled by
+		// their higher-level events; call_log SET records are not, so store
+		// them as structured call history here.
+		if entry, ok := callLogEntryFromAppState(v); ok {
+			a.storeCallLogRecords([]store.CallLogEntry{entry})
+		}
+
 	case *events.AppStateSyncComplete:
 		slog.Info(fmt.Sprintf("App state sync complete: %s", v.Name), "source", "appstate")
 		a.app.Event.Emit("wa:appstate_sync_complete", map[string]any{
@@ -1676,6 +1684,11 @@ func (a *Api) handleGroupInfoEvent(v *events.GroupInfo) {
 // persisted through the existing MessageStore so the chat list and history
 // render exactly like incoming messages do.
 func (a *Api) processHistorySync(v *events.HistorySync) {
+	// Call-log records arrive in the same payload but are not conversations.
+	// Capture them before the early return below so a sync that carries only
+	// call records (and no messages) does not discard them.
+	a.storeCallLogRecords(callLogRecordsFromHistory(v.Data.GetCallLogRecords()))
+
 	conversations := v.Data.GetConversations()
 	if len(conversations) == 0 {
 		return

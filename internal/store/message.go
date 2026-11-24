@@ -220,6 +220,10 @@ func NewMessageStore() (*MessageStore, error) {
 		if err != nil {
 			return err
 		}
+		_, err = tx.Exec(query.CreateCallLogTable)
+		if err != nil {
+			return err
+		}
 		// The fork poll schema is authoritative. A database created by upstream
 		// has incompatible polls/poll_votes tables, against which the fork's
 		// CREATE TABLE IF NOT EXISTS would silently no-op. Detect and move such

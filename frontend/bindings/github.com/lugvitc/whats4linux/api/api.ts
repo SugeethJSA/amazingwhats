@@ -476,9 +476,20 @@ export function GetProfileColor(jidStr: string): $CancellablePromise<string> {
     return $Call.ByID(890988263, jidStr);
 }
 
+/**
+ * GetRecentCalls is the Wails binding for the future Calls screen. It returns
+ * structured call history newest first, with the limit clamped to 1..500 in
+ * the store layer.
+ */
+export function GetRecentCalls(limit: number): $CancellablePromise<store$0.CallLogEntry[]> {
+    return $Call.ByID(4214551437, limit).then(($result: any) => {
+        return $$createType40($result);
+    });
+}
+
 export function GetSearchSuggestions(query: string, limit: number): $CancellablePromise<string[]> {
     return $Call.ByID(2991969524, query, limit).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType41($result);
     });
 }
 
@@ -501,19 +512,19 @@ export function GetSettings(): $CancellablePromise<{ [_ in string]?: any }> {
 
 export function GetStatusPrivacy(): $CancellablePromise<$models.StatusPrivacyEntry[]> {
     return $Call.ByID(416277147).then(($result: any) => {
-        return $$createType41($result);
+        return $$createType43($result);
     });
 }
 
 export function GetSubscribedNewsletters(): $CancellablePromise<$models.NewsletterInfo[]> {
     return $Call.ByID(972602877).then(($result: any) => {
-        return $$createType42($result);
+        return $$createType44($result);
     });
 }
 
 export function GetUserInfo(jidStrs: string[]): $CancellablePromise<$models.UserInfoResult[]> {
     return $Call.ByID(749068144, jidStrs).then(($result: any) => {
-        return $$createType44($result);
+        return $$createType46($result);
     });
 }
 
@@ -543,7 +554,7 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 
 export function IsOnWhatsApp(phoneNumbers: string[]): $CancellablePromise<$models.OnWhatsAppResult[]> {
     return $Call.ByID(2901109790, phoneNumbers).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
@@ -652,7 +663,7 @@ export function PairPhone(phone: string): $CancellablePromise<string> {
  */
 export function PickAttachmentFile(): $CancellablePromise<$models.PickedFile | null> {
     return $Call.ByID(2333101227).then(($result: any) => {
-        return $$createType48($result);
+        return $$createType50($result);
     });
 }
 
@@ -710,13 +721,13 @@ export function ResetConnection(): $CancellablePromise<void> {
 
 export function ResolveBusinessMessageLink(code: string): $CancellablePromise<$models.BusinessLinkResult | null> {
     return $Call.ByID(3573562060, code).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType52($result);
     });
 }
 
 export function ResolveContactQRLink(code: string): $CancellablePromise<$models.ContactQRLinkResult | null> {
     return $Call.ByID(89436650, code).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType54($result);
     });
 }
 
@@ -751,7 +762,7 @@ export function SearchContacts(query: string): $CancellablePromise<$models.Conta
 
 export function SearchMessages(params: $models.SearchParams): $CancellablePromise<$models.SearchResult[]> {
     return $Call.ByID(711367617, params).then(($result: any) => {
-        return $$createType54($result);
+        return $$createType56($result);
     });
 }
 
@@ -1121,19 +1132,21 @@ const $$createType35 = store$0.PinnedMessage.createFrom;
 const $$createType36 = $Create.Array($$createType35);
 const $$createType37 = $models.PollVotesResult.createFrom;
 const $$createType38 = $models.PrivacySettingsResponse.createFrom;
-const $$createType39 = $Create.Array($Create.Any);
-const $$createType40 = $models.StatusPrivacyEntry.createFrom;
-const $$createType41 = $Create.Array($$createType40);
-const $$createType42 = $Create.Array($$createType31);
-const $$createType43 = $models.UserInfoResult.createFrom;
-const $$createType44 = $Create.Array($$createType43);
-const $$createType45 = $models.OnWhatsAppResult.createFrom;
+const $$createType39 = store$0.CallLogEntry.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = $Create.Array($Create.Any);
+const $$createType42 = $models.StatusPrivacyEntry.createFrom;
+const $$createType43 = $Create.Array($$createType42);
+const $$createType44 = $Create.Array($$createType31);
+const $$createType45 = $models.UserInfoResult.createFrom;
 const $$createType46 = $Create.Array($$createType45);
-const $$createType47 = $models.PickedFile.createFrom;
-const $$createType48 = $Create.Nullable($$createType47);
-const $$createType49 = $models.BusinessLinkResult.createFrom;
+const $$createType47 = $models.OnWhatsAppResult.createFrom;
+const $$createType48 = $Create.Array($$createType47);
+const $$createType49 = $models.PickedFile.createFrom;
 const $$createType50 = $Create.Nullable($$createType49);
-const $$createType51 = $models.ContactQRLinkResult.createFrom;
+const $$createType51 = $models.BusinessLinkResult.createFrom;
 const $$createType52 = $Create.Nullable($$createType51);
-const $$createType53 = $models.SearchResult.createFrom;
-const $$createType54 = $Create.Array($$createType53);
+const $$createType53 = $models.ContactQRLinkResult.createFrom;
+const $$createType54 = $Create.Nullable($$createType53);
+const $$createType55 = $models.SearchResult.createFrom;
+const $$createType56 = $Create.Array($$createType55);

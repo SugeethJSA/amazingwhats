@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lugvitc/whats4linux/internal/store"
 	"github.com/polymorfa/hypermeow/types/events"
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"
@@ -912,6 +913,26 @@ func (a *Api) insertCallLog(ac *ActiveCall) {
 
 	if err := a.messageStore.InsertSystemMessage(chatJID, msgID, text, ac.StartTime.Unix()); err != nil {
 		slog.Warn(fmt.Sprintf("Failed to store call log: %v", err), "source", "calls")
+	}
+
+	// Also write a structured row so a locally placed call is visible in the
+	// call log immediately, without waiting for history/app-state sync. The
+	// system message above stays intact for the existing chat rendering.
+	entry := store.CallLogEntry{
+		CallID:       fmt.Sprintf("local_%s_%d", ac.PeerJID, ac.StartTime.UnixMilli()),
+		PeerJID:      ac.PeerJID,
+		GroupJID:     ac.GroupJID,
+		IsIncoming:   ac.Direction == "incoming",
+		IsVideo:      ac.IsVideo,
+		Result:       status,
+		StartedAt:    ac.StartTime.Unix(),
+		DurationSecs: durSecs,
+		Source:       "local",
+	}
+	if err := a.messageStore.UpsertCallLogEntries([]store.CallLogEntry{entry}); err != nil {
+		slog.Warn(fmt.Sprintf("Failed to store structured call log: %v", err), "source", "calls")
+	} else {
+		a.app.Event.Emit("wa:call_log_updated")
 	}
 	a.app.Event.Emit("wa:chat_list_refresh")
 }

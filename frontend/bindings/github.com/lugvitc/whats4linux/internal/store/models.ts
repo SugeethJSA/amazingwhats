@@ -9,6 +9,64 @@ import { Create as $Create } from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as types$0 from "../types/models.js";
 
+/**
+ * CallLogEntry is one structured call-history row. It is intentionally a flat,
+ * JSON-tagged value so the same shape can cross the Wails binding boundary to a
+ * future Calls screen without another DTO.
+ */
+export class CallLogEntry {
+    "call_id": string;
+    "peer_jid": string;
+    "group_jid": string;
+    "is_incoming": boolean;
+    "is_video": boolean;
+    "result": string;
+    "started_at": number;
+    "duration_secs": number;
+    "source": string;
+
+    /** Creates a new CallLogEntry instance. */
+    constructor($$source: Partial<CallLogEntry> = {}) {
+        if (!("call_id" in $$source)) {
+            this["call_id"] = "";
+        }
+        if (!("peer_jid" in $$source)) {
+            this["peer_jid"] = "";
+        }
+        if (!("group_jid" in $$source)) {
+            this["group_jid"] = "";
+        }
+        if (!("is_incoming" in $$source)) {
+            this["is_incoming"] = false;
+        }
+        if (!("is_video" in $$source)) {
+            this["is_video"] = false;
+        }
+        if (!("result" in $$source)) {
+            this["result"] = "";
+        }
+        if (!("started_at" in $$source)) {
+            this["started_at"] = 0;
+        }
+        if (!("duration_secs" in $$source)) {
+            this["duration_secs"] = 0;
+        }
+        if (!("source" in $$source)) {
+            this["source"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CallLogEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CallLogEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CallLogEntry($$parsedSource as Partial<CallLogEntry>);
+    }
+}
+
 export class ContextInfo {
     "stanzaId"?: string;
     "participant"?: string;
