@@ -442,7 +442,9 @@ export function ChatInput({
     onInputChange(e)
 
     // Check for mention trigger
-    const mentionMatch = value.match(/@(\w*)$/)
+    // Match an @ token at the caret even when the name has spaces, dots or
+    // non-Latin characters; \w would stop at the first space or accent.
+    const mentionMatch = value.match(/@([^\s@]*)$/)
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase()
       const matches = mentionableContacts
@@ -475,7 +477,7 @@ export function ChatInput({
         name = contact.short || contact.phno
       }
     }
-    const newText = inputText.replace(/@\w*$/, `@${name} `)
+    const newText = inputText.replace(/@[^\s@]*$/, `@${name} `)
     const fakeEvent = {
       target: { value: newText },
     } as React.ChangeEvent<HTMLTextAreaElement>
@@ -694,7 +696,10 @@ export function ChatInput({
           </IconButton>
 
           {/* Text Input */}
-          <div className="relative min-w-0 flex-1 overflow-hidden rounded-xl">
+          {/* No overflow-hidden here: the mention popover renders above the
+              input with bottom-full and would be clipped. The textarea itself
+              scrolls and min-w-0 keeps the pill inside the viewport. */}
+          <div className="relative min-w-0 flex-1 rounded-xl">
             <div
               ref={backdropRef}
               className={clsx(

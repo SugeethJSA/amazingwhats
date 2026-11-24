@@ -931,8 +931,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
       } else if (fileToSend) {
         const dataURL = await blobToDataURL(fileToSend)
         const asGif = fileTypeToSend === "gif" || (fileTypeToSend === "video" && sendAsGif)
-        payload = {
-          type: "video",
+        const common = {
           clientTempId: tempId,
           base64Data: dataURL.split(",")[1],
           mimetype: fileToSend.type || "application/octet-stream",
@@ -940,7 +939,17 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
-          gifPlayback: asGif,
+        }
+        // The backend has distinct image/video/audio/document branches. Sending
+        // every File as "video" made PDFs and other documents arrive as video.
+        if (fileTypeToSend === "image") {
+          payload = { type: "image", ...common }
+        } else if (fileTypeToSend === "video" || fileTypeToSend === "gif") {
+          payload = { type: "video", ...common, gifPlayback: asGif }
+        } else if (fileTypeToSend === "audio") {
+          payload = { type: "audio", ...common }
+        } else {
+          payload = { type: "document", ...common }
         }
       } else {
         payload = {
