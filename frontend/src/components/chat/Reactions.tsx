@@ -99,7 +99,7 @@ function ReactorRow({ jid }: ReactorRowProps) {
   return (
     <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-tertiary">
       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 shrink-0 flex items-center justify-center text-gray-500 dark:text-gray-400 [&_svg]:w-5 [&_svg]:h-5">
-        {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <UserAvatar />}
+        {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" /> : <UserAvatar />}
       </div>
       <span className="flex-1 min-w-0 truncate text-sm text-gray-900 dark:text-gray-100">
         {fallback}

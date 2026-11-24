@@ -238,7 +238,7 @@ const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) =>
         <MenuIcon />
       </button>
       <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 overflow-hidden flex items-center justify-center ml-2">
-        {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <UserAvatar />}
+        {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" /> : <UserAvatar />}
       </div>
     </div>
   </div>

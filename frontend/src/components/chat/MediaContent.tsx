@@ -441,6 +441,15 @@ export function MediaContent({
     }
   }, [mediaSrc])
 
+  // Accessible names for the tappable image/GIF previews. Prefer the sender's
+  // display name; otherwise use a neutral "attachment" label. Never fabricate
+  // a name from a raw JID/ID.
+  const mediaSender = message.Info.PushName?.trim()
+  const mediaNoun = type === "sticker" ? "sticker" : isRawGif ? "GIF" : "image"
+  const mediaOpenLabel = mediaSender
+    ? `Open ${mediaNoun} from ${mediaSender}`
+    : `Open ${mediaNoun} attachment`
+
   if (mediaSrc) {
     if (type === "image" || type === "sticker") {
       return (
@@ -449,22 +458,29 @@ export function MediaContent({
           onMouseEnter={() => type === "image" && setShowDownloadButton(true)}
           onMouseLeave={() => type === "image" && setShowDownloadButton(false)}
         >
-          <img
-            src={mediaSrc}
-            className={
-              type === "image"
-                ? "block min-w-75 max-w-82.5 max-h-100 object-cover rounded-lg cursor-pointer"
-                : "object-contain w-48.75 h-48.75 cursor-pointer"
-            }
-            // Same explicit box as the placeholder -> zero layout shift.
+          <button
+            type="button"
+            aria-label={mediaOpenLabel}
+            // The button owns the reserved box so the image fills exactly the
+            // same placeholder-sized area as before -> zero layout shift.
+            className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
             style={type === "image" ? (reservedBox ?? undefined) : undefined}
-            decoding="async"
-            alt="media"
             onClick={() => {
               onImageClick?.(mediaSrc)
               openViewer(mediaSrc, "image", message, chatId)
             }}
-          />
+          >
+            <img
+              src={mediaSrc}
+              className={
+                type === "image"
+                  ? "block w-full h-full min-w-75 max-w-82.5 max-h-100 object-cover rounded-lg"
+                  : "object-contain w-48.75 h-48.75"
+              }
+              decoding="async"
+              alt=""
+            />
+          </button>
           {type === "image" && showDownloadButton && onDownload && (
             <button
               onClick={e => {
@@ -484,17 +500,25 @@ export function MediaContent({
     }
     if (type === "video" && isRawGif) {
       return (
-        <img
-          src={mediaSrc}
+        <button
+          type="button"
+          aria-label={mediaOpenLabel}
+          // Button owns the reserved box; image fills it, so the click target
+          // and rendered size stay identical to the previous <img>.
+          className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+          style={reservedBox ?? GIF_FALLBACK_BOX}
           onClick={() => {
             onImageClick?.(mediaSrc)
             openViewer(mediaSrc, "image", message, chatId)
           }}
-          className="block min-w-75 max-w-82.5 max-h-100 rounded-lg object-cover cursor-pointer"
-          style={reservedBox ?? GIF_FALLBACK_BOX}
-          decoding="async"
-          alt="GIF"
-        />
+        >
+          <img
+            src={mediaSrc}
+            className="block w-full h-full min-w-75 max-w-82.5 max-h-100 object-cover rounded-lg"
+            decoding="async"
+            alt=""
+          />
+        </button>
       )
     }
     if (type === "video")
