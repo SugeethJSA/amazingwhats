@@ -3,14 +3,18 @@
 package notify
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	toast "git.sr.ht/~jackmordaunt/go-toast"
+	"git.sr.ht/~jackmordaunt/go-toast/wintoast"
 )
 
 const replyInputID = "replyText"
@@ -157,6 +161,80 @@ func buildWindowsNotification(opts Options, iconPath string) toast.Notification 
 	return n
 }
 
+// tempImagePath writes an avatar/thumbnail to a short-lived file with a plain
+// name, so it can be referenced from toast XML without XML escaping problems.
+// The file is removed after Windows has had time to load it into the toast.
+func tempImagePath(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("empty notification image")
+	}
+	ext := ".png"
+	switch http.DetectContentType(data) {
+	case "image/jpeg":
+		ext = ".jpg"
+	case "image/gif":
+		ext = ".gif"
+	case "image/webp":
+		ext = ".webp"
+	}
+	dir, err := os.MkdirTemp("", "whats4linux-notify-image-")
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, "avatar"+ext)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		_ = os.RemoveAll(dir)
+		return "", err
+	}
+	time.AfterFunc(10*time.Minute, func() { _ = os.RemoveAll(dir) })
+	return path, nil
+}
+
+// pushWindowsToastWithAvatar renders toast XML directly so the chat avatar can
+// be placed in the "hero" image slot. go-toast v1.1.2 only exposes the
+// appLogoOverride icon and uses that same path for registry branding, so a
+// plain toast.Notification can never show a per-chat image without corrupting
+// the app icon in the registry. All application metadata is still registered
+// with the real app icon; only the toast XML carries the avatar.
+func pushWindowsToastWithAvatar(opts Options, appIcon string, avatar []byte) error {
+	avatarPath, err := tempImagePath(avatar)
+	if err != nil {
+		return err
+	}
+	if err := toast.SetAppData(toast.AppData{
+		AppID:    AppName,
+		IconPath: appIcon,
+		GUID:     "",
+	}); err != nil {
+		return err
+	}
+	return wintoast.Push(buildWindowsAvatarToastXML(opts, appIcon, avatarPath), wintoast.PowershellFallback)
+}
+
+// buildWindowsAvatarToastXML is a pure helper so the hand-built toast can be
+// unit-tested (well-formedness, hostiles, placement and argument round-trip).
+// Microsoft's ToastGeneric schema puts the hero image first in the binding.
+func buildWindowsAvatarToastXML(opts Options, appIcon, avatarPath string) string {
+	var b strings.Builder
+	b.WriteString(`<toast activationType="Foreground" launch="`)
+	b.WriteString(xmlAttribute(activationArgs(ActionOpen, opts)))
+	b.WriteString(`" duration="Short"><visual><binding template="ToastGeneric">`)
+	b.WriteString(`<image placement="hero" src="` + xmlAttribute(avatarPath) + `" />`)
+	b.WriteString(`<image placement="appLogoOverride" src="` + xmlAttribute(appIcon) + `" />`)
+	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Title) + `]]></text>`)
+	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Body) + `]]></text>`)
+	b.WriteString(`</binding></visual>`)
+	if opts.Actions {
+		b.WriteString(`<actions>`)
+		b.WriteString(`<input id="` + replyInputID + `" type="text" placeHolderContent="Type your reply..." />`)
+		b.WriteString(`<action activationType="foreground" content="Open" arguments="` + xmlAttribute(activationArgs(ActionOpen, opts)) + `" />`)
+		b.WriteString(`<action activationType="foreground" content="Reply" arguments="` + xmlAttribute(activationArgs(ActionReply, opts)) + `" />`)
+		b.WriteString(`</actions>`)
+	}
+	b.WriteString(`</toast>`)
+	return b.String()
+}
+
 // Notify pushes a Windows toast with Open and Reply actions. If the rich
 // notification is rejected (for example by a Windows build with a stricter XML
 // parser), it degrades to a plain toast with the same app name and icon instead
@@ -168,6 +246,20 @@ func Notify(opts Options) error {
 		iconPath = ""
 	}
 	iconPath = safeIconPath(iconPath)
+
+	// The API layer fills Avatar for person/group chats; the Linux backend
+	// already renders it. Use the hero-image toast on Windows when available.
+	avatar := opts.Avatar
+	if len(avatar) == 0 {
+		avatar = opts.Image
+	}
+	if len(avatar) > 0 && iconPath != "" {
+		if err := pushWindowsToastWithAvatar(opts, iconPath, avatar); err == nil {
+			return nil
+		} else {
+			warnFailureOnce("toast with avatar", err)
+		}
+	}
 
 	notification := buildWindowsNotification(opts, iconPath)
 	if err := notification.Push(); err != nil {

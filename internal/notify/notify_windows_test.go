@@ -221,3 +221,72 @@ func TestWindowsSafeIconPath(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(filepath.Dir(safe)) })
 }
+
+func TestWindowsAvatarToastXML(t *testing.T) {
+	opts := Options{
+		ChatJID:   `120363&"'<@g.us`,
+		MessageID: `M&"1`,
+		SenderJID: `1&2@s.whatsapp.net`,
+		Title:     `A < B & C ]]> "D"`,
+		Body:      `line1 & <tag> "quoted"`,
+		Actions:   true,
+	}
+	appIcon := `C:\Icons\app&icon.png`
+	avatar := `C:\Temp\avatar&x.png`
+	raw := buildWindowsAvatarToastXML(opts, appIcon, avatar)
+
+	var doc struct {
+		Launch string `xml:"launch,attr"`
+		Visual struct {
+			Binding struct {
+				Images []struct {
+					Src   string `xml:"src,attr"`
+					Place string `xml:"placement,attr"`
+				} `xml:"image"`
+				Texts []string `xml:"text"`
+			} `xml:"binding"`
+		} `xml:"visual"`
+		Actions struct {
+			Action []struct {
+				Content   string `xml:"content,attr"`
+				Arguments string `xml:"arguments,attr"`
+			} `xml:"action"`
+		} `xml:"actions"`
+	}
+	if err := xml.Unmarshal([]byte(raw), &doc); err != nil {
+		t.Fatalf("avatar toast XML is not well formed: %v\n%s", err, raw)
+	}
+	images := doc.Visual.Binding.Images
+	if len(images) != 2 {
+		t.Fatalf("want 2 images, got %d: %s", len(images), raw)
+	}
+	if images[0].Place != "hero" || images[0].Src != avatar {
+		t.Errorf("hero image = %+v, want src %q", images[0], avatar)
+	}
+	if images[1].Place != "appLogoOverride" || images[1].Src != appIcon {
+		t.Errorf("app logo = %+v, want src %q", images[1], appIcon)
+	}
+	texts := doc.Visual.Binding.Texts
+	if len(texts) != 2 || texts[0] != opts.Title || texts[1] != opts.Body {
+		t.Errorf("texts = %q, want %q / %q", texts, opts.Title, opts.Body)
+	}
+	launch, err := url.ParseQuery(doc.Launch)
+	if err != nil {
+		t.Fatalf("launch args: %v", err)
+	}
+	if launch.Get("chatJid") != opts.ChatJID || launch.Get("messageId") != opts.MessageID {
+		t.Errorf("launch args round-trip failed: %v", launch)
+	}
+	if len(doc.Actions.Action) != 2 {
+		t.Fatalf("want 2 actions, got %d", len(doc.Actions.Action))
+	}
+	for _, action := range doc.Actions.Action {
+		values, err := url.ParseQuery(action.Arguments)
+		if err != nil {
+			t.Fatalf("action args: %v", err)
+		}
+		if values.Get("chatJid") != opts.ChatJID {
+			t.Errorf("action args round-trip failed: %v", values)
+		}
+	}
+}

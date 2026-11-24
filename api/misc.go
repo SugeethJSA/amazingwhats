@@ -42,6 +42,22 @@ func (a *Api) GetSettings() map[string]any {
 	return store.GetSettings()
 }
 
+// MinimizeToTray reports the General > "Minimize to system tray" setting.
+// The frontend persists it through SaveSettings; reading it at close time (not
+// caching it at startup) makes toggles take effect immediately. Default true
+// matches the shipped setting and the tray-first close behaviour.
+func (a *Api) MinimizeToTray() bool {
+	value, ok := a.GetSettings()["minimizeToTray"]
+	if !ok || value == nil {
+		return true
+	}
+	enabled, ok := value.(bool)
+	if !ok {
+		return true
+	}
+	return enabled
+}
+
 func replaceMentions(text string, mentionedJIDs []string, a *Api) string {
 	result := text
 

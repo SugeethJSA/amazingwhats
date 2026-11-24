@@ -11,6 +11,7 @@ import (
 	"github.com/lugvitc/whats4linux/internal/tray"
 	"github.com/urfave/cli"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
@@ -93,6 +94,16 @@ func run(assets fs.FS) cli.ActionFunc {
 
 		api := apiPkg.New(app, window)
 		app.RegisterService(application.NewService(api))
+
+		// General > "Minimize to system tray" now controls close behaviour.
+		// The platform flags above keep the app alive on last-window-close;
+		// when the setting is off we quit from the close hook instead. Reading
+		// the setting at close time makes UI toggles effective immediately.
+		window.RegisterHook(events.Common.WindowClosing, func(_ *application.WindowEvent) {
+			if !api.MinimizeToTray() {
+				app.Quit()
+			}
+		})
 
 		// CALL-003: one dedicated, hidden call window owns the call UI. It
 		// loads /call.html, a separate Vite entry that renders ONLY the call

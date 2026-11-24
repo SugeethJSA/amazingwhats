@@ -598,6 +598,16 @@ export function MarkRead(chatJID: string, messageIDs: string[], Type: string): $
 }
 
 /**
+ * MinimizeToTray reports the General > "Minimize to system tray" setting.
+ * The frontend persists it through SaveSettings; reading it at close time (not
+ * caching it at startup) makes toggles take effect immediately. Default true
+ * matches the shipped setting and the tray-first close behaviour.
+ */
+export function MinimizeToTray(): $CancellablePromise<boolean> {
+    return $Call.ByID(645729556);
+}
+
+/**
  * MuteCall toggles the LOCAL microphone mute for an active call. This mutes in
  * our own AudioSource (meowcaller has no public local-mute setter). The updated
  * state is broadcast with call:mute_state for the dedicated call window.
