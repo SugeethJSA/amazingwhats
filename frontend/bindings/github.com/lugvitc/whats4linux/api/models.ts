@@ -750,6 +750,16 @@ export class MessageContent {
      */
     "gifPlayback"?: boolean;
 
+    /**
+     * PTT marks an audio message as a push-to-talk voice note.
+     */
+    "ptt"?: boolean;
+
+    /**
+     * Seconds is the voice note duration in seconds (only meaningful with PTT).
+     */
+    "seconds"?: number;
+
     /** Creates a new MessageContent instance. */
     constructor($$source: Partial<MessageContent> = {}) {
         if (!("type" in $$source)) {

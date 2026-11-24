@@ -34,6 +34,10 @@ type MessageContent struct {
 	// GifPlayback marks a video message as an animated GIF (whatsmeow's GIF
 	// format: a video upload with the gifPlayback flag set).
 	GifPlayback bool `json:"gifPlayback,omitempty"`
+	// PTT marks an audio message as a push-to-talk voice note.
+	PTT bool `json:"ptt,omitempty"`
+	// Seconds is the voice note duration in seconds (only meaningful with PTT).
+	Seconds uint32 `json:"seconds,omitempty"`
 }
 
 // uploadWithRetry wraps a.waClient.Upload with retries for transient network
@@ -418,6 +422,15 @@ func (a *Api) SendMessage(chatJID string, content MessageContent) (string, error
 		}
 		audioMsg := &waE2E.AudioMessage{
 			Mimetype: &mimeType,
+		}
+
+		// Mark as a voice note only when explicitly requested; leave fields nil
+		// for ordinary audio files so their wire representation is unchanged.
+		if content.PTT {
+			audioMsg.PTT = proto.Bool(true)
+		}
+		if content.Seconds > 0 {
+			audioMsg.Seconds = proto.Uint32(content.Seconds)
 		}
 
 		if contextInfo != nil {
