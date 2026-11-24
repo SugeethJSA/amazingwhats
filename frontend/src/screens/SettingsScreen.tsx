@@ -5,6 +5,7 @@ import { GetProfile, GetSelfAvatar } from "../../bindings/github.com/lugvitc/wha
 import * as api from "../../bindings/github.com/lugvitc/whats4linux/api/models.js"
 import GeneralSettingsScreen from "./settingscreens/GeneralSettingsScreen"
 import AccountSettingsScreen from "./settingscreens/AccountSettingsScreen"
+import BusinessSettingsScreen from "./settingscreens/BusinessSettingsScreen"
 import PrivacySettingsScreen from "./settingscreens/PrivacySettingsScreen"
 import ChatsSettingsScreen from "./settingscreens/ChatsSettingsScreen"
 import NotificationsSettingsScreen from "./settingscreens/NotificationsSettingsScreen"
@@ -37,6 +38,7 @@ const FOCUS_RING =
 type SettingsCategory =
   | "general"
   | "account"
+  | "business"
   | "privacy"
   | "chats"
   | "notifications"
@@ -68,6 +70,13 @@ const settingsItems: SettingsItem[] = [
     description: "Security notifications, account info",
     icon: <AccountIcon />,
     screen: null,
+  },
+  {
+    id: "business",
+    label: "Business profile",
+    description: "Business info and opening hours",
+    icon: <UserIcon />,
+    screen: <BusinessSettingsScreen />,
   },
   {
     id: "privacy",
@@ -123,7 +132,7 @@ const settingsItems: SettingsItem[] = [
 /** Genuine sections for the settings list: related categories sit together. */
 const SETTINGS_GROUPS: { label: string; ids: SettingsCategory[] }[] = [
   { label: "Preferences", ids: ["general", "chats", "notifications", "shortcuts"] },
-  { label: "Account and privacy", ids: ["account", "privacy"] },
+  { label: "Account and privacy", ids: ["account", "business", "privacy"] },
   { label: "Help and tools", ids: ["help", "advanced"] },
   { label: "Session", ids: ["logout"] },
 ]

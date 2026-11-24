@@ -748,37 +748,157 @@ export function ChatInfo({
                 </div>
               )}
 
-              {/* Business Section */}
-              {chatType === "contact" && businessInfo && (
-                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                  <div className="p-4">
-                    <p className="text-sm text-gray-600 dark:text-dark-muted mb-2">Business</p>
-                    {businessInfo.description && (
-                      <p className="text-sm text-gray-900 dark:text-gray-100 mb-1">
-                        {businessInfo.description}
-                      </p>
-                    )}
-                    {businessInfo.website && (
-                      <p className="text-sm text-blue-500 mb-1">{businessInfo.website}</p>
-                    )}
-                    {businessInfo.email && (
-                      <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
-                        {businessInfo.email}
-                      </p>
-                    )}
-                    {businessInfo.category && (
-                      <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
-                        {businessInfo.category}
-                      </p>
-                    )}
-                    {businessInfo.address && (
-                      <p className="text-sm text-gray-600 dark:text-dark-muted">
-                        {businessInfo.address}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* Business Section — every row is backed by a real field the
+                  backend returns; absent fields are omitted, never placeholder. */}
+              {chatType === "contact" &&
+                businessInfo &&
+                (() => {
+                  const description =
+                    typeof businessInfo.description === "string" && businessInfo.description.trim()
+                      ? businessInfo.description.trim()
+                      : null
+                  // The backend returns `websites`, not the old singular `website`.
+                  // Only absolute http(s) URLs become links, rendered as plain text.
+                  const websites: string[] = Array.isArray(businessInfo.websites)
+                    ? businessInfo.websites
+                        .filter(
+                          (w): w is string =>
+                            typeof w === "string" && /^https?:\/\//i.test(w.trim()),
+                        )
+                        .map(w => w.trim())
+                    : []
+                  const email =
+                    typeof businessInfo.email === "string" && businessInfo.email.trim()
+                      ? businessInfo.email.trim()
+                      : null
+                  const rawCategories: string[] = Array.isArray(businessInfo.categories)
+                    ? businessInfo.categories.filter(
+                        (c): c is string => typeof c === "string" && Boolean(c.trim()),
+                      )
+                    : []
+                  // Keep older contacts that only expose the singular category.
+                  const singleCategory =
+                    typeof businessInfo.category === "string" && businessInfo.category.trim()
+                      ? businessInfo.category.trim()
+                      : null
+                  const categories = rawCategories.length ? rawCategories : singleCategory ? [singleCategory] : []
+                  const address =
+                    typeof businessInfo.address === "string" && businessInfo.address.trim()
+                      ? businessInfo.address.trim()
+                      : null
+                  const hours: {
+                    day_of_week?: unknown
+                    mode?: unknown
+                    open_time?: unknown
+                    close_time?: unknown
+                  }[] = Array.isArray(businessInfo.business_hours) ? businessInfo.business_hours : []
+                  // One human-readable line per day. 24-hour and
+                  // appointment-only modes never fabricate clock times.
+                  const hourLine = (hour: (typeof hours)[number]): string | null => {
+                    const rawDay =
+                      typeof hour.day_of_week === "string" ? hour.day_of_week.trim() : ""
+                    const day = rawDay ? rawDay.charAt(0).toUpperCase() + rawDay.slice(1) : ""
+                    const mode = typeof hour.mode === "string" ? hour.mode.trim().toLowerCase() : ""
+                    const open = typeof hour.open_time === "string" ? hour.open_time.trim() : ""
+                    const close = typeof hour.close_time === "string" ? hour.close_time.trim() : ""
+                    if (mode === "appointment_only") {
+                      return day ? `${day}: By appointment only` : "By appointment only"
+                    }
+                    if (mode === "open_24h" || (open === "0" && close === "0")) {
+                      return day ? `${day}: Open 24 hours` : "Open 24 hours"
+                    }
+                    if (open && close) {
+                      const range = `${open}–${close}`
+                      return day ? `${day}: ${range}` : range
+                    }
+                    return day || null
+                  }
+                  const hourLines = hours.map(hourLine).filter((line): line is string => Boolean(line))
+                  const timezone =
+                    typeof businessInfo.business_hours_timezone === "string" &&
+                    businessInfo.business_hours_timezone.trim()
+                      ? businessInfo.business_hours_timezone.trim()
+                      : null
+
+                  if (
+                    !description &&
+                    websites.length === 0 &&
+                    !email &&
+                    categories.length === 0 &&
+                    !address &&
+                    hourLines.length === 0 &&
+                    !timezone
+                  ) {
+                    return null
+                  }
+
+                  return (
+                    <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                      <div className="p-4">
+                        <p className="text-sm text-gray-600 dark:text-dark-muted mb-2">Business</p>
+                        {description && (
+                          <p className="text-sm text-gray-900 dark:text-gray-100 mb-1 break-words">
+                            {description}
+                          </p>
+                        )}
+                        {websites.length > 0 && (
+                          <div className="mb-1 flex flex-col gap-0.5">
+                            {websites.map((url, i) => (
+                              <a
+                                key={`${url}-${i}`}
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block break-all text-sm text-blue-500 hover:underline"
+                              >
+                                {url}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {email && (
+                          <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
+                            <a href={`mailto:${email}`} className="text-blue-500 hover:underline">
+                              {email}
+                            </a>
+                          </p>
+                        )}
+                        {categories.length > 0 && (
+                          <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">
+                            {categories.join(", ")}
+                          </p>
+                        )}
+                        {address && (
+                          <p className="text-sm text-gray-600 dark:text-dark-muted break-words">
+                            {address}
+                          </p>
+                        )}
+                        {(hourLines.length > 0 || timezone) && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 dark:text-dark-muted mb-1">Hours</p>
+                            {hourLines.length > 0 && (
+                              <ul className="space-y-0.5">
+                                {hourLines.map((line, i) => (
+                                  <li
+                                    key={`${line}-${i}`}
+                                    className="text-sm text-gray-900 dark:text-gray-100"
+                                  >
+                                    {line}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {timezone && (
+                              <p className="mt-1 text-xs text-gray-500 dark:text-dark-muted">
+                                Timezone: {timezone}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
               {/* Media, links, and docs — opens the combined hub */}
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
