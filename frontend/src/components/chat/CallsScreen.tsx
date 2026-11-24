@@ -235,6 +235,7 @@ function CallRow({
           <img
             src={avatar}
             alt=""
+            loading="lazy"
             className="h-full w-full object-cover"
             onError={() => setAvatar(null)}
           />

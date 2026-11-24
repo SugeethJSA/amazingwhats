@@ -1157,7 +1157,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         {/* Contact Avatar */}
         <div className="relative mb-3 flex items-center justify-center">
           {activeCall.status !== "active" && (
-            <div className="absolute inset-0 rounded-full bg-[#21c063]/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full bg-[#21c063]/20 animate-ping motion-reduce:animate-none" />
           )}
           {activeCall.avatarUrl ? (
             <img
@@ -1493,7 +1493,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         {(reaction || remoteHandRaised || screenShareActive || participantKeys.length > 0) && (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[11px] text-gray-300">
             {reaction && (
-              <span key={reaction.id} className="animate-bounce text-lg" role="status">
+              <span key={reaction.id} className="animate-bounce text-lg motion-reduce:animate-none" role="status">
                 {reaction.emoji}
               </span>
             )}

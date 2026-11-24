@@ -439,9 +439,10 @@ body {
 }
 
 /* ─── Reduced motion ────────────────────────────────────────────────────── */
-/* Only decorative, looping and entrance motion is removed. State changes
-   (hover/active colours, transitions) and progress cues (storyFill and the
-   history sync bar) keep working. */
+/* Only decorative, looping and entrance motion is removed, including the
+   Tailwind built-ins animate-ping / animate-bounce / animate-pulse. State
+   changes (hover/active colours, transitions) and progress cues (storyFill,
+   animate-spin spinners and the history sync bar) keep working. */
 @media (prefers-reduced-motion: reduce) {
   .login-orb,
   .skeleton,
@@ -453,7 +454,10 @@ body {
   .animate-slide-in-right,
   .animate-slide-in-left,
   .toast-base,
-  .typing-dot {
+  .typing-dot,
+  .animate-ping,
+  .animate-bounce,
+  .animate-pulse {
     animation: none !important;
   }
 }

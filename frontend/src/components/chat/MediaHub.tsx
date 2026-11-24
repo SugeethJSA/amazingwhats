@@ -167,13 +167,13 @@ function MediaThumbnailCell({ item, selected, onToggle, onOpen }: MediaThumbnail
         className={`absolute inset-0 flex h-full w-full items-center justify-center ${FOCUS_RING}`}
       >
         {src ? (
-          <img src={src} alt="" decoding="async" className="h-full w-full object-cover" />
+          <img src={src} alt="" decoding="async" loading="lazy" className="h-full w-full object-cover" />
         ) : failed ? (
           <ThumbnailFallback item={item} />
         ) : (
           <div
             aria-hidden="true"
-            className="h-full w-full animate-pulse bg-gradient-to-br from-white/[0.09] via-white/[0.04] to-transparent"
+            className="h-full w-full animate-pulse motion-reduce:animate-none bg-gradient-to-br from-white/[0.09] via-white/[0.04] to-transparent"
           />
         )}
       </button>
