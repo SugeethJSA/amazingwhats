@@ -46,26 +46,26 @@ jobs:
         include:
          - os: ubuntu-24.04
            platform: linux/amd64
-           binary: Whats4Linux-Linux-amd64.AppImage
-           artifact: whats4linux-linux-amd64
+           binary: amazingwhats-linux-amd64.AppImage
+           artifact: amazingwhats-linux-amd64
             # Sole updater-matching asset for this platform.
-           updater_asset: Whats4Linux-Linux-amd64.AppImage
+           updater_asset: amazingwhats-linux-amd64.AppImage
            linux: true
 
          - os: windows-latest
            platform: windows/amd64
-           binary: whats4linux-windows.exe
-           artifact: whats4linux-windows-amd64
+           binary: amazingwhats-windows.exe
+           artifact: amazingwhats-windows-amd64
             # Only this ZIP matches the updater; the raw exe has no arch token.
-           updater_asset: whats4linux-windows-amd64.zip
+           updater_asset: amazingwhats-windows-amd64.zip
            linux: false
 
          - os: macos-latest
            platform: darwin/amd64
-           binary: whats4linux-darwin
-           artifact: whats4linux-macos-amd64
+           binary: amazingwhats-darwin
+           artifact: amazingwhats-macos-amd64
             # Only this ZIP matches the updater; the raw bundle has no arch token.
-           updater_asset: whats4linux-darwin-amd64.zip
+           updater_asset: amazingwhats-darwin-amd64.zip
            linux: false
 
     runs-on: ${{ matrix.os }}
@@ -139,7 +139,7 @@ jobs:
             LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
 
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            # Produce bin/whats4linux.app for the ditto step below.
+            # Produce bin/amazingwhats.app for the ditto step below.
             wails3 task darwin:create:app:bundle
           fi
 
@@ -151,7 +151,7 @@ jobs:
         run: |
           wails3 build PRODUCTION=true ARCH=amd64 \
             LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.version }} -X main.commit=${{ steps.version.outputs.commit }} -X main.date=${{ steps.version.outputs.date }} -X main.buildType=release"
-          mv bin/whats4linux.exe "bin/${{ matrix.binary }}"
+          mv bin/amazingwhats.exe "bin/${{ matrix.binary }}"
 
       - name: Package Windows binary with AGPL license (zip)
         if: matrix.os == 'windows-latest'
@@ -196,13 +196,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path build/bin | Out-Null
           makensis "/DAPP_EXE=$appExe" build/windows/installer/installer.nsi
 
-          $expected = Join-Path (Get-Location) 'bin/whats4linux-setup.exe'
-          $alternate = Join-Path (Get-Location) 'build/bin/whats4linux-setup.exe'
+          $expected = Join-Path (Get-Location) 'bin/amazingwhats-setup.exe'
+          $alternate = Join-Path (Get-Location) 'build/bin/amazingwhats-setup.exe'
           if ((Test-Path $alternate) -and -not (Test-Path $expected)) {
             Move-Item -Force $alternate $expected
           }
           if (-not (Test-Path $expected)) {
-            throw "NSIS did not produce bin/whats4linux-setup.exe (also checked build/bin/whats4linux-setup.exe)"
+            throw "NSIS did not produce bin/amazingwhats-setup.exe (also checked build/bin/amazingwhats-setup.exe)"
           }
           Get-Item $expected | Select-Object FullName, Length
 
@@ -212,8 +212,8 @@ jobs:
         with:
           # Keep the FILE token-free so the updater cannot pick it; rolling
           # releases have no -nightly suffix, so the artifact name is plain.
-          name: whats4linux-setup
-          path: bin/whats4linux-setup.exe
+          name: amazingwhats-setup
+          path: bin/amazingwhats-setup.exe
           if-no-files-found: error
 
       - name: Download appimagetool
@@ -226,31 +226,33 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           mkdir -p packaging/AppImage/AppDir/usr/bin
-          mv bin/whats4linux packaging/AppImage/AppDir/usr/bin/whats4linux
+          mv bin/amazingwhats packaging/AppImage/AppDir/usr/bin/amazingwhats
           chmod +x packaging/AppImage/AppDir/usr/bin/*
           # Ship the AGPL-3.0 license text inside the AppDir as required by the license.
-          mkdir -p packaging/AppImage/AppDir/usr/share/licenses/whats4linux
-          cp LICENSE packaging/AppImage/AppDir/usr/share/licenses/whats4linux/LICENSE
+          mkdir -p packaging/AppImage/AppDir/usr/share/licenses/amazingwhats
+          cp LICENSE packaging/AppImage/AppDir/usr/share/licenses/amazingwhats/LICENSE
           cd packaging/AppImage/AppDir
-          for f in .DirIcon whats4linux.desktop whats4linux.png; do
+          # Keep the directory icon in sync with the real app icon.
+          cp amazingwhats.png .DirIcon
+          for f in .DirIcon amazingwhats.desktop amazingwhats.png; do
             if [ -L "$f" ]; then cp -L "$f" "$f.tmp" && mv "$f.tmp" "$f"; fi
           done
           cd ../../..
           ./appimagetool-x86_64.AppImage packaging/AppImage/AppDir
-          mv Whats4Linux-x86_64.AppImage "bin/${{matrix.binary}}"
+          mv amazingwhats-x86_64.AppImage "bin/${{matrix.binary}}"
 
       - name: Bundle macOS
         if: matrix.os == 'macos-latest'
         run: |
-          if [ ! -d bin/whats4linux.app ]; then
+          if [ ! -d bin/amazingwhats.app ]; then
             wails3 task darwin:create:app:bundle
           fi
           # Include the AGPL-3.0 license text inside the .app bundle.
-          mkdir -p bin/whats4linux.app/Contents/Resources
-          cp LICENSE bin/whats4linux.app/Contents/Resources/LICENSE
+          mkdir -p bin/amazingwhats.app/Contents/Resources
+          cp LICENSE bin/amazingwhats.app/Contents/Resources/LICENSE
           cd bin
           ditto -c -k --sequesterRsrc --keepParent \
-            whats4linux.app \
+            amazingwhats.app \
             "${{ matrix.updater_asset }}"
 
       # D-PKG-003: one checksum LINE per platform, produced with the native
@@ -372,9 +374,9 @@ jobs:
           set -euo pipefail
           rm -rf verify && mkdir verify
           cp SHA256SUMS verify/
-          for name in Whats4Linux-Linux-amd64.AppImage \
-                      whats4linux-windows-amd64.zip \
-                      whats4linux-darwin-amd64.zip; do
+          for name in amazingwhats-linux-amd64.AppImage \
+                      amazingwhats-windows-amd64.zip \
+                      amazingwhats-darwin-amd64.zip; do
             src="$(find dist -type f -name "$name" -print -quit)"
             if [ -z "$src" ]; then
               echo "Portable asset missing from downloaded artifacts: $name" >&2
@@ -399,10 +401,10 @@ jobs:
             Rolling release built from commit ${{ github.sha }}.
 
             ## Downloads
-            - **Linux**: `Whats4Linux-Linux-amd64.AppImage`
-            - **Windows**: `whats4linux-windows-amd64.zip` (binary + AGPL-3.0 LICENSE)
-            - **macOS**: `whats4linux-darwin-amd64.zip`
-            - **Windows installer**: `whats4linux-setup.exe` (per-user NSIS; not used by the updater)
+            - **Linux**: `amazingwhats-linux-amd64.AppImage`
+            - **Windows**: `amazingwhats-windows-amd64.zip` (binary + AGPL-3.0 LICENSE)
+            - **macOS**: `amazingwhats-darwin-amd64.zip`
+            - **Windows installer**: `amazingwhats-setup.exe` (per-user NSIS; not used by the updater)
             - **Updater checksums**: `SHA256SUMS` (portable assets only)
           files: |
             dist/**/*

@@ -12,9 +12,8 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-// trayIcon is the 32x32 PNG frame extracted from the original systray/icon.go
-// ICO (the size the old systray used in the notification area). It is a real
-// icon, not a generated placeholder.
+// trayIcon is the 32x32 downsample of our own chat-mark.svg (the same mark as
+// the app icon), rasterised for the notification-area tray.
 //
 //go:embed icon.png
 var trayIcon []byte
@@ -34,7 +33,7 @@ type Tray struct {
 func New(app *application.App, window *application.WebviewWindow, api *apiPkg.Api) *Tray {
 	systray := app.SystemTray.New()
 	systray.SetIcon(trayIcon)
-	systray.SetLabel("Whats4Linux")
+	systray.SetLabel("amazingwhats")
 	systray.SetTooltip("Lantern")
 
 	menu := app.NewMenu()
