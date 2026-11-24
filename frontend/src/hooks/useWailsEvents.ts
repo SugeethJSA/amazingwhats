@@ -201,7 +201,7 @@ export function useWailsEvents() {
       (data: { chatId: string; state: string; media?: string }) => {
         if (!data?.chatId) return
         const isTyping = data.state === "composing" || data.state === "recording"
-        useUIStore.getState().setTypingIndicator(data.chatId, isTyping)
+        useUIStore.getState().setTypingIndicator(data.chatId, isTyping, data.media)
       },
     )
 

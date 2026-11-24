@@ -1069,9 +1069,10 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
 
     const unsubPresence = EventsOn(
       "wa:chat_presence",
-      (data: { chatId: string; state: string }) => {
+      (data: { chatId: string; state: string; media?: string }) => {
         if (data?.chatId === chatId) {
-          useUIStore.getState().setTypingIndicator(chatId, data.state === "composing")
+          const isTyping = data.state === "composing" || data.state === "recording"
+          useUIStore.getState().setTypingIndicator(chatId, isTyping, data.media)
         }
       },
     )
@@ -1278,6 +1279,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               hasMore={isReady && hasMore}
               highlightedMessageId={highlightedMessageId}
               isAnnounceGroup={isAnnounceGroup}
+              typing={
+                typingIndicator?.isTyping
+                  ? { name: chatName, jid: chatId, media: typingIndicator.media }
+                  : null
+              }
             />
           </div>
         </div>

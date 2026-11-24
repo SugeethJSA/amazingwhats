@@ -1,7 +1,8 @@
-import { forwardRef, useImperativeHandle, useRef, memo, useMemo } from "react"
+import { forwardRef, useImperativeHandle, useRef, memo, useMemo, useEffect, useState } from "react"
 import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso"
 import type { Message } from "../../store/types"
-import { dayKey, formatDateSeparator } from "../../lib/utils"
+import { dayKey, formatDateSeparator, getAvatarColor } from "../../lib/utils"
+import { GetCachedAvatar } from "../../../bindings/github.com/lugvitc/whats4linux/api/api.js"
 import { MessageItem } from "./MessageItem"
 import type { ContactActionTarget } from "../../hooks/useContactActions"
 
@@ -30,6 +31,8 @@ interface MessageListProps {
   hasMore?: boolean
   highlightedMessageId?: string | null
   isAnnounceGroup?: boolean
+  /** Active peer typing indicator, rendered as a bubble at the end of the list. */
+  typing?: { name: string; jid: string; media?: string } | null
 }
 
 export interface MessageListHandle {
@@ -45,6 +48,7 @@ const OVERSCAN = { top: 800, bottom: 800 }
 
 interface ListContext {
   isLoading?: boolean
+  typing?: { name: string; jid: string; media?: string } | null
 }
 
 // Components must be stable module-level references: an inline object/arrow
@@ -57,8 +61,58 @@ const ListHeader: Components<Message, ListContext>["Header"] = ({ context }) =>
     </div>
   ) : null
 
-// Breathing room between the last message and the composer.
-const ListFooter: Components<Message, ListContext>["Footer"] = () => <div className="h-2" />
+// Small avatar next to the typing bubble. Uses the same cached-avatar binding
+// as message rows, with a coloured initial fallback when no avatar exists.
+function TypingAvatar({ jid, name }: { jid: string; name: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    setSrc(null)
+    GetCachedAvatar(jid, false)
+      .then(url => {
+        if (alive) setSrc(url || null)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [jid])
+  if (src) {
+    return <img src={src} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+  }
+  return (
+    <div
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+      style={{ background: getAvatarColor(jid) }}
+      aria-hidden="true"
+    >
+      {name.charAt(0).toUpperCase() || "?"}
+    </div>
+  )
+}
+
+// Footer scrolls with the list (Virtuoso keeps it in view when already at the
+// bottom), so the typing bubble sits directly under the last message.
+const ListFooter: Components<Message, ListContext>["Footer"] = ({ context }) => {
+  const typing = context?.typing
+  if (!typing) return <div className="h-2" />
+  const label = typing.media === "audio" ? "recording a voice message" : "typing"
+  return (
+    <div className="flex items-end gap-2 px-2 pb-2 pt-1" role="status" aria-live="polite">
+      <TypingAvatar jid={typing.jid} name={typing.name} />
+      <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-white px-3 py-2 shadow-sm dark:bg-dark-secondary">
+        <div className="flex items-center gap-1" aria-hidden="true">
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "0ms" }} />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "160ms" }} />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "320ms" }} />
+        </div>
+        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+          {typing.name} {label}
+        </span>
+      </div>
+    </div>
+  )
+}
 
 const listComponents: Components<Message, ListContext> = {
   Header: ListHeader,
@@ -95,6 +149,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
     hasMore,
     highlightedMessageId,
     isAnnounceGroup = false,
+  typing = null,
   },
   ref,
 ) {
@@ -174,7 +229,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
       // fast incoming updates and produces janky rubber-banding.
       followOutput={atBottom => (atBottom ? "auto" : false)}
       computeItemKey={(_index, msg) => msg?.Info?.ID ?? String(_index)}
-      context={{ isLoading }}
+      context={{ isLoading, typing }}
       components={listComponents}
       itemContent={(_index, msg) => {
         // Virtuoso's index is global (firstItemIndex starts at START_INDEX =

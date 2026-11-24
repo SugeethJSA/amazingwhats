@@ -6,6 +6,8 @@ const STALE_ONLINE_MS = 600_000
 interface TypingState {
   isTyping: boolean
   at: number
+  /** Presence media from wa:chat_presence, e.g. "audio" for voice recording. */
+  media?: string
 }
 
 interface OnlineState {
@@ -90,7 +92,7 @@ interface UIStore {
   setSidebarOpen: (open: boolean) => void
   setShowEmojiPicker: (show: boolean) => void
   setChatInfoOpen: (open: boolean) => void
-  setTypingIndicator: (chatId: string, isTyping: boolean) => void
+  setTypingIndicator: (chatId: string, isTyping: boolean, media?: string) => void
   setOnlineStatus: (userId: string, isOnline: boolean) => void
   /** Backward compatible: `addNotification(message)` still works. */
   addNotification: (message: string, options?: NotificationOptions) => number
@@ -153,11 +155,11 @@ export const useUIStore = create<UIStore>(set => ({
   setShowEmojiPicker: show => set({ showEmojiPicker: show }),
   setChatInfoOpen: open => set({ chatInfoOpen: open }),
 
-  setTypingIndicator: (chatId, isTyping) =>
+  setTypingIndicator: (chatId, isTyping, media) =>
     set(state => {
       const next = { ...state.typingIndicators }
       if (isTyping) {
-        next[chatId] = { isTyping: true, at: Date.now() }
+        next[chatId] = { isTyping: true, at: Date.now(), media }
       } else {
         delete next[chatId]
       }
