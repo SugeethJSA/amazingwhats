@@ -635,8 +635,9 @@ func playBeep() {
 
 // DownloadMediaToFile downloads any media type (document, video, audio, image) to the filesystem.
 // It streams the download to a temp file (never loading it fully into memory)
-// and prompts the user where to save it. Progress events are intentionally not
-// emitted: no frontend listener consumes them (D-AUD-003e).
+// and prompts the user where to save it. Real byte-level progress is emitted as
+// "download:progress" (see download_progress.go) plus terminal "download:done"
+// / "download:error" events for per-message UI state.
 func (a *Api) DownloadMediaToFile(messageID string) error {
 	if a.messageStore == nil {
 		return fmt.Errorf("message store is not ready")
@@ -672,13 +673,36 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		_ = os.Remove(tmp.Name())
 	}()
 
-	// Stream the decrypted payload straight into the temp file. The previous
-	// "media:download_progress" emits were removed (D-AUD-003e): no frontend
-	// listener consumes that event, so it was orphaned IPC traffic with an
-	// inconsistent total. "download:complete" below is kept intact.
-	if dlErr := a.waClient.DownloadToFile(a.ctx, msg.Media, tmp); dlErr != nil {
+	// GetFileLength() is the PLAINTEXT length and can be 0/-1 when unknown, so
+	// this total is only APPROXIMATE: the ciphertext bytes counted below can
+	// slightly exceed it. Non-positive values are passed as -1 (indeterminate);
+	// the frontend must treat the wrapper's clamped percent as authoritative
+	// instead of recomputing downloaded/total itself.
+	total := int64(msg.Media.GetFileLength())
+	if total <= 0 {
+		total = -1
+	}
+
+	// Announce the start explicitly so the UI never has to infer it from a
+	// progress chunk (a late/reordered chunk must not revive a finished bar).
+	a.app.Event.Emit("download:start", map[string]any{"messageId": messageID})
+	// Show the bar immediately, before the first byte arrives.
+	a.emitDownloadProgress(messageID, 0, total, calcDownloadPercent(0, total))
+
+	// Count REAL bytes received via progressFile.Write. The old
+	// "media:download_progress" event is not revived: it counted ciphertext
+	// bytes against a plaintext total and could report >100%.
+	pf := &progressFile{
+		File:      tmp,
+		messageID: messageID,
+		total:     total,
+		emit:      a.emitDownloadProgress,
+	}
+	if dlErr := a.waClient.DownloadToFile(a.ctx, msg.Media, pf); dlErr != nil {
+		a.app.Event.Emit("download:error", map[string]any{"messageId": messageID})
 		return fmt.Errorf("failed to download media: %w", dlErr)
 	}
+	pf.finish()
 
 	filePath, err := a.app.Dialog.SaveFile().
 		SetDirectory(downloadsDir).
@@ -687,26 +711,33 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 		AddFilter("All Files", "*").
 		PromptForSingleSelection()
 	if err != nil {
+		a.app.Event.Emit("download:error", map[string]any{"messageId": messageID})
 		return err
 	}
 	if filePath == "" {
+		a.app.Event.Emit("download:done", map[string]any{"messageId": messageID, "cancelled": true})
 		return nil // Cancelled
 	}
 
 	// Copy from the temp file to the user-chosen destination.
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
+		a.app.Event.Emit("download:error", map[string]any{"messageId": messageID})
 		return fmt.Errorf("failed to seek temp file: %w", err)
 	}
 	out, err := os.Create(filePath)
 	if err != nil {
+		a.app.Event.Emit("download:error", map[string]any{"messageId": messageID})
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer func() { _ = out.Close() }()
 	if _, err := io.Copy(out, tmp); err != nil {
 		_ = os.Remove(filePath)
+		a.app.Event.Emit("download:error", map[string]any{"messageId": messageID})
 		return fmt.Errorf("failed to write destination file: %w", err)
 	}
 
+	a.app.Event.Emit("download:done", map[string]any{"messageId": messageID, "path": filePath})
+	// Kept unchanged: App.tsx still listens for the bare path string.
 	a.app.Event.Emit("download:complete", filePath)
 	_ = notify.Notify(notify.Options{Title: notify.AppName, Body: "Downloaded: " + filePath})
 	playBeep()
