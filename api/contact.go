@@ -225,20 +225,6 @@ func (a *Api) GetBusinessProfile(jidStr string) (map[string]any, error) {
 		if profile == nil {
 			return map[string]any{}, nil
 		}
-		result := map[string]any{"jid": key}
-		if profile.Address != "" {
-			result["address"] = profile.Address
-		}
-		if profile.Email != "" {
-			result["email"] = profile.Email
-		}
-		if len(profile.Categories) > 0 {
-			cats := make([]string, len(profile.Categories))
-			for i, c := range profile.Categories {
-				cats[i] = c.Name
-			}
-			result["categories"] = cats
-		}
-		return result, nil
+		return businessProfileMap(profile), nil
 	})
 }

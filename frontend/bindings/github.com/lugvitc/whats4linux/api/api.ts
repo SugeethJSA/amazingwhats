@@ -413,6 +413,17 @@ export function GetMediaHubItems(kind: string): $CancellablePromise<$models.Medi
 }
 
 /**
+ * GetMyBusinessProfile returns the logged-in account's own business profile.
+ * It deliberately bypasses businessProfileCache: self data must be fresh,
+ * especially immediately after an update.
+ */
+export function GetMyBusinessProfile(): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(823807724).then(($result: any) => {
+        return $$createType16($result);
+    });
+}
+
+/**
  * GetMyJID returns the logged-in user's full JID. Callers normalize it with
  * userPart() before comparing it to other JIDs (the account ID is a PN JID,
  * while group participants may be addressed by LID).
@@ -1094,6 +1105,16 @@ export function UnlinkGroupFromCommunity(parentJID: string, childJID: string): $
 
 export function UnsubscribeNewsletter(newsletterJID: string): $CancellablePromise<void> {
     return $Call.ByID(3508634273, newsletterJID);
+}
+
+/**
+ * UpdateMyBusinessProfile validates and applies the supplied profile changes.
+ * Validation mirrors the backend limits with plain messages so backend error
+ * strings never reach the frontend verbatim. Failure logs stay generic and
+ * never include profile bodies.
+ */
+export function UpdateMyBusinessProfile(input: $models.BusinessProfileUpdateInput): $CancellablePromise<void> {
+    return $Call.ByID(1756513097, input);
 }
 
 /**

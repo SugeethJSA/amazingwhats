@@ -62,6 +62,35 @@ export class BusinessLinkResult {
 }
 
 /**
+ * BusinessProfileUpdateInput is the editable subset of a business profile.
+ * A nil field means "leave unchanged"; a non-nil empty value clears the field.
+ */
+export class BusinessProfileUpdateInput {
+    "address"?: string | null;
+    "email"?: string | null;
+    "description"?: string | null;
+    "websites"?: string[] | null;
+
+    /** Creates a new BusinessProfileUpdateInput instance. */
+    constructor($$source: Partial<BusinessProfileUpdateInput> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BusinessProfileUpdateInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): BusinessProfileUpdateInput {
+        const $$createField3_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("websites" in $$parsedSource) {
+            $$parsedSource["websites"] = $$createField3_0($$parsedSource["websites"]);
+        }
+        return new BusinessProfileUpdateInput($$parsedSource as Partial<BusinessProfileUpdateInput>);
+    }
+}
+
+/**
  * CallStats holds diagnostic info about an active call for the frontend stats panel.
  */
 export class CallStats {
@@ -295,8 +324,8 @@ export class CommunityDetails {
      * Creates a new CommunityDetails instance from a string or object.
      */
     static createFrom($$source: any = {}): CommunityDetails {
-        const $$createField6_0 = $$createType1;
-        const $$createField7_0 = $$createType2;
+        const $$createField6_0 = $$createType3;
+        const $$createField7_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("announcement" in $$parsedSource) {
             $$parsedSource["announcement"] = $$createField6_0($$parsedSource["announcement"]);
@@ -497,8 +526,8 @@ export class Group {
      * Creates a new Group instance from a string or object.
      */
     static createFrom($$source: any = {}): Group {
-        const $$createField7_0 = $$createType3;
-        const $$createField10_0 = $$createType5;
+        const $$createField7_0 = $$createType5;
+        const $$createField10_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("group_owner" in $$parsedSource) {
             $$parsedSource["group_owner"] = $$createField7_0($$parsedSource["group_owner"]);
@@ -567,7 +596,7 @@ export class GroupParticipant {
      * Creates a new GroupParticipant instance from a string or object.
      */
     static createFrom($$source: any = {}): GroupParticipant {
-        const $$createField0_0 = $$createType3;
+        const $$createField0_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("contact" in $$parsedSource) {
             $$parsedSource["contact"] = $$createField0_0($$parsedSource["contact"]);
@@ -734,7 +763,7 @@ export class MessageContent {
      * Creates a new MessageContent instance from a string or object.
      */
     static createFrom($$source: any = {}): MessageContent {
-        const $$createField6_0 = $$createType6;
+        const $$createField6_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("mentions" in $$parsedSource) {
             $$parsedSource["mentions"] = $$createField6_0($$parsedSource["mentions"]);
@@ -769,7 +798,7 @@ export class NewsletterHistoryEntry {
      * Creates a new NewsletterHistoryEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): NewsletterHistoryEntry {
-        const $$createField1_0 = $$createType7;
+        const $$createField1_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("message" in $$parsedSource) {
             $$parsedSource["message"] = $$createField1_0($$parsedSource["message"]);
@@ -855,8 +884,8 @@ export class NewsletterMessageItem {
      * Creates a new NewsletterMessageItem instance from a string or object.
      */
     static createFrom($$source: any = {}): NewsletterMessageItem {
-        const $$createField5_0 = $$createType8;
-        const $$createField6_0 = $$createType9;
+        const $$createField5_0 = $$createType9;
+        const $$createField6_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("reaction_counts" in $$parsedSource) {
             $$parsedSource["reaction_counts"] = $$createField5_0($$parsedSource["reaction_counts"]);
@@ -995,8 +1024,8 @@ export class PollVotesResult {
      * Creates a new PollVotesResult instance from a string or object.
      */
     static createFrom($$source: any = {}): PollVotesResult {
-        const $$createField1_0 = $$createType11;
-        const $$createField3_0 = $$createType12;
+        const $$createField1_0 = $$createType12;
+        const $$createField3_0 = $$createType13;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("options" in $$parsedSource) {
             $$parsedSource["options"] = $$createField1_0($$parsedSource["options"]);
@@ -1160,7 +1189,7 @@ export class StatusPrivacyEntry {
      * Creates a new StatusPrivacyEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): StatusPrivacyEntry {
-        const $$createField1_0 = $$createType6;
+        const $$createField1_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("jids" in $$parsedSource) {
             $$parsedSource["jids"] = $$createField1_0($$parsedSource["jids"]);
@@ -1220,7 +1249,7 @@ export class StickerPackResult {
      * Creates a new StickerPackResult instance from a string or object.
      */
     static createFrom($$source: any = {}): StickerPackResult {
-        const $$createField4_0 = $$createType14;
+        const $$createField4_0 = $$createType15;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stickers" in $$parsedSource) {
             $$parsedSource["stickers"] = $$createField4_0($$parsedSource["stickers"]);
@@ -1249,7 +1278,7 @@ export class UserInfoResult {
      * Creates a new UserInfoResult instance from a string or object.
      */
     static createFrom($$source: any = {}): UserInfoResult {
-        const $$createField3_0 = $$createType6;
+        const $$createField3_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("devices" in $$parsedSource) {
             $$parsedSource["devices"] = $$createField3_0($$parsedSource["devices"]);
@@ -1259,18 +1288,19 @@ export class UserInfoResult {
 }
 
 // Private type creation functions
-const $$createType0 = CommunityGroup.createFrom;
+const $$createType0 = $Create.Array($Create.Any);
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($$createType0);
-const $$createType3 = Contact.createFrom;
-const $$createType4 = GroupParticipant.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $Create.Array($Create.Any);
-const $$createType7 = store$0.DecodedMessage.createFrom;
-const $$createType8 = $Create.Map($Create.Any, $Create.Any);
+const $$createType2 = CommunityGroup.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = $Create.Array($$createType2);
+const $$createType5 = Contact.createFrom;
+const $$createType6 = GroupParticipant.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = store$0.DecodedMessage.createFrom;
 const $$createType9 = $Create.Map($Create.Any, $Create.Any);
-const $$createType10 = PollOptionVotes.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = $Create.Array($Create.Any);
-const $$createType13 = StickerPackItem.createFrom;
-const $$createType14 = $Create.Array($$createType13);
+const $$createType10 = $Create.Map($Create.Any, $Create.Any);
+const $$createType11 = PollOptionVotes.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = $Create.Array($Create.Any);
+const $$createType14 = StickerPackItem.createFrom;
+const $$createType15 = $Create.Array($$createType14);

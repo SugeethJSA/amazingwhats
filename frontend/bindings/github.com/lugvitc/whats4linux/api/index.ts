@@ -9,6 +9,7 @@ export {
 export {
     BlockedContact,
     BusinessLinkResult,
+    BusinessProfileUpdateInput,
     CallStats,
     ChatElement,
     CommunityDetails,
