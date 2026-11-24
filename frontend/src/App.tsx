@@ -11,6 +11,7 @@ import QRCode from "qrcode"
 import { LoginScreen } from "./screens/LoginScreen"
 import { initSelf, resetSelf } from "./lib/self"
 import { Lightbox } from "./components/Lightbox"
+import { NavRail } from "./components/NavRail"
 import { MediaHub } from "./components/chat/MediaHub"
 import { CallOverlay } from "./components/chat/CallOverlay"
 
@@ -485,34 +486,41 @@ function App() {
         </div>
       )}
 
-      <main id="main-content" tabIndex={-1} className="relative">
-        {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={screen !== "login" ? "relative flex h-screen" : "relative"}
+      >
+        {screen !== "login" && <NavRail />}
+        <div className="min-w-0 flex-1">
+          {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}
 
-        {(screen === "chats" || screen === "settings") && (
-          <Suspense
-            fallback={
-              <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
-                Loading chats…
+          {(screen === "chats" || screen === "settings") && (
+            <Suspense
+              fallback={
+                <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
+                  Loading chats…
+                </div>
+              }
+            >
+              <div className={screen === "settings" ? "hidden" : "contents"}>
+                <ChatListScreen onOpenSettings={() => setScreen("settings")} />
               </div>
-            }
-          >
-            <div className={screen === "settings" ? "hidden" : "contents"}>
-              <ChatListScreen onOpenSettings={() => setScreen("settings")} />
-            </div>
-          </Suspense>
-        )}
+            </Suspense>
+          )}
 
-        {screen === "settings" && (
-          <Suspense
-            fallback={
-              <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
-                Loading settings…
-              </div>
-            }
-          >
-            <SettingsScreen onBack={() => setScreen("chats")} />
-          </Suspense>
-        )}
+          {screen === "settings" && (
+            <Suspense
+              fallback={
+                <div className="p-8 text-[13px] text-light-muted" role="status" aria-live="polite">
+                  Loading settings…
+                </div>
+              }
+            >
+              <SettingsScreen onBack={() => setScreen("chats")} />
+            </Suspense>
+          )}
+        </div>
       </main>
       <CallOverlay />
     </div>

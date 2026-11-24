@@ -957,8 +957,11 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const moreFiltersRef = useRef<HTMLDivElement | null>(null)
   const moreFiltersTriggerRef = useRef<HTMLButtonElement | null>(null)
 
-  type SidebarView = "chats" | "communities" | "channels" | "status"
-  const [view, setView] = useState<SidebarView>("chats")
+  // Sidebar view is store-backed so the persistent left rail can drive it.
+  // Keep the local names `view` / `setView` so every existing check below stays
+  // unchanged.
+  const view = useUIStore(state => state.sidebarView)
+  const setView = useUIStore(state => state.setSidebarView)
 
   // Subscribed here as well as used in the selector so muting a chat updates
   // the visible list immediately when the "Muted" filter is active.
@@ -1747,36 +1750,6 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             onSearch={() => setShowSearch(true)}
             avatar={selfAvatar}
           />
-          <div className="flex gap-2 px-3 pb-2 pt-1 overflow-x-auto">
-            {(["chats", "communities", "channels", "status"] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => {
-                  if (v === view) return
-                  // The sidebar tab owns the panes. Clear the previous view in
-                  // the same event so no chat/search result can flash in the
-                  // conversation pane while the status list mounts.
-                  setShowSearch(false)
-                  setStoryGroup(null)
-                  selectChat(null)
-                  setSelectedCommunity(null)
-                  setCommunityReturn(null)
-                  setView(v)
-                }}
-                aria-pressed={view === v}
-                className={clsx(
-                  "rounded-full border px-3 py-1 text-sm capitalize transition-colors shrink-0",
-                  view === v
-                    ? // Same signal tint as the selected chat row, with the
-                      // tab's own underline affordance (see .sidebar-tab-active).
-                      "sidebar-tab-active border-transparent bg-green-muted font-medium text-green-ink"
-                    : "border-gray-300 dark:border-dark-border text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5",
-                )}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
           {view !== "status" && (
             <SearchBar
               value={searchTerm}

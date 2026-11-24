@@ -19,6 +19,9 @@ interface OnlineState {
 
 export type AppScreen = "login" | "chats" | "settings"
 
+/** Sidebar destination backing the persistent left navigation rail. */
+export type SidebarView = "chats" | "communities" | "channels" | "status"
+
 export type NotificationTone = "info" | "success" | "error" | "warning"
 
 export interface NotificationAction {
@@ -84,6 +87,8 @@ export interface GroupJoinIntent {
 interface UIStore {
   screen: AppScreen
   setScreen: (screen: AppScreen) => void
+  sidebarView: SidebarView
+  setSidebarView: (view: SidebarView) => void
   sidebarOpen: boolean
   showEmojiPicker: boolean
   chatInfoOpen: boolean
@@ -133,6 +138,8 @@ let nextGroupJoinIntentId = 1
 export const useUIStore = create<UIStore>(set => ({
   screen: "login",
   setScreen: screen => set({ screen }),
+  sidebarView: "chats",
+  setSidebarView: sidebarView => set({ sidebarView }),
   sidebarOpen: true,
   showEmojiPicker: false,
   chatInfoOpen: false,
