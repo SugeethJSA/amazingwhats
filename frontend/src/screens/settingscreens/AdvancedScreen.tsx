@@ -50,7 +50,7 @@ function CodeEditorCard({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           spellCheck={false}
-          className="h-40 w-full resize-y rounded-xl border border-black/[0.08] bg-light-secondary p-3 font-mono text-[13px] leading-relaxed text-light-text outline-none transition-all placeholder:text-light-muted focus:border-[var(--color-focus-ring)] focus:ring-2 focus:ring-[var(--color-focus-ring)] dark:border-white/[0.1] dark:bg-dark-tertiary dark:text-dark-text dark:placeholder:text-dark-muted"
+          className="h-40 w-full resize-y rounded-xl border border-black/[0.08] bg-light-secondary p-3 font-mono text-[13px] leading-relaxed text-light-text transition-all placeholder:text-light-muted focus:border-[var(--color-focus-ring)] dark:border-white/[0.1] dark:bg-dark-tertiary dark:text-dark-text dark:placeholder:text-dark-muted"
         />
         <div className="flex items-center gap-3">
           <ActionButton onClick={onSave}>Save {title}</ActionButton>

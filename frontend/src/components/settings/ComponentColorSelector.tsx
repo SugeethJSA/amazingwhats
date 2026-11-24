@@ -143,7 +143,7 @@ const ComponentColorSelector = () => {
                               onChange={e =>
                                 handleDraftChange(selectedComponent, label as any, e.target.value)
                               }
-                              className="w-full border dark:border-zinc-700 rounded bg-transparent px-2 py-1.5 text-sm font-mono text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                              className="w-full border dark:border-zinc-700 rounded bg-transparent px-2 py-1.5 text-sm font-mono text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted"
                             />
                           </div>
                           <input

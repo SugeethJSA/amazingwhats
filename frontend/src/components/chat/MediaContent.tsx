@@ -463,7 +463,7 @@ export function MediaContent({
             aria-label={mediaOpenLabel}
             // The button owns the reserved box so the image fills exactly the
             // same placeholder-sized area as before -> zero layout shift.
-            className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+            className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer"
             style={type === "image" ? (reservedBox ?? undefined) : undefined}
             onClick={() => {
               onImageClick?.(mediaSrc)
@@ -505,7 +505,7 @@ export function MediaContent({
           aria-label={mediaOpenLabel}
           // Button owns the reserved box; image fills it, so the click target
           // and rendered size stay identical to the previous <img>.
-          className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+          className="block p-0 border-0 bg-transparent rounded-lg overflow-hidden cursor-pointer"
           style={reservedBox ?? GIF_FALLBACK_BOX}
           onClick={() => {
             onImageClick?.(mediaSrc)
