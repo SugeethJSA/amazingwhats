@@ -3,8 +3,8 @@ version: '3'
 
 info:
   companyName: "lugvitc"
-  productName: "whats4linux"
-  productIdentifier: "net.lugvitc.whats4linux"
+  productName: "amazingwhats"
+  productIdentifier: "net.lugvitc.amazingwhats"
   description: "An unofficial WhatsApp client."
   copyright: "(c) lugvitc"
   comments: "An unofficial WhatsApp client."

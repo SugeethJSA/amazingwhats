@@ -1,14 +1,14 @@
-# D-PKG-002 - real NSIS installer + thorough uninstaller for Whats4Linux (Wails v3).
+# D-PKG-002 - real NSIS installer + thorough uninstaller for amazingwhats (Wails v3).
 #
 # Build from the repository root (see build/windows/Taskfile.yml:package:installer):
-#   makensis /DAPP_EXE=..\..\..\bin\whats4linux.exe build/windows/installer/installer.nsi
+#   makensis /DAPP_EXE=..\..\..\bin\amazingwhats.exe build/windows/installer/installer.nsi
 #
 # NSIS sets its compiler working directory to the folder of this script, so all
 # relative paths below are relative to build/windows/installer/:
 #   ..\icon.ico           -> build/windows/icon.ico
 #   ..\..\..\LICENSE      -> <repo root>/LICENSE          (real AGPL-3.0 text)
-#   ..\..\..\bin\...      -> <repo root>/bin/whats4linux.exe
-#   ..\..\..\bin\...      -> <repo root>/bin/whats4linux-setup.exe (output)
+#   ..\..\..\bin\...      -> <repo root>/bin/amazingwhats.exe
+#   ..\..\..\bin\...      -> <repo root>/bin/amazingwhats-setup.exe (output)
 
 Unicode true
 
@@ -20,18 +20,18 @@ Unicode true
 # Product identity. No fabricated data: values match wails.json (publisher,
 # version) and the Go binary name; the exe default matches `go build -o`.
 # ---------------------------------------------------------------------------
-!define PRODUCT_NAME      "Whats4Linux"
+!define PRODUCT_NAME      "amazingwhats"
 !define PUBLISHER         "lugvitc"
 !define VERSION           "1.0.0"
-!define APP_DIR_NAME      "whats4linux"     # $LOCALAPPDATA\Programs\whats4linux
-!define APP_DATA_DIR      "whats4linux"     # %APPDATA%\whats4linux + %LOCALAPPDATA%\whats4linux
-!define APP_EXE_NAME      "whats4linux.exe" # built binary name
+!define APP_DIR_NAME      "amazingwhats"     # $LOCALAPPDATA\Programs\amazingwhats
+!define APP_DATA_DIR      "amazingwhats"     # %APPDATA%\amazingwhats + %LOCALAPPDATA%\amazingwhats
+!define APP_EXE_NAME      "amazingwhats.exe" # built binary name
 
 # Compile-time input: path to the built exe. Overridable with
 #   makensis /DAPP_EXE=<path> ...
-# The default resolves to <repo root>/bin/whats4linux.exe.
+# The default resolves to <repo root>/bin/amazingwhats.exe.
 !ifndef APP_EXE
-  !define APP_EXE "..\..\..\bin\whats4linux.exe"
+  !define APP_EXE "..\..\..\bin\amazingwhats.exe"
 !endif
 
 # Standard per-user Add/Remove Programs key (no custom/vendor registry keys).
@@ -53,7 +53,7 @@ ManifestDPIAware true
 SetCompressor /SOLID lzma
 
 Name "${PRODUCT_NAME}"
-OutFile "..\..\..\bin\whats4linux-setup.exe"
+OutFile "..\..\..\bin\amazingwhats-setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\${APP_DIR_NAME}"
 InstallDirRegKey HKCU "${UNINST_KEY}" "InstallLocation"
 ShowInstDetails show
@@ -66,7 +66,7 @@ ShowUninstDetails show
 !define MUI_UNICON "..\icon.ico"
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_NOAUTOCLOSE
-!define MUI_UNCONFIRMPAGE_TEXT_TOP "Close Whats4Linux before uninstalling. All application data and cache will be permanently deleted."
+!define MUI_UNCONFIRMPAGE_TEXT_TOP "Close amazingwhats before uninstalling. All application data and cache will be permanently deleted."
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\..\..\LICENSE"
@@ -135,17 +135,17 @@ FunctionEnd
 # ---------------------------------------------------------------------------
 # Uninstall: shortcuts, ARP key, install dir, and ALL app data/cache.
 # Verified footprint (from source):
-#   %APPDATA%\whats4linux       settings.json, custom.css, custom.js,
+#   %APPDATA%\amazingwhats       settings.json, custom.css, custom.js,
 #                               app_settings.json, messages.db, app.db,
 #                               session.wa (+ SQLite -wal/-shm sidecars)
-#   %LOCALAPPDATA%\whats4linux  images\, idxdb (+ SQLite -wal/-shm sidecars)
+#   %LOCALAPPDATA%\amazingwhats  images\, idxdb (+ SQLite -wal/-shm sidecars)
 # RMDIR /r removes the whole trees, so no DB or session can be left behind.
 # ---------------------------------------------------------------------------
 Function un.onInit
   SetShellVarContext current
   IfSilent un_skip_warning 0
     MessageBox MB_YESNO|MB_ICONEXCLAMATION \
-      "Close Whats4Linux before uninstalling.$\r$\n$\r$\nUninstalling ${PRODUCT_NAME} will permanently delete all application data and cache, including your session (session.wa) and message databases (messages.db, app.db). Continue?" \
+      "Close amazingwhats before uninstalling.$\r$\n$\r$\nUninstalling ${PRODUCT_NAME} will permanently delete all application data and cache, including your session (session.wa) and message databases (messages.db, app.db). Continue?" \
       IDYES un_skip_warning
     Abort
   un_skip_warning:

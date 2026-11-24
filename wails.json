@@ -1,5 +1,5 @@
 {
-  "name": "whats4linux",
+  "name": "amazingwhats",
   "frontend": {
     "dir": "frontend",
     "install": "npm install",
@@ -13,7 +13,7 @@
   },
   "info": {
     "companyName": "lugvitc",
-    "productName": "whats4linux",
+    "productName": "amazingwhats",
     "productVersion": "1.0.0",
     "comments": "An unofficial WhatsApp client."
   }

@@ -2,7 +2,7 @@
 
 ## 🔐 Reporting Security Vulnerabilities
 
-If you discover a security vulnerability in **Whats4Linux**, please report it **privately and responsibly**.
+If you discover a security vulnerability in **amazingwhats**, please report it **privately and responsibly**.
 
 **Do NOT open a public GitHub issue** for security-related problems.
 
@@ -53,7 +53,7 @@ We ask reporters to allow reasonable time for investigation and remediation befo
 
 ## 🔒 Data & Privacy Considerations
 
-- Whats4Linux does **not** collect analytics or telemetry
+- amazingwhats does **not** collect analytics or telemetry
 - All user data is stored **locally**
 - Encryption and protocol handling rely on the upstream `whatsmeow` library
 - Sensitive information should never be logged or exposed
@@ -67,7 +67,7 @@ Contributors must take care to:
 
 ## 🛑 Known Limitations
 
-- Whats4Linux is an **unofficial client**
+- amazingwhats is an **unofficial client**
 - Use of unofficial clients may violate WhatsApp’s Terms of Service
 - Account restrictions or bans are possible and are outside the project’s control
 
@@ -82,4 +82,4 @@ Security researchers who follow this policy will be credited where appropriate (
 
 ---
 
-Thank you for helping keep Whats4Linux secure.
+Thank you for helping keep amazingwhats secure.

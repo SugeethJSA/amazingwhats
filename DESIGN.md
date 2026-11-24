@@ -1,5 +1,5 @@
 ---
-name: Whats4Linux
+name: amazingwhats
 description: A calm, native-feeling WhatsApp desktop client built on a green signal over deep neutral surfaces.
 colors:
   signal-green: "#21c063"
@@ -121,7 +121,7 @@ components:
     padding: "10px 16px"
 ---
 
-# Design System: Whats4Linux
+# Design System: amazingwhats
 
 ## Overview
 
@@ -285,7 +285,7 @@ The track is the labelled `role="progressbar"` with `aria-valuenow`/`aria-valuem
 
 ### Wordmark
 
-The shared `@/components/common/Wordmark` lockup pairs the bundled `chat-mark.svg` beside the text "Whats4Linux", with the accent on "4Linux". It has a stable contract — `{ className?: string; compact?: boolean }` — so every surface uses the same mark and lettering. The whole lockup carries the accessible name "Whats4Linux"; the mark is decorative. `compact` steps the mark down from 28px to 20px and the label from 18px to 14px for dense chrome. Text uses the primary text token in both themes and the green-ink token for the accent, so it stays readable on either canvas.
+The shared `@/components/common/Wordmark` lockup pairs the bundled `chat-mark.svg` beside the text "amazingwhats", with the accent on "whats". It has a stable contract — `{ className?: string; compact?: boolean }` — so every surface uses the same mark and lettering. The whole lockup carries the accessible name "amazingwhats"; the mark is decorative. `compact` steps the mark down from 28px to 20px and the label from 18px to 14px for dense chrome. Text uses the primary text token in both themes and the green-ink token for the accent, so it stays readable on either canvas.
 
 ### Named Rules
 

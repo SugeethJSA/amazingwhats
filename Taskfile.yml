@@ -9,7 +9,7 @@ includes:
   linux: ./build/linux/Taskfile.yml
 
 vars:
-  APP_NAME: whats4linux
+  APP_NAME: amazingwhats
   BIN_DIR: bin
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 

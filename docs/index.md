@@ -34,7 +34,7 @@ The two-halves idea is visible in four lines. The frontend directory is declared
 ```json
 // wails.json:2-5
 {
-  "name": "whats4linux",
+  "name": "amazingwhats",
   "frontend": {
     "dir": "frontend",
 ```

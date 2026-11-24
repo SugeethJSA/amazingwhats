@@ -338,7 +338,7 @@ a.initMeowcaller()
 func New(app *application.App, window *application.WebviewWindow, api *apiPkg.Api) *Tray {
 	systray := app.SystemTray.New()
 	systray.SetIcon(trayIcon)
-	systray.SetLabel("Whats4Linux")
+	systray.SetLabel("amazingwhats")
 	systray.SetTooltip("Lantern")
 ```
 

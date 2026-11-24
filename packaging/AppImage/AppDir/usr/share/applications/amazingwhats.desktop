@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Whats4Linux
-Exec=whats4linux
-Icon=whats4linux
+Name=amazingwhats
+Exec=amazingwhats
+Icon=amazingwhats
 Terminal=false
 Categories=Network;

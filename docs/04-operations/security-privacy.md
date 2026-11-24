@@ -28,8 +28,8 @@ The habit to learn: when someone says "the app is secure because X", ask *which 
 
 ```go
 // internal/misc/misc.go:10-18
-const AppName = "whats4linux"
-const AppID = "net.lugvitc.whats4linux"
+const AppName = "amazingwhats"
+const AppID = "net.lugvitc.amazingwhats"
 
 // Config files and the session database hold long-lived credentials, so the
 // config directory is owner-only and secret files are owner-read/write only.
@@ -102,7 +102,7 @@ func LoadSettings() {
 <!-- SECURITY.md:54-64 -->
 ## 🔒 Data & Privacy Considerations
 
-- Whats4Linux does **not** collect analytics or telemetry
+- amazingwhats does **not** collect analytics or telemetry
 - All user data is stored **locally**
 - Encryption and protocol handling rely on the upstream `whatsmeow` library
 - Sensitive information should never be logged or exposed
@@ -142,7 +142,7 @@ Contributors must take care to:
 | `SECURITY.md:7-13` | Reporting policy: no public issue; use a private advisory or contact the maintainer. |
 | `SECURITY.md:68-74` | Limitation: unofficial client, possible ToS violation, possible bans outside the project's control. |
 | `release.yaml:156-159` | Windows release zips the binary **with** `LICENSE` — an enforced AGPL payload step. |
-| `release.yaml:174-176` | AppImage ships `LICENSE` under `usr/share/licenses/whats4linux`. |
+| `release.yaml:174-176` | AppImage ships `LICENSE` under `usr/share/licenses/amazingwhats`. |
 | `release.yaml:188-190` | macOS `.app` ships `LICENSE` in `Contents/Resources`. |
 | `rolling-release.yaml:154-157,172-174,189-191` | The rolling workflow repeats the same three license-payload steps. |
 | `build/Taskfile.yml:69-72` | Explains why legacy NSIS assets remain: the AGPL license page must not be removed until a v3 NSIS path is verified. |

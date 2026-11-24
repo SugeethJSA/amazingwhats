@@ -37,7 +37,7 @@ includes:
   linux: ./build/linux/Taskfile.yml
 
 vars:
-  APP_NAME: whats4linux
+  APP_NAME: amazingwhats
   BIN_DIR: bin
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 ```
@@ -171,7 +171,7 @@ concurrency:
 | Line | What it does |
 |---|---|
 | `Taskfile.yml:5-9` | Pulls in the shared recipe card and one card per OS. This is why `wails3 task build` works without naming a platform. |
-| `Taskfile.yml:12-14` | Sets `APP_NAME=whats4linux`, `BIN_DIR=bin`, and a dev port defaulting to `9245` (overridable via the Task variable `WAILS_VITE_PORT`). |
+| `Taskfile.yml:12-14` | Sets `APP_NAME=amazingwhats`, `BIN_DIR=bin`, and a dev port defaulting to `9245` (overridable via the Task variable `WAILS_VITE_PORT`). |
 | `Taskfile.yml:20` | `build` dispatches to `{{OS}}:build` — the current OS decides which card runs. |
 | `Taskfile.yml:35` | The real dev command: `wails3 dev -config ./build/config.yml -port 9245`. |
 | `build/config.yml:31-40` | The dev pipeline: install deps once, start the frontend dev server in the background, tidy modules, build, then run the primary app. |
@@ -179,12 +179,12 @@ concurrency:
 | `build/Taskfile.yml:67` | The freshness gate: regenerate, then `git diff --exit-code -- frontend/bindings` fails the task if tracked bindings changed. |
 | `build/Taskfile.yml:69-72` | Records why legacy v2 NSIS assets are kept: the AGPL license page in `project.nsi` must stay until a v3 NSIS path is regenerated and verified. |
 | `build/linux/Taskfile.yml:19` | The final compile step: `go build {{.BUILD_FLAGS}} -o "{{.OUTPUT}}"`. |
-| `build/linux/Taskfile.yml:23-24` | Default output path is `bin/whats4linux`. |
+| `build/linux/Taskfile.yml:23-24` | Default output path is `bin/amazingwhats`. |
 | `build/linux/Taskfile.yml:27-28` | Linux needs `GOOS=linux` and `CGO_ENABLED=1`. |
 | `build/windows/Taskfile.yml:32-33` | The comment names the reason: `mattn/go-sqlite3` requires cgo, and CI puts MSYS2 ucrt64 GCC on `PATH`. |
-| `build/windows/Taskfile.yml:27` | Windows output is `bin/whats4linux.exe`. |
+| `build/windows/Taskfile.yml:27` | Windows output is `bin/amazingwhats.exe`. |
 | `build/darwin/Taskfile.yml:29-31` | macOS pins `-mmacosx-version-min=12.0` and `MACOSX_DEPLOYMENT_TARGET=12.0`. |
-| `build/darwin/Taskfile.yml:46-50` | Packaging creates `bin/whats4linux.app`, copies the icon/binary/plist, then ad-hoc signs with `codesign --force --deep --sign -`. |
+| `build/darwin/Taskfile.yml:46-50` | Packaging creates `bin/amazingwhats.app`, copies the icon/binary/plist, then ad-hoc signs with `codesign --force --deep --sign -`. |
 | `build.yaml:45` | CI health check: `wails3 doctor`. |
 | `build.yaml:49-50` | CI binding freshness gate, identical to `verify:bindings`. |
 | `build.yaml:54` | CI's explicit production build: `wails3 build PRODUCTION=true ARCH=amd64`. |
@@ -227,14 +227,14 @@ Production adds `-tags production`, `-trimpath`, `-buildvcs=false`, and `-ldflag
 
 | Context | Path | Source |
 |---|---|---|
-| Linux local build | `bin/whats4linux` | `build/linux/Taskfile.yml:23-24` |
-| Windows local build | `bin/whats4linux.exe` | `build/windows/Taskfile.yml:27` |
-| macOS bundle | `bin/whats4linux.app` | `build/darwin/Taskfile.yml:46-49` |
+| Linux local build | `bin/amazingwhats` | `build/linux/Taskfile.yml:23-24` |
+| Windows local build | `bin/amazingwhats.exe` | `build/windows/Taskfile.yml:27` |
+| macOS bundle | `bin/amazingwhats.app` | `build/darwin/Taskfile.yml:46-49` |
 | CI build-gate artifact | `bin/*` (uploaded as `wails-linux-amd64`) | `build.yaml:56-60` |
-| Release AppImage | `bin/Whats4Linux-Linux-x86_64.AppImage` | `release.yaml:69,183` |
-| Release Windows binary / zip | `bin/whats4linux-windows.exe` → `bin/whats4linux-windows.zip` | `release.yaml:75,145-146,158-160` |
-| Release macOS bundle | `bin/whats4linux-darwin*` | `release.yaml:81,185-194` |
-| Nix package output | `$out/bin/whats4linux` (from `bin/whats4linux`) | `package.nix:114-119` |
+| Release AppImage | `bin/amazingwhats-linux-x86_64.AppImage` | `release.yaml:69,183` |
+| Release Windows binary / zip | `bin/amazingwhats-windows.exe` → `bin/amazingwhats-windows.zip` | `release.yaml:75,145-146,158-160` |
+| Release macOS bundle | `bin/amazingwhats-darwin*` | `release.yaml:81,185-194` |
+| Nix package output | `$out/bin/amazingwhats` (from `bin/amazingwhats`) | `package.nix:114-119` |
 
 ### CI gates, at a glance
 

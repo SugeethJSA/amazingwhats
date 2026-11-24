@@ -54,12 +54,12 @@ tasks:
         vars:
           PRODUCTION: "true"
     cmds:
-      - makensis /DAPP_EXE=..\..\..\bin\whats4linux.exe build/windows/installer/installer.nsi
+      - makensis /DAPP_EXE=..\..\..\bin\amazingwhats.exe build/windows/installer/installer.nsi
       # Fail loudly if makensis silently skipped/produced nothing. The path is
       # the real repo-root bin/ output (Task's execution dir is the repo root).
-      - cmd: powershell -NoProfile -Command "if (-not (Test-Path -LiteralPath '{{.BIN_DIR}}/whats4linux-setup.exe' -PathType Leaf)) { Write-Error 'makensis did not produce bin/whats4linux-setup.exe'; exit 1 }; Write-Host 'Installer built at {{.BIN_DIR}}/whats4linux-setup.exe'"
+      - cmd: powershell -NoProfile -Command "if (-not (Test-Path -LiteralPath '{{.BIN_DIR}}/amazingwhats-setup.exe' -PathType Leaf)) { Write-Error 'makensis did not produce bin/amazingwhats-setup.exe'; exit 1 }; Write-Host 'Installer built at {{.BIN_DIR}}/amazingwhats-setup.exe'"
         platforms: [windows]
-      - cmd: test -f {{.BIN_DIR}}/whats4linux-setup.exe && echo "Installer built at {{.BIN_DIR}}/whats4linux-setup.exe"
+      - cmd: test -f {{.BIN_DIR}}/amazingwhats-setup.exe && echo "Installer built at {{.BIN_DIR}}/amazingwhats-setup.exe"
         platforms: [linux, darwin]
 
   package:

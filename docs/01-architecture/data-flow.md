@@ -414,7 +414,7 @@ func (a *Api) DownloadMediaToFile(messageID string) error {
 	}
 	...
 	// Stream to a temp file first so downloads never balloon memory.
-	tmp, err := os.CreateTemp("", "whats4linux-dl-*")
+	tmp, err := os.CreateTemp("", "amazingwhats-dl-*")
 	...
 	if dlErr := a.waClient.DownloadToFile(a.ctx, msg.Media, tmp); dlErr != nil {
 		return fmt.Errorf("failed to download media: %w", dlErr)
@@ -431,7 +431,7 @@ if _, err := io.Copy(out, tmp); err != nil {
 }
 
 a.app.Event.Emit("download:complete", filePath)
-_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
+_ = beeep.Notify("amazingwhats", "Downloaded: "+filePath, "")
 playBeep()
 return nil
 ```

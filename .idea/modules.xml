@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/whats4linux.iml" filepath="$PROJECT_DIR$/.idea/whats4linux.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/amazingwhats.iml" filepath="$PROJECT_DIR$/.idea/amazingwhats.iml" />
     </modules>
   </component>
 </project>

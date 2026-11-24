@@ -114,7 +114,7 @@ func Execute(args []string, assets fs.FS, bArgs BuildArgs) error {
 | `main.go:24` | `main()` turns the returned error into an OS exit code via `runMain`. |
 | `main.go:28-33` | `run()` injects the build info and calls `cmd.Execute`. |
 | `main.go:36-42` | `runMain` prints `<AppName>: <error>` and returns `1` on failure, `0` otherwise. |
-| `cmd/cmd.go:12` | `AppName = "whats4linux"`. |
+| `cmd/cmd.go:12` | `AppName = "amazingwhats"`. |
 | `cmd/cmd.go:57` | With no subcommand, `Action: run(assets)` is the normal launch path. |
 | `cmd/cmd.go:64-80` | `Execute` builds the CLI app, formats the version string, and calls `app.Run(args)`. |
 

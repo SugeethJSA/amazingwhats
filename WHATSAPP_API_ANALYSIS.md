@@ -2,18 +2,18 @@
 
 ## Overview
 
-This document cross-references the **whatsmeow** library API surface (v0.0.0-20260616120636-eaa388b4e537) against the **whats4linux** implementation to determine which APIs are **implemented**, **indirectly available**, or **not implemented**.
+This document cross-references the **whatsmeow** library API surface (v0.0.0-20260616120636-eaa388b4e537) against the **amazingwhats** implementation to determine which APIs are **implemented**, **indirectly available**, or **not implemented**.
 
 **Legend:**
-- **Implemented** — Directly called from whats4linux code
-- **Indirectly Available** — whats4linux has its own wrapper/implementation or uses via internal mechanisms
-- **Not Implemented** — whatsmeow API exists but is not used by whats4linux
+- **Implemented** — Directly called from amazingwhats code
+- **Indirectly Available** — amazingwhats has its own wrapper/implementation or uses via internal mechanisms
+- **Not Implemented** — whatsmeow API exists but is not used by amazingwhats
 
 ---
 
 ## Client Core (`client.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `NewClient` | Implemented | `internal/wa/client.go:20` |
 | `Connect` | Implemented | `internal/wa/client.go:22` |
@@ -42,7 +42,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Send & Message Building (`send.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `SendMessage` | Implemented | `api/message.go:208,473,667,740,755,858,909` |
 | `SendPeerMessage` | Not Implemented | — |
@@ -64,7 +64,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Upload & Download (`upload.go`, `download.go`, `download-to-file.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `Upload` | Implemented | `api/message.go:292,336,372,420,452,576,582` |
 | `UploadReader` | Not Implemented | — |
@@ -86,7 +86,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Group Operations (`group.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `CreateGroup` | Implemented | `api/group.go:128,258,293` |
 | `UnlinkGroup` | Implemented | `api/groups_ext.go:186` |
@@ -122,7 +122,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Newsletter / Channels (`newsletter.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `NewsletterSubscribeLiveUpdates` | Implemented | `api/channels.go:178` |
 | `NewsletterMarkViewed` | Implemented | `api/channels.go:197` |
@@ -145,7 +145,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Presence (`presence.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `SendPresence` | Implemented | `api/api.go:703` |
 | `SubscribePresence` | Implemented | `api/chat.go:200` |
@@ -155,7 +155,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Privacy Settings (`privacysettings.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `TryFetchPrivacySettings` | Implemented | `api/privacy.go:172` |
 | `GetPrivacySettings` | Implemented | `api/privacy.go:34` |
@@ -166,7 +166,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## User / Profile (`user.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `GetContactQRLink` | Implemented | `api/discovery.go:96` |
 | `ResolveBusinessMessageLink` | Implemented | `api/account.go:82` |
@@ -188,7 +188,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Receipts (`receipt.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `MarkRead` | Implemented | `api/message.go:688` |
 | `SetForceActiveDeliveryReceipts` | Implemented | `api/client.go:52` |
@@ -197,7 +197,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Pairing (`pair.go`, `pair-code.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `PairPhone` | Implemented | `api/auth.go:31` |
 | `PairClientChrome` (constant) | Implemented | `api/auth.go:31` |
@@ -206,7 +206,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## App State (`appstate.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `FetchAppState` | Implemented | `api/api.go:145,153,157` |
 | `SendAppState` | Implemented | `api/account.go:127,139,155,166`, `api/chat.go:59,78`, `api/notifications.go:88` |
@@ -237,7 +237,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Media (`download.go`, `mediaconn.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `MediaType` (type) | Implemented | `internal/wa/media.go:52`, `internal/types/media.go:20-30` |
 | `MediaImage` | Implemented | `api/message.go:292,452`, `api/media.go:115,131,153`, `internal/types/media.go:21,25` |
@@ -259,7 +259,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Calls (`call.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `RejectCall` | Implemented | `api/calls.go:217` |
 
@@ -267,7 +267,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Push Notifications (`push.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `RegisterForPushNotifications` | Not Implemented | — |
 | `GetPushConfigAttrs` | Not Implemented | — |
@@ -281,7 +281,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Prekeys (`prekeys.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `GetServerPreKeyCount` | Not Implemented | — |
 | `UploadPreKeys` | Not Implemented | — |
@@ -292,7 +292,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## QR Channel (`qrchan.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `GetQRChannel` | Not Implemented | — |
 | `QRChannelItem` (type) | Not Implemented | — |
@@ -301,7 +301,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Media Retry (`mediaretry.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `SendMediaRetryReceipt` | Not Implemented | — |
 | `DecryptMediaRetryNotification` | Not Implemented | — |
@@ -310,7 +310,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Messaging Secret (`msgsecret.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `BuildPollVote` | Implemented | `api/polls.go:43` |
 | `BuildPollCreation` | Implemented | `api/message.go:810` |
@@ -328,7 +328,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Status Privacy (`broadcast.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `GetStatusPrivacy` | Implemented | `api/status.go:30` |
 | `DefaultStatusPrivacy` | Not Implemented | — |
@@ -337,7 +337,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Update (`update.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `GetLatestVersion` | Not Implemented | — |
 
@@ -345,7 +345,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Types Package (`types/`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `JID` (type) | Implemented | Used extensively |
 | `ParseJID` | Implemented | Used extensively |
@@ -387,7 +387,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Events Package (`types/events/`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `Message` | Implemented | `api/api.go:551`, `api/message.go:480,759`, `internal/store/message.go:542` |
 | `Picture` | Implemented | `api/api.go:626` |
@@ -453,7 +453,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## AppState Events (`types/events/appstate.go`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `Contact` | Implemented | `api/api.go:742` |
 | `PushName` | Implemented | `api/api.go:750` |
@@ -480,7 +480,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Store Package (`store/`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `Store.ID` | Implemented | Used extensively |
 | `Store.LIDs` | Implemented | `api/api.go:568,707,965`, `api/message.go` |
@@ -505,7 +505,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## SQL Store (`store/sqlstore/`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `sqlstore.NewWithDB` | Implemented | `api/api.go:441` |
 | `sqlstore.Container` | Implemented | `api/api.go:45`, `internal/wa/client.go:14` |
@@ -516,7 +516,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Proto Types (`proto/waE2E`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `waE2E.Message` | Implemented | Used extensively |
 | `waE2E.ContextInfo` | Implemented | `api/message.go:161` |
@@ -563,7 +563,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 ## Proto Types (`proto/waCommon`)
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `waCommon` | Implemented | `api/message.go:16` (imported) |
 
@@ -573,7 +573,7 @@ This document cross-references the **whatsmeow** library API surface (v0.0.0-202
 
 These are low-level APIs exposed via `DangerousInternals()`. Most are **not implemented** directly:
 
-| whatsmeow API | Status | whats4linux Location |
+| whatsmeow API | Status | amazingwhats Location |
 |---|---|---|
 | `DangerousInternals` | Not Implemented | — |
 | `DangerousInternalClient` | Not Implemented | — |

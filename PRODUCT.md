@@ -34,7 +34,7 @@ Desktop application shell (Wails v3, GTK4/WebKitGTK6, Taskfile build), in-proces
 
 ## Brand Commitments
 
-Name: Whats4Linux (Wails product name `whats4linux`). Unofficial-client disclaimer is a standing identity constraint. License: GNU AGPL v3.0. Voice from README.md: "Build native where it matters. Keep the UI lightweight. Respect Linux and its users." Project author/publisher recorded as celestix / lugvitc.
+Name: amazingwhats (Wails product name `amazingwhats`). Unofficial-client disclaimer is a standing identity constraint. License: GNU AGPL v3.0. Voice from README.md: "Build native where it matters. Keep the UI lightweight. Respect Linux and its users." Project author/publisher recorded as celestix / lugvitc.
 
 ## Evidence on Hand
 

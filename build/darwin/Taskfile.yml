@@ -32,7 +32,7 @@ tasks:
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
 
   package:
-    summary: Packages a production build into bin/whats4linux.app
+    summary: Packages a production build into bin/amazingwhats.app
     deps:
       - task: build
         vars:

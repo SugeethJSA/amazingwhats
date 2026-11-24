@@ -1,14 +1,14 @@
 <img width="1100" height="560" alt="gh-poster-chatscreen" src="https://github.com/user-attachments/assets/b9088f8b-b462-4aa5-b7a1-68cf03ad4211" />
 
-![Downloads](https://img.shields.io/github/downloads/lugvitc/whats4linux/total?style=flat-square) ![Contributors](https://img.shields.io/github/contributors/lugvitc/whats4linux?color=dark-green&style=flat-square) ![Issues](https://img.shields.io/github/issues/lugvitc/whats4linux?style=flat-square) ![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg) [![CI](https://github.com/lugvitc/whats4linux/actions/workflows/format.yaml/badge.svg)](https://github.com/lugvitc/whats4linux/actions/workflows/format.yaml) [![Release](https://github.com/lugvitc/whats4linux/actions/workflows/build.yaml/badge.svg)](https://github.com/lugvitc/whats4linux/actions/workflows/build.yaml)
+![Downloads](https://img.shields.io/github/downloads/SugeethJSA/amazingwhats/total?style=flat-square) ![Contributors](https://img.shields.io/github/contributors/SugeethJSA/amazingwhats?color=dark-green&style=flat-square) ![Issues](https://img.shields.io/github/issues/SugeethJSA/amazingwhats?style=flat-square) ![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg) [![CI](https://github.com/SugeethJSA/amazingwhats/actions/workflows/format.yaml/badge.svg)](https://github.com/SugeethJSA/amazingwhats/actions/workflows/format.yaml) [![Release](https://github.com/SugeethJSA/amazingwhats/actions/workflows/build.yaml/badge.svg)](https://github.com/SugeethJSA/amazingwhats/actions/workflows/build.yaml)
 
 
-**Whats4Linux** is an unofficial WhatsApp client for Linux with a **native Go backend** and a **lightweight WebKit-based UI**.
+**amazingwhats** is an unofficial WhatsApp client for Linux with a **native Go backend** and a **lightweight WebKit-based UI**.
 
 It is **not a wrapper around WhatsApp Web**.  
 Instead, it directly connects to WhatsApp using the official multi-device protocol via [`whatsmeow`](https://github.com/tulir/whatsmeow).
 
-The goal of Whats4Linux is to provide a **fast, efficient, Linux-first desktop client** without Electron, Chromium, or browser automation.
+The goal of amazingwhats is to provide a **fast, efficient, Linux-first desktop client** without Electron, Chromium, or browser automation.
 
 ---
 
@@ -24,7 +24,7 @@ The goal of Whats4Linux is to provide a **fast, efficient, Linux-first desktop c
 
 ## 🧠 Architecture
 
-Whats4Linux follows a **native-backed, web-rendered** architecture:
+amazingwhats follows a **native-backed, web-rendered** architecture:
 
 ```mermaid
 flowchart LR
@@ -81,7 +81,7 @@ flowchart LR
 
 ## 🐧 Linux-First Design
 
-Whats4Linux is built specifically for Linux:
+amazingwhats is built specifically for Linux:
 - Uses WebKitGTK instead of Chromium
 - Respects XDG base directories
 - Designed for long-running sessions
@@ -114,8 +114,8 @@ Whats4Linux is built specifically for Linux:
 > ⚠️ Project is under active development
 
 ```bash
-git clone https://github.com/lugvitc/whats4linux
-cd whats4linux
+git clone https://github.com/SugeethJSA/amazingwhats
+cd amazingwhats
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
 wails3 build PRODUCTION=true
 ```
@@ -136,7 +136,7 @@ This will produce a binary in the `bin/` directory.
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-* If you have suggestions for adding or removing features, feel free to [open an issue](https://github.com/lugvitc/whats4linux/issues/new) to discuss it, or directly create a pull request after you edit the *README.md* file with necessary changes.
+* If you have suggestions for adding or removing features, feel free to [open an issue](https://github.com/SugeethJSA/amazingwhats/issues/new) to discuss it, or directly create a pull request after you edit the *README.md* file with necessary changes.
 * Please make sure you check your spelling and grammar.
 * Create individual PR for each suggestion.
 
@@ -153,7 +153,7 @@ Contributions are what make the open source community such an amazing place to b
 
 ## ⚠️ Disclaimer
 
-Whats4Linux is an **unofficial WhatsApp client** and is **not affiliated with, endorsed by, or connected to WhatsApp or Meta** in any way.
+amazingwhats is an **unofficial WhatsApp client** and is **not affiliated with, endorsed by, or connected to WhatsApp or Meta** in any way.
 
 Use at your own risk.
 
@@ -184,5 +184,5 @@ See the `LICENSE` file for full details.
 > Keep the UI lightweight.  
 > Respect Linux and its users.
 
-Whats4Linux exists to provide a performant, efficient, and Linux-focused WhatsApp experience without unnecessary abstractions or heavy runtimes.
+amazingwhats exists to provide a performant, efficient, and Linux-focused WhatsApp experience without unnecessary abstractions or heavy runtimes.
 Your feedback and contributions are highly appreciated!

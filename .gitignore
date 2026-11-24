@@ -5,7 +5,7 @@ bin
 frontend/wailsjs
 .DS_Store
 .env
-/whats4linux
+/amazingwhats
 wa.db
 wa.db.1
 vendor
@@ -15,6 +15,6 @@ result
 .wails-wrapped
 *.AppImage
 *.exe
-whats4linux.exe
+amazingwhats.exe
 .task/
 build/darwin/icons.icns

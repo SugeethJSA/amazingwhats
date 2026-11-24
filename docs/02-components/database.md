@@ -22,7 +22,7 @@ Think of the writer as a **single-lane post office**:
 - There is exactly **one clerk who can stamp the ledger** (`runWriter`). Everyone else drops a sealed job (`writeRequest`) into an inbox (`writeCh`, 100 slots). The clerk opens a transaction, runs the job, commits it, and rings a small bell (`done` channel) for callers that are waiting.
 - `runSync` is the "wait for the bell" service. Reads that must see pending writes, such as `GetDecodedMessage`, also queue through the clerk so they cannot overtake a write.
 - The **ledger is `messages.db`**: tables for messages, media, reactions, pins, mutes, archives, polls, link previews and receipts. The clerk never lets two writers stamp at once.
-- `app.db` is a **separate address book** for groups and communities; `session.wa` is the **locked safe** holding the WhatsApp pairing; `idxdb` (under `os.UserCacheDir()/whats4linux`) is the **scratchpad** of cached image keys.
+- `app.db` is a **separate address book** for groups and communities; `session.wa` is the **locked safe** holding the WhatsApp pairing; `idxdb` (under `os.UserCacheDir()/amazingwhats`) is the **scratchpad** of cached image keys.
 - Startup is a **renovation before opening**. Tables are created `IF NOT EXISTS`, missing columns are added one `ALTER` at a time (ignoring "duplicate column"), and an old upstream poll-table layout is moved aside, replaced with the fork's layout, backfilled and then verified. If the verification fails, opening the store fails fast rather than corrupting votes later.
 - Upserts are **"write it again, but keep the good parts"**: an `ON CONFLICT DO UPDATE` refreshes a row without deleting child rows, and `COALESCE` preserves a cached thumbnail when a re-sync arrives without one.
 - The **chat-list cache is a notepad on the counter** (`chatListMap`, keyed by the JID user part). New messages overwrite the line; edits and deletes must explicitly erase the line so the next `GetChatList` recomputes it from the ledger.
@@ -32,7 +32,7 @@ flowchart TD
     START["Api.ServiceStartup (api/api.go:502)"] --> ADB["wa.NewAppDatabase -> app.db (wa/db.go:24)"]
     START --> SESS["sql.Open session.wa -> sqlstore.Container -> Upgrade (api/api.go:523-535)"]
     START --> MSG["store.NewMessageStore -> messages.db (store/message.go:158)"]
-    START --> IMG["cache.NewImageCache -> idxdb (UserCacheDir/whats4linux)"]
+    START --> IMG["cache.NewImageCache -> idxdb (UserCacheDir/amazingwhats)"]
 
     MSG --> WQ["writeCh: 100 writeRequest slots"]
     WQ --> WRITER["runWriter: the ONLY BeginTx (store/message.go:311)"]
@@ -125,10 +125,10 @@ func GetSQLiteAddress(dbName string) string {
 
 | File | Owner / source | What it holds |
 |---|---|---|
-| `app.db` | `wa.AppDatabase`, opened at `internal/wa/db.go:25` | `whats4linux_groups`: group/community names, topics, owners, parent links (`internal/query/group.go:4-16`). |
+| `app.db` | `wa.AppDatabase`, opened at `internal/wa/db.go:25` | `amazingwhats_groups`: group/community names, topics, owners, parent links (`internal/query/group.go:4-16`). |
 | `session.wa` | whatsmeow `sqlstore.Container`, opened at `api/api.go:523-530` | Long-lived WhatsApp device credentials and app state; `container.Upgrade(ctx)` runs at `api/api.go:531`. |
 | `messages.db` | `store.MessageStore`, opened at `internal/store/message.go:395` | Messages, media, reactions, pins, mutes, archives, polls, link previews, receipts. |
-| `idxdb` (in `os.UserCacheDir()/whats4linux`, not the config dir) | `cache.ImageCache` (created in `cache.NewImageCache`, called at `api/api.go:549`) | Cached image index keyed by message ID; path set at `internal/cache/image_cache.go:47-58`, table queried at `:157`. |
+| `idxdb` (in `os.UserCacheDir()/amazingwhats`, not the config dir) | `cache.ImageCache` (created in `cache.NewImageCache`, called at `api/api.go:549`) | Cached image index keyed by message ID; path set at `internal/cache/image_cache.go:47-58`, table queried at `:157`. |
 
 | Line | What it does |
 |---|---|
@@ -330,7 +330,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_chat_cursor ON messages(chat_jid, timest
 | `internal/store/message.go:229-254` | Upstream-shaped poll tables are renamed aside before the fork tables are created. |
 | `internal/store/message.go:259-266` | Four link-preview poster columns are migrated the same one-ALTER-per-column way. |
 | `internal/store/message.go:270-287` | On any init error the store calls `Close()`; then poll data is backfilled and the schema shape asserted. |
-| `internal/wa/db.go:35-60` | Separately, `AppDatabase.Initialise` creates `whats4linux_groups`, applies four community-column ALTERs and fetches groups — called from the `events.Connected` branch (`api/api.go:795`). |
+| `internal/wa/db.go:35-60` | Separately, `AppDatabase.Initialise` creates `amazingwhats_groups`, applies four community-column ALTERs and fetches groups — called from the `events.Connected` branch (`api/api.go:795`). |
 
 ### 4. Poll schema authority and the startup shape assertion
 
@@ -466,7 +466,7 @@ ON CONFLICT(message_id) DO UPDATE SET
 | `internal/query/message_media.go:74-79` | A NULL incoming thumbnail/PTT/waveform leaves the cached value intact. |
 | `internal/query/polls.go:29-32` | Poll metadata uses `INSERT OR REPLACE` instead — it has no child foreign keys. |
 | `internal/query/polls.go:41-44` | Poll votes also use `INSERT OR REPLACE`, keyed by `(chat_jid, poll_message_id, voter_jid)`. |
-| `internal/query/group.go:25-29` | Groups use `INSERT OR REPLACE INTO whats4linux_groups` keyed by JID. |
+| `internal/query/group.go:25-29` | Groups use `INSERT OR REPLACE INTO amazingwhats_groups` keyed by JID. |
 | `internal/store/message.go:292-306` | The four hot statements are prepared once on the DB (not on a transaction) and closed by `Close`. |
 
 ### 6. `chatListMap`: the preview cache and its invalidation

@@ -15,7 +15,7 @@ Configuration questions attract guesses: "is it `XDG_CONFIG_HOME`?", "what is th
 
 Think of the app's settings as a **filing cabinet in your home**:
 
-- The **cabinet** is the config directory. The app builds it from your OS's own "where should apps put user config?" answer and then appends its own name, `whats4linux`. It locks the cabinet to you (`0700`).
+- The **cabinet** is the config directory. The app builds it from your OS's own "where should apps put user config?" answer and then appends its own name, `amazingwhats`. It locks the cabinet to you (`0700`).
 - The **folders inside** are individual files: one for startup/debug settings, one for the big JSON bag of app settings, and two for your custom styling scripts.
 - The **sticky note on the cabinet door** is the environment. On startup the app reads a `.env` file if one exists, then looks for exactly two names. A sticky note overrides the paperwork inside.
 - The **notifications switch** is special. It is owned by the backend, cached in memory so the busy message path never has to touch the shared settings map, and written to disk atomically.
@@ -26,8 +26,8 @@ Two habits follow from this: do not assume a fixed absolute path, and do not inv
 
 ```go
 // internal/misc/misc.go:10-18
-const AppName = "whats4linux"
-const AppID = "net.lugvitc.whats4linux"
+const AppName = "amazingwhats"
+const AppID = "net.lugvitc.amazingwhats"
 
 // Config files and the session database hold long-lived credentials, so the
 // config directory is owner-only and secret files are owner-read/write only.
@@ -151,11 +151,11 @@ func LoadSettings() {
 
 | Line | What it does |
 |---|---|
-| `misc.go:10-11` | The two hard-coded names: `AppName = whats4linux`, `AppID = net.lugvitc.whats4linux`. |
+| `misc.go:10-11` | The two hard-coded names: `AppName = amazingwhats`, `AppID = net.lugvitc.amazingwhats`. |
 | `misc.go:15-16` | The two permission constants: directory `0700`, secret files `0600`. |
 | `misc.go:18` | `ConfigDir` is computed once at package load by `defaultConfigDir()`. |
 | `misc.go:44` | The base path comes from Go's `os.UserConfigDir()` — **not** a repo constant. |
-| `misc.go:48` | The app appends its own `whats4linux` folder to that base. |
+| `misc.go:48` | The app appends its own `amazingwhats` folder to that base. |
 | `misc.go:50,58` | Creates at `0700` and re-chmods at `0700` on every start (migration of older, looser dirs). |
 | `misc.go:59` | A chmod failure is logged, not fatal — Windows may not support POSIX mode bits. |
 | `settings/config.go:12-15` | `settings.json` has exactly two keys: `debug` (bool) and `log_level` (string). |
@@ -178,7 +178,7 @@ func LoadSettings() {
 
 ### Where the directory actually is
 
-The repository does **not** hardcode an absolute path. It calls `os.UserConfigDir()` and joins `whats4linux` (`misc.go:44-48`). Go's standard library resolves `os.UserConfigDir()` per operating system, so the concrete location depends on the machine — the code is deliberately portable. Do not assume any particular dot-directory is universal.
+The repository does **not** hardcode an absolute path. It calls `os.UserConfigDir()` and joins `amazingwhats` (`misc.go:44-48`). Go's standard library resolves `os.UserConfigDir()` per operating system, so the concrete location depends on the machine — the code is deliberately portable. Do not assume any particular dot-directory is universal.
 
 ### Files in that directory, from code
 
@@ -222,7 +222,7 @@ Details that matter:
 
 ```mermaid
 flowchart LR
-    subgraph ConfigDir["ConfigDir = os.UserConfigDir()/whats4linux (0700)"]
+    subgraph ConfigDir["ConfigDir = os.UserConfigDir()/amazingwhats (0700)"]
         SJ["settings.json (0600)<br/>debug: bool, log_level: string"]
         ASJ["app_settings.json (0600)<br/>notifications_enabled: bool<br/>+ arbitrary frontend keys"]
         CSS["custom.css (0600)"]
@@ -239,7 +239,7 @@ flowchart LR
 
 ## What can go wrong
 
-> **The path is not portable to assume.** Because the base comes from `os.UserConfigDir()`, a documented `~/.config/whats4linux` path will be wrong on some machines. Read `misc.go:43-62` instead.
+> **The path is not portable to assume.** Because the base comes from `os.UserConfigDir()`, a documented `~/.config/amazingwhats` path will be wrong on some machines. Read `misc.go:43-62` instead.
 
 > **Environment silently beats the file.** `defer s.setupEnvVars()` (`config.go:20`) runs after the JSON read, so a stale `DEBUG` in your shell overrides `settings.json`. Check `GetLogLevel()` (`config.go:46-54`) when a log-level change appears to do nothing.
 

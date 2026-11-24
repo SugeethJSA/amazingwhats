@@ -27,7 +27,7 @@
 
 let
 frontend = buildNpmPackage {
-    pname = "whats4linux-frontend";
+    pname = "amazingwhats-frontend";
     inherit version;
     
     src = ./frontend;
@@ -57,7 +57,7 @@ frontend = buildNpmPackage {
   };
 in
 buildGoModule {
-  pname = "whats4linux";
+  pname = "amazingwhats";
   inherit version;
   
   src = ./.;
@@ -115,7 +115,7 @@ buildGoModule {
     runHook preInstall
 
     mkdir -p $out/bin $out/lib
-    [ -f bin/whats4linux ] && cp bin/whats4linux $out/bin/ || true
+    [ -f bin/amazingwhats ] && cp bin/amazingwhats $out/bin/ || true
     [ -d bin/lib ] && cp bin/lib/* $out/lib/ || true
 
     runHook postInstall
@@ -123,7 +123,7 @@ buildGoModule {
   
   postFixup = ''
     # Wrap the binary with required library paths
-    wrapProgram $out/bin/whats4linux \
+    wrapProgram $out/bin/amazingwhats \
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [
         gtk4
         webkitgtk_6_0
@@ -145,13 +145,13 @@ buildGoModule {
   '';
   
   meta = {
-    homepage = "https://github.com/lugvitc/whats4linux";
+    homepage = "https://github.com/SugeethJSA/amazingwhats";
     description = "An unofficial WhatsApp client for Linux";
     license = lib.licenses.agpl3Plus;
     maintainers = with lib.maintainers; [
       zstg
     ];
     platforms = lib.platforms.linux;
-    mainProgram = "whats4linux";
+    mainProgram = "amazingwhats";
   };
 }

@@ -1,6 +1,6 @@
-# Contributing to Whats4Linux
+# Contributing to amazingwhats
 
-Thank you for your interest in contributing to **Whats4Linux**!  
+Thank you for your interest in contributing to **amazingwhats**!  
 Contributions of all kinds are welcome — code, documentation, bug reports, and performance improvements.
 
 This document outlines how to get started and what we expect from contributors.
@@ -35,8 +35,8 @@ Refer to the official Wails documentation for platform-specific setup.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/lugvitc/whats4linux.git
-cd whats4linux
+git clone https://github.com/SugeethJSA/amazingwhats.git
+cd amazingwhats
 ```
 
 ### Install Frontend Dependencies
@@ -50,7 +50,7 @@ npm install
 
 ### Run in Development Mode
 
-To start Whats4Linux in development mode:
+To start amazingwhats in development mode:
 
 ```bash
 wails dev

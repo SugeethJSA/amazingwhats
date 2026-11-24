@@ -284,7 +284,7 @@ func (a *Api) emitError(msg string) {
 ```go
 // api/media.go:710-712
 	a.app.Event.Emit("download:complete", filePath)
-	_ = beeep.Notify("whats4linux", "Downloaded: "+filePath, "")
+	_ = beeep.Notify("amazingwhats", "Downloaded: "+filePath, "")
 	playBeep()
 ```
 

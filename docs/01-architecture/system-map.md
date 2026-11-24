@@ -381,7 +381,7 @@ type Tray struct {
 func New(app *application.App, window *application.WebviewWindow, api *apiPkg.Api) *Tray {
 	systray := app.SystemTray.New()
 	systray.SetIcon(trayIcon)
-	systray.SetLabel("Whats4Linux")
+	systray.SetLabel("amazingwhats")
 	systray.SetTooltip("Lantern")
 
 	menu := app.NewMenu()
@@ -442,7 +442,7 @@ export * from "./types"
 ```json
 // wails.json:1-9
 {
-  "name": "whats4linux",
+  "name": "amazingwhats",
   "frontend": {
     "dir": "frontend",
     "install": "npm install",
@@ -488,7 +488,7 @@ includes:
 
 > **The write channel is finite.** `MessageStore` queues up to 100 writes (`message.go:169`); `Api`'s worker queue is 256 (`api.go:282`) and drops tasks when full (`api.go:310-317`). Under a large history sync, work can be dropped rather than blocking the event loop — that is intentional, but it means "event received" does not guarantee "row stored".
 
-> **Do not assume a tray subprocess.** `internal/tray/tray.go:1-3` states the tray is in-process, and `OnShutdown` calls `systray.Destroy()` (`cmd/run.go:46-48`). An older runbook that talks about `whats4linux_tray`, a Unix socket bridge or `StartSystray` describes the previous design, not this code.
+> **Do not assume a tray subprocess.** `internal/tray/tray.go:1-3` states the tray is in-process, and `OnShutdown` calls `systray.Destroy()` (`cmd/run.go:46-48`). An older runbook that talks about `amazingwhats_tray`, a Unix socket bridge or `StartSystray` describes the previous design, not this code.
 
 ## Where to next
 

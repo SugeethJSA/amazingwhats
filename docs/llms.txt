@@ -1,10 +1,10 @@
-AMAZINGWHAT / WHATS4LINUX - DOCUMENTATION INDEX
-==============================================
+amazingwhats - DOCUMENTATION INDEX
+==================================
 
 Repository directory: amazingwhats
 Go module: github.com/lugvitc/whats4linux (go.mod:1)
 Go version: 1.27.3 (go.mod:3)
-Product name: whats4linux, version 1.0.0 (wails.json:2,16-18)
+Product name: amazingwhats, version 1.0.0 (wails.json:2,16-18)
 Purpose: "An unofficial WhatsApp client." (wails.json:18; see also build/config.yml:8,10)
 Desktop stack: Go + React, Wails v3 (wails.json, Taskfile.yml, build/Taskfile.yml)
 License: AGPL-3.0-or-later (package.nix:150; LICENSE)
