@@ -71,6 +71,9 @@ type SendPayload = {
   quotedMessageId?: string
   mentions?: string[]
   gifPlayback?: boolean
+  /** Push-to-talk metadata from a real microphone recording. */
+  ptt?: boolean
+  seconds?: number
   clientTempId?: string
 }
 
@@ -159,6 +162,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const [forwardTarget, setForwardTarget] = useState<string | null>(null)
   const [failedSends, setFailedSends] = useState<FailedSend[]>([])
   const retrySendRef = useRef<(tempId: string) => void>(() => {})
+  // Pairs PTT metadata with the currently staged file. A ref (not state) so
+  // the send handler reads the value staged in the same tick as the file.
+  const voiceMetaRef = useRef<{ ptt: boolean; seconds: number } | null>(null)
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const [mentionableContacts, setMentionableContacts] = useState<any[]>([])
@@ -904,6 +910,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     const imageToSend = pastedImage
     const fileToSend = selectedFile
     const fileTypeToSend = selectedFileType
+    const voiceMeta = voiceMetaRef.current
     const quotedMessageId = replyingTo?.Info.ID
 
     // Generate a temporary ID for optimistic update
@@ -956,6 +963,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           audioMessage: {
             mimetype: fileToSend.type,
             _tempFile: fileToSend,
+            ...(voiceMeta ? { ptt: true, seconds: voiceMeta.seconds } : {}),
           },
         }
       } else {
@@ -1007,6 +1015,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     setInputText("")
     setPastedImage(null)
     setSelectedFile(null)
+    voiceMetaRef.current = null
     setReplyingTo(null)
     setSelectedMentions([])
 
@@ -1080,7 +1089,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         } else if (fileTypeToSend === "video" || fileTypeToSend === "gif") {
           payload = { type: "video", ...common, gifPlayback: asGif }
         } else if (fileTypeToSend === "audio") {
-          payload = { type: "audio", ...common }
+          payload = {
+            type: "audio",
+            ...common,
+            ...(voiceMeta ? { ptt: true, seconds: voiceMeta.seconds } : {}),
+          }
         } else {
           payload = { type: "document", ...common }
         }
@@ -1102,6 +1115,20 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     } else {
       markSendFailed(tempId, null, pendingMessage)
     }
+  }
+
+  // A finished recording enters the same file pipeline as a picked audio file;
+  // only the PTT metadata differs. The File already carries the real MIME.
+  const handleVoiceRecord = (file: File, seconds: number, _mime: string) => {
+    voiceMetaRef.current = { ptt: true, seconds }
+    // A staged voice note is the sole outgoing content: clear anything that
+    // could win the send branch (text, pasted image, reply, scheduled draft).
+    setPastedImage(null)
+    setInputText("")
+    setReplyingTo(null)
+    setSelectedFile(file)
+    setSelectedFileType("audio")
+    setSendAsGif(false)
   }
 
   useEffect(() => {
@@ -1532,9 +1559,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             }
           }}
           onSendMessage={handleSendMessage}
+          onVoiceRecord={handleVoiceRecord}
           onFileSelect={e => {
             const file = e.target.files?.[0]
             if (file) {
+              voiceMetaRef.current = null
               setSelectedFile(file)
               setSendAsGif(false)
               const generalType = file.type.split("/")[0]
@@ -1549,6 +1578,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             }
           }}
           onRemoveFile={() => {
+            voiceMetaRef.current = null
             setSelectedFile(null)
             setPastedImage(null)
             setSendAsGif(false)

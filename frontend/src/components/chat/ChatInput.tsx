@@ -25,6 +25,7 @@ import { registerShortcut } from "../../lib/shortcuts"
 import { sanitizeHtml } from "../../lib/utils"
 import { PollDialog } from "./PollDialog"
 import { ContactShareDialog } from "./ContactShareDialog"
+import { useVoiceRecorder } from "../../hooks/useVoiceRecorder"
 
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
 interface ChatInputProps {
@@ -46,6 +47,8 @@ interface ChatInputProps {
   onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void
   onSendMessage: () => void
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
+  /** Stage a real microphone recording: file, elapsed seconds, actual MIME. */
+  onVoiceRecord?: (file: File, seconds: number, mime: string) => void
   onRemoveFile: () => void
   onEmojiClick: (emoji: string) => void
   onToggleEmojiPicker: () => void
@@ -121,6 +124,23 @@ const audioMimeForName = (name: string): string => {
 const isAudioPick = (mimetype: string, name: string): boolean =>
   mimetype.toLowerCase().startsWith("audio/") ||
   /\.(mp3|m4a|aac|ogg|oga|wav|flac|opus|webm)$/i.test(name)
+
+const formatVoiceDuration = (totalSeconds: number): string => {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+}
+
+// The extension follows the MIME MediaRecorder actually produced — a WebM
+// recording is never renamed as Ogg. The MIME on the File stays authoritative.
+const voiceFileExtension = (mime: string): string => {
+  const value = mime.toLowerCase()
+  if (value.includes("ogg")) return "ogg"
+  if (value.includes("webm")) return "webm"
+  if (value.includes("mp4")) return "m4a"
+  // Browser default with no reported MIME still needs a filename; no format
+  // claim is made in the UI in that case.
+  return "webm"
+}
 
 // Contact names are inserted into a RegExp for mention highlighting. Escape
 // regex metacharacters so a name like " Ada (work) [admin]" cannot throw.
@@ -250,6 +270,7 @@ export function ChatInput({
   onPaste,
   onSendMessage,
   onFileSelect,
+  onVoiceRecord,
   onRemoveFile,
   onEmojiClick,
   onToggleEmojiPicker,
@@ -281,6 +302,15 @@ export function ChatInput({
   const [scheduleAt, setScheduleAt] = useState("")
 
   const addNotification = useUIStore(state => state.addNotification)
+  const voiceRecorder = useVoiceRecorder()
+  // Distinguishes an intentional Cancel from a real recording failure while a
+  // stop() is in flight, so cancelling does not show a spurious error toast.
+  const voiceCancelRef = useRef(false)
+  const cancelVoiceRecording = voiceRecorder.cancel
+  useEffect(() => {
+    // Never leave the microphone running behind a disabled composer.
+    if (disabled) cancelVoiceRecording()
+  }, [disabled, cancelVoiceRecording])
 
   // Real audio attach flow: the native GTK picker (PickAttachmentFile) returns
   // base64 bytes; we accept the file only when it is audio, then hand it to the
@@ -308,6 +338,60 @@ export function ChatInput({
         tone: "error",
         durationMs: 6000,
       })
+    }
+  }
+
+  const handleStartVoiceRecording = async () => {
+    const result = await voiceRecorder.start()
+    if (!result.ok) {
+      addNotification(result.error ?? "Couldn't start recording. Please try again.", {
+        tone: "error",
+        durationMs: 6000,
+      })
+    }
+  }
+
+  const handleCancelVoiceRecording = () => {
+    voiceCancelRef.current = true
+    voiceRecorder.cancel()
+  }
+
+  const handleStopVoiceRecording = async () => {
+    voiceCancelRef.current = false
+    try {
+      const { blob, mime, seconds } = await voiceRecorder.stop()
+      if (!mime) {
+        // Never relabel an unknown container as Ogg or WebM.
+        addNotification("Recording format unavailable. Please try again.", {
+          tone: "error",
+          durationMs: 6000,
+        })
+        return
+      }
+      if (blob.size === 0) {
+        addNotification("Nothing was recorded. Please try again.", {
+          tone: "warning",
+          durationMs: 5000,
+        })
+        return
+      }
+      const file = new File([blob], `voice-message.${voiceFileExtension(mime)}`, { type: mime })
+      if (onVoiceRecord) {
+        onVoiceRecord(file, seconds, mime)
+      } else {
+        // Hosts without onVoiceRecord still get the real recording through
+        // the exact onFileSelect path used by the pick-from-disk flow.
+        onFileSelect({
+          target: { files: [file] },
+        } as unknown as React.ChangeEvent<HTMLInputElement>)
+      }
+    } catch {
+      if (!voiceCancelRef.current) {
+        addNotification("Couldn't finish the recording. Please try again.", {
+          tone: "error",
+          durationMs: 6000,
+        })
+      }
     }
   }
 
@@ -732,6 +816,80 @@ export function ChatInput({
         </div>
       )}
 
+      {/* Live voice recording: real elapsed timer, real microphone level, and
+          explicit Cancel/Send. No file is staged until Send is pressed. */}
+      {voiceRecorder.isRecording && (
+        <div className="mb-2 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm dark:border-white/10 dark:bg-dark-secondary">
+          <div className="flex items-center gap-2.5">
+            <span className="flex items-center" aria-hidden="true">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+            </span>
+            <span
+              role="timer"
+              aria-label={`Recording ${formatVoiceDuration(voiceRecorder.seconds)}`}
+              className="font-mono text-sm tabular-nums text-light-text dark:text-dark-text"
+            >
+              {formatVoiceDuration(voiceRecorder.seconds)}
+            </span>
+            {voiceRecorder.levelSupported ? (
+              <div
+                role="meter"
+                aria-label="Microphone level"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(voiceRecorder.level * 100)}
+                className="flex h-5 min-w-0 flex-1 items-end gap-0.5"
+              >
+                {[0, 1, 2, 3, 4].map(index => (
+                  <span
+                    key={index}
+                    aria-hidden="true"
+                    className={clsx(
+                      "h-full flex-1 rounded-sm transition-colors",
+                      index < Math.ceil(voiceRecorder.level * 5)
+                        ? "bg-[#21c063]"
+                        : "bg-gray-200 dark:bg-white/10",
+                    )}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <button
+              type="button"
+              onClick={handleCancelVoiceRecording}
+              aria-label="Cancel voice recording"
+              className={clsx(
+                "shrink-0 rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5",
+                FOCUS_RING,
+              )}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleStopVoiceRecording()}
+              aria-label="Attach voice note"
+              className={clsx(
+                "shrink-0 rounded-lg bg-[#21c063] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#1b9a58]",
+                FOCUS_RING,
+              )}
+            >
+              Attach voice note
+            </button>
+          </div>
+          <p className="mt-1.5 text-[11px] text-light-muted dark:text-dark-muted">
+            Press Send in the composer to transmit this voice note.
+          </p>
+          {voiceRecorder.mime.toLowerCase().includes("webm") && (
+            <p className="mt-1.5 text-[11px] text-light-muted dark:text-dark-muted">
+              Ogg Opus unavailable; recording as WebM Opus.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Previews (pasted image / attached file / reply) sit in a card above
           the composer pill, like WhatsApp. */}
       {(pastedImage || selectedFile || replyingTo) && (
@@ -950,7 +1108,7 @@ export function ChatInput({
                           },
                         },
                         {
-                          label: "Audio",
+                          label: "Audio file",
                           icon: <AudioIcon />,
                           color: "text-[#f59e0b]",
                           act: () => void pickAudioFile(),
@@ -1077,9 +1235,10 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Empty draft: the right slot is a real audio-attach shortcut (native
-            picker -> existing file pipeline). With content it becomes Send. */}
-        {hasContent ? (
+        {/* Empty draft: the right slot starts a real microphone recording.
+            With content it becomes Send. While recording the bar above owns
+            Cancel/Send, so this slot is hidden. */}
+        {voiceRecorder.isRecording ? null : hasContent ? (
           <button
             type="button"
             onClick={onSendMessage}
@@ -1095,9 +1254,9 @@ export function ChatInput({
         ) : (
           <button
             type="button"
-            onClick={() => void pickAudioFile()}
-            aria-label="Attach audio"
-            title="Attach audio"
+            onClick={() => void handleStartVoiceRecording()}
+            aria-label="Record voice message"
+            title="Record voice message"
             className={clsx(
               "mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#21c063] text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-[#1b9a58] hover:shadow-md active:scale-95",
               FOCUS_RING,
