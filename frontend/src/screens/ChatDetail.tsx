@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import {
   SendMessage,
   FetchMessagesPaged,
+  FetchNewsletterHistory,
   GetPinnedMessages,
   SendChatPresence,
   GetGroupInfo,
@@ -46,6 +47,14 @@ interface ChatDetailProps {
 }
 
 const PAGE_SIZE = 50
+
+// Structural mirror of the generated api/models.ts NewsletterHistoryEntry.
+// Declared here so regenerated bindings never need a hand edit.
+type NewsletterHistoryEntry = {
+  server_id: number
+  message: store.DecodedMessage
+}
+
 // Virtuoso needs a stable, large starting index so it can decrement as older
 // messages are prepended, keeping the scroll position anchored.
 const START_INDEX = 1_000_000
@@ -182,6 +191,8 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
   const loadMorePromiseRef = useRef<Promise<Message[]> | null>(null)
+  // Oldest (smallest) server cursor seen for the current newsletter chat.
+  const newsletterCursorRef = useRef(0)
   const initialLoadPromiseRef = useRef<Promise<void> | null>(null)
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusRequestRef = useRef<string | null>(null)
@@ -190,6 +201,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const easeHideRef = useRef(getEase("DropDown", "close"))
 
   const chatType = currentChat?.type || "contact"
+  const isNewsletter = chatId.endsWith("@newsletter")
   const [chatSubtitle, setChatSubtitle] = useState("")
   const [pinnedMessages, setPinnedMessages] = useState<store.PinnedMessage[]>([])
   // Which pinned message the banner jumps to next (cycles like WhatsApp).
@@ -472,9 +484,86 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
             merged.push(message)
           }
         }
-        setMessages(chatId, merged)
-        preloadImages(visibleImageIDs(merged))
-        const more = loadedMsgs.length >= PAGE_SIZE
+
+        let finalMessages: Message[] = merged
+        let more = loadedMsgs.length >= PAGE_SIZE
+
+        if (isNewsletter) {
+          // Older channel posts live on WhatsApp's server, not in local SQLite.
+          // The server page is newest-first; the store expects oldest-first.
+          try {
+            const entries: NewsletterHistoryEntry[] =
+              (await FetchNewsletterHistory(chatId, PAGE_SIZE, 0)) || []
+            if (requestGenerationRef.current !== generation) return
+            const serverMsgs: Message[] = entries.map(entry => entry.message).reverse()
+
+            const lowestServerID = entries.reduce(
+              (lowest, entry) => Math.min(lowest, entry.server_id),
+              Number.POSITIVE_INFINITY,
+            )
+            if (Number.isFinite(lowestServerID)) {
+              newsletterCursorRef.current = lowestServerID
+            }
+
+            const byID = new Map<string, Message>()
+            const withoutID: Message[] = []
+            for (const message of merged) {
+              const id = message.Info?.ID
+              if (id) byID.set(id, message)
+              else withoutID.push(message)
+            }
+            for (const message of serverMsgs) {
+              const id = message.Info?.ID
+              if (!id) {
+                withoutID.push(message)
+                continue
+              }
+              const existing = byID.get(id)
+              if (!existing) {
+                byID.set(id, message)
+                continue
+              }
+              // Same ID: prefer the copy with the newer timestamp; on a tie
+              // keep the local copy (it may carry optimistic-only state).
+              if (
+                new Date(message.Info.Timestamp).getTime() >
+                new Date(existing.Info.Timestamp).getTime()
+              ) {
+                byID.set(id, message)
+              }
+            }
+            // A live/optimistic message can land while the server call is in
+            // flight; keep it instead of dropping it with the earlier snapshot.
+            const liveNow = useMessageStore.getState().messages[chatId] || []
+            for (const message of liveNow) {
+              const id = message.Info?.ID
+              if (id && !byID.has(id) && (!beforeRequest.has(id) || message.isPending)) {
+                byID.set(id, message)
+              }
+            }
+
+            finalMessages = [...byID.values(), ...withoutID].sort((a, b) => {
+              const timeDiff =
+                new Date(a.Info.Timestamp).getTime() - new Date(b.Info.Timestamp).getTime()
+              if (timeDiff !== 0) return timeDiff
+              return (a.Info?.ID || "").localeCompare(b.Info?.ID || "")
+            })
+            more = entries.length >= PAGE_SIZE
+          } catch (err) {
+            if (requestGenerationRef.current !== generation) return
+            console.error("Newsletter history load failed:", err)
+            addNotification("Couldn't load channel history", {
+              tone: "error",
+              durationMs: 5000,
+            })
+            // Keep the local-only merged list instead of blanking the channel.
+            // Disable further paging: the local cursor cannot reach old posts.
+            more = false
+          }
+        }
+
+        setMessages(chatId, finalMessages)
+        preloadImages(visibleImageIDs(finalMessages))
         hasMoreRef.current = more
         setHasMore(more)
 
@@ -493,7 +582,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         setIsReady(true)
       }
     },
-    [chatId, setMessages],
+    [chatId, isNewsletter, setMessages, addNotification],
   )
 
   const retryInitialLoad = useCallback(() => {
@@ -518,8 +607,46 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     loadingMoreRef.current = true
     setIsLoadingMore(true)
 
-    const request = (async () => {
+    const request = (async (): Promise<Message[]> => {
       try {
+        if (isNewsletter) {
+          // The local paged query cannot reach posts that only exist on the
+          // newsletter server, so page by the server cursor instead.
+          const entries: NewsletterHistoryEntry[] =
+            (await FetchNewsletterHistory(chatId, PAGE_SIZE, newsletterCursorRef.current)) || []
+          if (requestGenerationRef.current !== generation) return []
+
+          const serverMsgs: Message[] = entries.map(entry => entry.message).reverse()
+          const knownIDs = new Set(
+            (useMessageStore.getState().messages[chatId] || []).map(m => m.Info?.ID),
+          )
+          const newMsgs = serverMsgs.filter(message => {
+            const id = message.Info?.ID
+            return !!id && !knownIDs.has(id)
+          })
+
+          const lowestServerID = entries.reduce(
+            (lowest, entry) => Math.min(lowest, entry.server_id),
+            Number.POSITIVE_INFINITY,
+          )
+          if (Number.isFinite(lowestServerID)) {
+            newsletterCursorRef.current = lowestServerID
+          }
+
+          if (newMsgs.length > 0) {
+            // Keep firstItemIndex and the prepended data in the same request
+            // generation; a response from an abandoned chat cannot move this list.
+            setFirstItemIndex(prev => prev - newMsgs.length)
+            prependMessages(chatId, newMsgs)
+          }
+          // Use the deduped count: a duplicate-only page (e.g. an inclusive
+          // server cursor) must not keep paging forever.
+          const more = newMsgs.length >= PAGE_SIZE
+          hasMoreRef.current = more
+          setHasMore(more)
+          return newMsgs
+        }
+
         const msgs =
           (await FetchMessagesPaged(chatId, PAGE_SIZE, beforeTimestamp, oldestMessage.Info.ID)) ||
           []
@@ -537,6 +664,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         return msgs
       } catch (err) {
         if (requestGenerationRef.current === generation) {
+          if (isNewsletter) {
+            console.error("Newsletter history load more failed:", err)
+            addNotification("Couldn't load older channel posts", { tone: "error" })
+            return []
+          }
           console.error("Load more failed:", err)
         }
         return []
@@ -552,7 +684,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
       }
     })
     return request
-  }, [chatId, prependMessages])
+  }, [chatId, isNewsletter, prependMessages, addNotification])
 
   const handleQuotedClick = useCallback(
     async (messageId: string) => {
@@ -977,6 +1109,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     loadingMoreRef.current = false
     loadMorePromiseRef.current = null
     hasMoreRef.current = true
+    newsletterCursorRef.current = 0
     setFirstItemIndex(START_INDEX)
     setHasMore(true)
     setIsLoadingMore(false)
