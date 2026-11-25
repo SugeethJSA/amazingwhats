@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -155,7 +157,61 @@ type MessageStore struct {
 	closed     bool
 }
 
+// NewMessageStore opens (and, if needed, migrates) the local message cache.
+// A malformed sqlite_master entry makes every later query fail, including
+// sign-in, even though the cache is disposable. Quarantine the DB once and
+// rebuild it in that case; the WhatsApp session lives in a separate file.
 func NewMessageStore() (*MessageStore, error) {
+	ms, err := newMessageStoreOnce()
+	if err == nil || !isCorruptMessageSchema(err) {
+		return ms, err
+	}
+	log.Printf("message store schema is corrupt; rebuilding local cache: %v", err)
+	if qerr := quarantineMessageDB(); qerr != nil {
+		return nil, errors.Join(err, qerr)
+	}
+	return newMessageStoreOnce()
+}
+
+func isCorruptMessageSchema(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	for _, marker := range []string{
+		"malformed database schema",
+		"database disk image is malformed",
+		"file is not a database",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func quarantineMessageDB() error {
+	stamp := time.Now().Format("20060102T150405.000000000")
+	// Rename WAL sidecars first: a fresh messages.db must never be opened next
+	// to a stale WAL that could replay the corrupt schema back into it.
+	for _, suffix := range []string{"-wal", "-shm", ""} {
+		name := filepath.Join(misc.ConfigDir, "messages.db"+suffix)
+		if _, err := os.Stat(name); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		dest := name + ".corrupt-" + stamp
+		if err := os.Rename(name, dest); err != nil {
+			return fmt.Errorf("quarantine %s: %w", filepath.Base(name), err)
+		}
+		log.Printf("message store: quarantined %s as %s", filepath.Base(name), filepath.Base(dest))
+	}
+	return nil
+}
+
+func newMessageStoreOnce() (*MessageStore, error) {
 	db, err := openDB()
 	if err != nil {
 		return nil, err
