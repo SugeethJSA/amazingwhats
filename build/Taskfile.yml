@@ -43,7 +43,9 @@ tasks:
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
 
   generate:bindings:
-    label: generate:bindings (BUILD_FLAGS={{.BUILD_FLAGS}})
+    # Keep the label const: Windows task-checksum filenames include the label,
+    # and embedding full LDFLAGS there exceeds the 260-char path limit in CI.
+    label: generate:bindings
     summary: Generates TypeScript bindings into frontend/bindings
     deps:
       - task: go:mod:tidy
