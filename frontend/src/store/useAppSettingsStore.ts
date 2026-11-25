@@ -4,8 +4,26 @@ import { DEFAULT_EASES, THEME, applyThemeColors } from "../theme.config"
 import { cacheTheme, normalizeTheme, readCachedTheme } from "../lib/theme"
 import { useEaseStore } from "./useEaseStore"
 
+/**
+ * Internal-only key stamped into the persisted settings map after the one-time
+ * Enter-is-send default migration has run. It is deliberately NOT part of
+ * AppSettings and is never rendered as a user-facing setting or UI toggle.
+ * The generic settings map (`{ [key: string]?: any }`) tolerates extra keys,
+ * so this rides along in saved snapshots without changing the persisted
+ * app-settings schema.
+ */
+const ENTER_IS_SEND_MIGRATED_KEY = "enterIsSendMigrated"
+
+/** Ensures a failed marker write is logged at most once per session. */
+let hasWarnedEnterIsSendMigration = false
+
 interface AppSettingsStore extends AppSettings {
   loaded: boolean
+
+  // Internal migration marker (see ENTER_IS_SEND_MIGRATED_KEY). Not an app
+  // setting; kept on the store so it rides along in every saved snapshot and
+  // the migration cannot re-run after a user later opts out.
+  enterIsSendMigrated: boolean
 
   loadSettings: () => Promise<void>
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>
@@ -70,11 +88,17 @@ const defaultSettings: AppSettings = {
 
   spellCheck: true,
   replaceTextWithEmojis: true,
-  enterIsSend: false,
+  enterIsSend: true,
 }
 
 function extractSettings(state: AppSettingsStore): AppSettings {
   const { loaded, ...settings } = state
+  // NOTE: `settings` intentionally still contains the internal
+  // `enterIsSendMigrated` marker. SaveSettings accepts a generic
+  // `{ [key: string]?: any }` map and tolerates extra keys, and keeping the
+  // marker in every saved snapshot is what makes the one-time migration
+  // durable across later updateSetting / updateThemeColor / useEaseStore
+  // writes. It is not part of AppSettings and is never surfaced in the UI.
   return settings
 }
 
@@ -91,16 +115,41 @@ function applyFontSize(value: string | undefined): void {
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   ...defaultSettings,
   loaded: false,
+  enterIsSendMigrated: false,
 
   loadSettings: async () => {
     try {
       const saved = await GetSettings()
+      const savedMap = (saved ?? {}) as Record<string, unknown>
 
       const merged = {
         ...defaultSettings,
-        ...(saved ?? {}),
+        ...savedMap,
       }
       merged.theme = normalizeTheme(merged.theme)
+
+      // One-time migration: legacy profiles persisted an explicit
+      // `enterIsSend: false` (the old default). Force the new WhatsApp-style
+      // behaviour once, stamp the persisted snapshot with an internal marker,
+      // and write back the raw saved map so every other value is preserved
+      // byte-for-byte. The marker is best-effort: a failed write is logged at
+      // most once and never breaks settings load; the corrected in-memory
+      // value is kept regardless.
+      const needsEnterIsSendMigration = savedMap[ENTER_IS_SEND_MIGRATED_KEY] !== true
+      if (needsEnterIsSendMigration) {
+        merged.enterIsSend = true
+
+        SaveSettings({
+          ...savedMap,
+          enterIsSend: true,
+          [ENTER_IS_SEND_MIGRATED_KEY]: true,
+        }).catch(err => {
+          if (!hasWarnedEnterIsSendMigration) {
+            hasWarnedEnterIsSendMigration = true
+            console.error("Failed to persist Enter-is-send migration marker:", err)
+          }
+        })
+      }
 
       // Older builds shipped a black light-mode toggle knob (#000000) as the
       // default and persisted it into saved settings. Rewrite that stale
@@ -121,6 +170,9 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       set({
         ...merged,
         loaded: true,
+        // After a successful load the marker is always true: either it was
+        // already present in the saved map, or we just stamped and persisted it.
+        enterIsSendMigrated: true,
       })
     } catch (err) {
       // fallback to defaults, but keep the locally cached theme so a backend
