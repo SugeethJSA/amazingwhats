@@ -97,22 +97,18 @@ export const ClockPendingIcon = () => (
 // tick count and colour, so the state is legible without relying on the
 // accessible label. All ticks share the 1.5px round stroke used by
 // ClockPendingIcon, and the same 16x15 box so the timestamp never shifts.
-type TickPathProps = { d: string; color?: string }
-
-const TickPath = ({ d, color }: TickPathProps) => (
+// Colour is applied by the wrapper via currentColor (--color-tick-muted /
+// --color-tick-read); the SVG itself never hardcodes a shade.
+const TickPath = ({ d }: { d: string }) => (
   <path
     d={d}
     fill="none"
-    stroke={color ?? "currentColor"}
+    stroke="currentColor"
     strokeWidth={1.5}
     strokeLinecap="round"
     strokeLinejoin="round"
   />
 )
-
-// The accent blue is token-backed (--color-link-ink) with the previous
-// tick blue as an offline fallback; no new colour token is introduced here.
-const READ_TICK_COLOR = "var(--color-link-ink, #4fc3f7)"
 
 /** Sent: one tick, in the bubble's own ink. */
 export const SingleTickIcon = () => (
@@ -129,11 +125,11 @@ export const DoubleTickIcon = () => (
   </svg>
 )
 
-/** Read: two ticks in the accent blue — the WhatsApp read-receipt convention. */
+/** Read: two ticks; the wrapper paints them with --color-tick-read. */
 export const ReadTickIcon = () => (
   <svg viewBox="0 0 16 15" width="16" height="15" className="inline-block ml-1" aria-hidden="true">
-    <TickPath d="M0.5 8 L4.5 12 L9.5 5" color={READ_TICK_COLOR} />
-    <TickPath d="M5.5 8 L9.5 12 L15.5 4" color={READ_TICK_COLOR} />
+    <TickPath d="M0.5 8 L4.5 12 L9.5 5" />
+    <TickPath d="M5.5 8 L9.5 12 L15.5 4" />
   </svg>
 )
 

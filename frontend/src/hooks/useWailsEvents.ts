@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { EventsOn } from "../lib/wailsRuntime"
+import { GetMyJID } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { htmlToPlainText, phoneFromJID, sanitizeHtml } from "../lib/utils"
 import type { ChatItem } from "../store/types"
 import { useMessageStore } from "../store/useMessageStore"
@@ -170,14 +171,34 @@ function handleGroupJoined(payload: GroupJoinedPayload | null | undefined) {
   })
 }
 
+// Cached on mount so the synchronous receipt handler can tell our own device's
+// acks apart from a real reader's. applyReceipt also falls back to isMe(), so
+// an ack arriving before this promise resolves is still ignored.
+let cachedMyJID = ""
+
 export function useWailsEvents() {
   const addNotification = useUIStore(s => s.addNotification)
 
   useEffect(() => {
+    GetMyJID()
+      .then(jid => {
+        cachedMyJID = jid || ""
+      })
+      .catch(() => {
+        /* not logged in yet */
+      })
+
     // 1. Message Read / Receipt Events
     const unsubReceipt = EventsOn(
       "wa:message_receipt",
-      (data: { chatId: string; status: string; messageIDs?: string[]; messageID?: string }) => {
+      (data: {
+        chatId: string
+        status: string
+        messageIDs?: string[]
+        messageID?: string
+        /** Reader (or acking device) JID from events.Receipt.Sender. */
+        sender?: string
+      }) => {
         if (!data?.chatId || !data?.status) return
         // The backend's events.Receipt carries every acked id in MessageIDs
         // (serialized as a string array). Older emitters sent a single
@@ -188,10 +209,14 @@ export function useWailsEvents() {
             ? [data.messageID]
             : []
         if (ids.length === 0) return
-        const { updateMessageReceipt } = useMessageStore.getState()
-        for (const id of ids) {
-          if (id) updateMessageReceipt(data.chatId, id, data.status)
-        }
+        const { applyReceipt } = useMessageStore.getState()
+        applyReceipt(
+          data.chatId,
+          ids,
+          data.status,
+          typeof data.sender === "string" ? data.sender : "",
+          cachedMyJID,
+        )
       },
     )
 

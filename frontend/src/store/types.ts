@@ -19,6 +19,12 @@ export interface ChatItem {
   communityAvatar?: string
   isCommunityGroup?: boolean
   isCommunityParent?: boolean
+  /**
+   * Frontend-only: group participant JIDs (both @s.whatsapp.net and @lid
+   * forms where available). Used only to decide whether every peer has read
+   * a group message before showing blue ticks — never display text.
+   */
+  participantJIDs?: string[]
 }
 
 /** Mirror of the backend's store.DecodedMessageInfo (generated v3 bindings). */
@@ -113,6 +119,17 @@ export interface Message {
   isPending?: boolean
   /** Frontend-only: last delivery/tick status shown in the bubbles. */
   receiptStatus?: string
+  /** Frontend-only: JIDs that sent a read receipt for this (own) message. */
+  readBy?: string[]
+  /** Frontend-only: JIDs that sent a delivery receipt for this (own) message. */
+  deliveredTo?: string[]
+}
+
+/** One durable receipt row returned by GetMessageReceipts (reader + type + time). */
+export interface MessageReceiptRow {
+  jid: string
+  status: string
+  timestamp?: number
 }
 
 export interface TypingIndicator {

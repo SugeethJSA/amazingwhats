@@ -40,6 +40,8 @@ interface MessageMenuProps {
   onDelete?: () => void
   onForward?: () => void
   onStar?: () => void
+  /** Opens the durable read-receipt panel for this message. */
+  onMessageInfo?: () => void
 }
 
 type NotificationOptions = {
@@ -84,6 +86,14 @@ const PinMenuIcon = () => (
   </svg>
 )
 
+// Same outline idiom as the other menu glyphs; keeps the icon local to the
+// menu so no other icon module needs to change.
+const InfoMenuIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" className="fill-current" aria-hidden="true">
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-13h2v2h-2v-2zm0 4h2v6h-2v-6z" />
+  </svg>
+)
+
 const labelIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" className="fill-current">
     <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5H5C3.9 5 3 5.9 3 7v10c0 1.1.9 2 2 2h11c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z" />
@@ -115,6 +125,7 @@ export function MessageMenu({
   onDelete,
   onForward,
   onStar,
+  onMessageInfo,
 }: MessageMenuProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -455,6 +466,20 @@ export function MessageMenu({
                   >
                     <PinMenuIcon />
                     <span>{isPinned ? "Unpin" : "Pin"}</span>
+                  </button>
+                )}
+                {onMessageInfo && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onMessageInfo()
+                      closeMenuNow()
+                    }}
+                    className={menuItemClass()}
+                  >
+                    <InfoMenuIcon />
+                    <span>Message info</span>
                   </button>
                 )}
                 {isFromMe && onEdit && (

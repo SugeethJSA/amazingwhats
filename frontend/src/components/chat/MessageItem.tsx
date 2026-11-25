@@ -16,6 +16,7 @@ import { MediaContent } from "./MediaContent"
 import { DownloadProgress } from "./DownloadProgress"
 import { QuotedMessage } from "./QuotedMessage"
 import { ReactionBubble, ReactionDetails } from "./Reactions"
+import { ReaderDetails } from "./ReaderDetails"
 import { LinkPreview } from "./LinkPreview"
 import clsx from "clsx"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
@@ -23,7 +24,7 @@ import { MessageMenu } from "./MessageMenu"
 import { ForwardDialog } from "./ForwardDialog"
 import { PollVoteDialog } from "./PollVoteDialog"
 import {
-  SendingIcon,
+  ClockPendingIcon,
   SingleTickIcon,
   DoubleTickIcon,
   ReadTickIcon,
@@ -33,7 +34,7 @@ import {
 } from "../../assets/svgs/chat_icons"
 import { useContactStore } from "../../store/useContactStore"
 import { useDownloadProgressStore } from "../../store/useDownloadProgressStore"
-import { useMessageStore, useUIStore } from "../../store"
+import { useChatStore, useMessageStore, useUIStore } from "../../store"
 import type { Message } from "../../store/types"
 import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { isMe } from "../../lib/self"
@@ -52,17 +53,48 @@ const FOCUS_RING =
 // whatsmeow receipt types arrive as strings on message.receiptStatus. One
 // resolver drives both the drawn glyph and the accessible label, so the two
 // can never disagree about which state the message is in.
-const READ_RECEIPTS = new Set(["read", "reads", "read_self", "read-self", "played"])
+const READ_RECEIPTS = new Set(["read", "reads", "read-self", "read_self", "played"])
 const DELIVERED_RECEIPTS = new Set(["delivered", "delivery", "received"])
 
 type ReceiptState = "sending" | "sent" | "delivered" | "read"
 
-function receiptState(message: Message): ReceiptState {
+// Phone-number part of a JID, ignoring device and server suffixes. Readers and
+// roster entries may arrive in different JID forms; compare on this part.
+const jidKey = (jid: string) => (jid || "").split("@")[0].split(":")[0]
+
+/**
+ * Tick state is derived from real per-reader data, never from a single volatile
+ * status string. In a group we only paint blue once *every* known peer has a
+ * read receipt; without a roster we stay double-gray rather than claim an
+ * "all read" we cannot prove.
+ */
+function receiptState(message: Message, chatId: string, participantJIDs?: string[]): ReceiptState {
   if (message.isPending) return "sending"
   const status = (message.receiptStatus ?? "").toLowerCase()
+  const readBy = message.readBy ?? []
+  const delivered = DELIVERED_RECEIPTS.has(status) || (message.deliveredTo?.length ?? 0) > 0
+
+  if (chatId.endsWith("@g.us")) {
+    const peers = Array.from(
+      new Set(
+        (participantJIDs ?? [])
+          .filter(jid => !!jid && !isMe(jid))
+          .map(jidKey)
+          .filter(Boolean),
+      ),
+    )
+    if (peers.length === 0 || readBy.length === 0) {
+      // No roster or no receipts: gray double tick, never a guessed blue.
+      return READ_RECEIPTS.has(status) || delivered ? "delivered" : "sent"
+    }
+    const readers = new Set(readBy.map(jidKey))
+    return peers.every(peer => readers.has(peer)) ? "read" : "delivered"
+  }
+
+  // 1:1: the peer's read receipt is the only thing that turns ticks blue.
+  if (readBy.some(jid => !!jid && !isMe(jid))) return "read"
   if (READ_RECEIPTS.has(status)) return "read"
-  if (DELIVERED_RECEIPTS.has(status)) return "delivered"
-  return "sent"
+  return delivered ? "delivered" : "sent"
 }
 
 const RECEIPT_LABELS: Record<ReceiptState, string> = {
@@ -72,9 +104,10 @@ const RECEIPT_LABELS: Record<ReceiptState, string> = {
   read: "Read",
 }
 
-// Sending, Sent, Delivered and Read each get their own artwork.
+// Sending, Sent, Delivered and Read each get their own artwork. Colour comes
+// from the wrapper's currentColor, so one glyph set serves light and dark.
 const RECEIPT_ICONS: Record<ReceiptState, React.FC> = {
-  sending: SendingIcon,
+  sending: ClockPendingIcon,
   sent: SingleTickIcon,
   delivered: DoubleTickIcon,
   read: ReadTickIcon,
@@ -239,6 +272,10 @@ export function MessageItem({
   const [showFullEmoji, setShowFullEmoji] = useState(false)
   const [showReactionDetails, setShowReactionDetails] = useState(false)
   const reactionPillRef = useRef<HTMLButtonElement>(null)
+  // Group roster from the chat store; only used to decide "everyone read".
+  const participantJIDs = useChatStore(state => state.chatsById.get(chatId)?.participantJIDs)
+  const [showReaderDetails, setShowReaderDetails] = useState(false)
+  const receiptAnchorRef = useRef<HTMLButtonElement>(null)
   // Derived directly from the message; no state/effect needed (a state+effect
   // here forced an extra re-render per message on mount).
   const reactions = message.reactions ?? []
@@ -472,8 +509,17 @@ export function MessageItem({
   // the last line WhatsApp-style; for media/documents it renders as a bottom
   // row. The glyph and its label share one receipt state.
   const timeMeta = (floated: boolean) => {
-    const state = receiptState(message)
-    const receiptText = `Message ${RECEIPT_LABELS[state].toLowerCase()}`
+    const state = receiptState(message, chatId, participantJIDs)
+    const receiptText =
+      state === "read"
+        ? (() => {
+            // Resolved contact names only — a raw JID is never display text.
+            const names = (message.readBy ?? [])
+              .map(jid => useContactStore.getState().contacts[jid]?.name)
+              .filter((name): name is string => !!name)
+            return names.length ? `Read by ${names.join(", ")}` : "Read by"
+          })()
+        : `Message ${RECEIPT_LABELS[state].toLowerCase()}`
     const ReceiptGlyph = RECEIPT_ICONS[state]
     return (
       <span
@@ -485,14 +531,26 @@ export function MessageItem({
         {message.edited && <span className="italic">Edited</span>}
         <span>{timeStr}</span>
         {isFromMe && (
-          <span
-            role="img"
+          <button
+            ref={receiptAnchorRef}
+            type="button"
+            disabled={isPending}
             aria-label={receiptText}
             title={receiptText}
-            className="transition-colors duration-300"
+            onClick={() => {
+              setShowReactionDetails(false)
+              setShowReactionPicker(false)
+              setShowFullEmoji(false)
+              setShowReaderDetails(true)
+            }}
+            className={clsx(
+              "inline-flex items-center rounded-sm transition-colors duration-300 disabled:cursor-default",
+              state === "read" ? "text-tick-read" : "text-tick-muted",
+              FOCUS_RING,
+            )}
           >
             <ReceiptGlyph />
-          </span>
+          </button>
         )}
       </span>
     )
@@ -809,6 +867,7 @@ export function MessageItem({
             type="button"
             onClick={() => {
               setShowReactionDetails(false)
+              setShowReaderDetails(false)
               setShowReactionPicker(v => !v)
             }}
             aria-label="React to message"
@@ -889,6 +948,12 @@ export function MessageItem({
             onDelete={handleDelete}
             onForward={handleForward}
             onStar={handleStar}
+            onMessageInfo={() => {
+              setShowReactionPicker(false)
+              setShowFullEmoji(false)
+              setShowReactionDetails(false)
+              setShowReaderDetails(true)
+            }}
           />
           {forwardTarget === message.Info.ID && (
             <ForwardDialog
@@ -939,6 +1004,7 @@ export function MessageItem({
               aria-label="Who reacted"
               onClick={() => {
                 setShowReactionDetails(true)
+                setShowReaderDetails(false)
                 setShowReactionPicker(false)
                 setShowFullEmoji(false)
               }}
@@ -961,6 +1027,15 @@ export function MessageItem({
               )}
               anchorRef={reactionPillRef}
               onClose={() => setShowReactionDetails(false)}
+            />
+          )}
+
+          {showReaderDetails && !isPending && (
+            <ReaderDetails
+              chatId={chatId}
+              messageId={message.Info.ID}
+              anchorRef={receiptAnchorRef}
+              onClose={() => setShowReaderDetails(false)}
             />
           )}
         </div>

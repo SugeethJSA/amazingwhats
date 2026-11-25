@@ -57,6 +57,11 @@ label[for] {
   --color-received-bubble-text: #111b21;
   --color-received-bubble-dark-text: #f0f2f5;
 
+  /* Delivery ticks: WhatsApp's gray for sent/delivered, blue for read.
+     The glyphs inherit these through currentColor — no inline hex in SVGs. */
+  --color-tick-muted: #8696a0;
+  --color-tick-read: #53bdeb;
+
   /* Toggle */
   --color-toggle-bg: #21c063;
   --color-toggle-dark-bg: #21c063;
@@ -152,6 +157,8 @@ label[for] {
   --color-danger-tint: rgba(239, 68, 68, 0.16);
   --color-chat-wallpaper: #000000;
   --color-focus-ring: #3ddc84;
+  --color-tick-muted: #8696a0;
+  --color-tick-read: #53bdeb;
   --color-scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --color-selection: rgba(33, 192, 99, 0.32);
 }

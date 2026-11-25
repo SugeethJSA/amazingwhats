@@ -245,6 +245,21 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
 
           setIsAnnounceGroup(!!groupInfo.is_group_announce)
 
+          // Keep the group roster (JIDs only, never display text) in the chat
+          // store. Message ticks use it to prove that *every* peer has read a
+          // group message before showing blue; without it they stay gray.
+          const participantJIDs: string[] = []
+          for (const p of groupInfo.group_participants ?? []) {
+            const contact = (p as any)?.contact
+            if (typeof contact?.jid === "string" && contact.jid) {
+              participantJIDs.push(contact.jid)
+            }
+            if (contact?.phno) {
+              participantJIDs.push(`${String(contact.phno).replace(/\D/g, "")}@s.whatsapp.net`)
+            }
+          }
+          useChatStore.getState().updateSingleChat(chatId, { participantJIDs })
+
           // WhatsApp-style participants line under the group name:
           // "You, Alice, ~ Bob, +91 98765 43210, …"
           const participantLabel = (c: any) =>
@@ -731,11 +746,13 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   // sending it to MarkRead makes the backend resolve it and log a "no rows"
   // pair on every call. Keep the local payload for pending messages until the
   // wa:new_message reconciliation replaces the temp ID with the real one.
-  // Keying on the set of real IDs (not the chatMessages array identity) also
-  // stops a burst of receipt/presence updates from re-sending the same read
-  // receipts dozens of times in a couple of seconds.
+  // Our own messages are excluded too: acking them would mark *our* messages
+  // as read by us and paint false blue ticks. Keying on the set of real IDs
+  // (not the chatMessages array identity) also stops a burst of receipt /
+  // presence updates from re-sending the same read receipts repeatedly.
   const readReceiptIds = useMemo(() => {
     const ids = chatMessages
+      .filter((m: Message) => !m?.Info?.IsFromMe)
       .map((m: Message) => m?.Info?.ID)
       .filter((id): id is string => !!id && !id.startsWith("temp-"))
     return Array.from(new Set(ids))
