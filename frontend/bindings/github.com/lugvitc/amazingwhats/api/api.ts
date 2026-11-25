@@ -602,6 +602,11 @@ export function LinkGroupToCommunity(parentJID: string, childJID: string): $Canc
     return $Call.ByID(3468443269, parentJID, childJID);
 }
 
+/**
+ * Login is called once by the frontend. The UI deliberately shows a generic
+ * sign-in failure so raw errors (proxy URLs with credentials, filesystem paths)
+ * never reach the renderer; log the real reason here to backend stderr instead.
+ */
 export function Login(): $CancellablePromise<void> {
     return $Call.ByID(363188883);
 }

@@ -66,9 +66,10 @@ func run(assets fs.FS) cli.ActionFunc {
 					window.Focus()
 				},
 			},
-			// Closing the window keeps the app alive in the tray so Open can
-			// restore it (v2 behaviour via the external systray process).
-			// v3 exposes this per platform, not on application.Options.
+			// These flags only suppress v3's automatic quit when the last window
+			// closes. They do NOT keep the window alive: the default WindowClosing
+			// listener destroys it, which is why the tray's Open action could not
+			// restore it. The close hook below decides hide-vs-quit explicitly.
 			Windows: application.WindowsOptions{
 				DisableQuitOnLastWindowClosed: true,
 			},
@@ -98,14 +99,22 @@ func run(assets fs.FS) cli.ActionFunc {
 		api := apiPkg.New(app, window)
 		app.RegisterService(application.NewService(api))
 
-		// General > "Minimize to system tray" now controls close behaviour.
-		// The platform flags above keep the app alive on last-window-close;
-		// when the setting is off we quit from the close hook instead. Reading
-		// the setting at close time makes UI toggles effective immediately.
-		window.RegisterHook(events.Common.WindowClosing, func(_ *application.WindowEvent) {
-			if !api.MinimizeToTray() {
-				app.Quit()
+		// General > "Minimize to system tray" controls close behaviour.
+		//
+		// Wails v3 runs hooks before its default WindowClosing listener. Cancelling
+		// there is the only way to keep the window object alive for the tray's
+		// Open action; without Cancel, the default listener marks it destroyed and
+		// removes it from the window manager, so Show() on a tray click is a no-op.
+		// Reading the setting at close time makes UI toggles effective immediately.
+		window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+			if api.MinimizeToTray() {
+				event.Cancel()
+				window.Hide()
+				return
 			}
+			// Suppressed auto-quit is not a quit: terminate explicitly after the
+			// native close has been allowed to proceed.
+			application.InvokeAsync(func() { app.Quit() })
 		})
 
 		// CALL-003: one dedicated, hidden call window owns the call UI. It

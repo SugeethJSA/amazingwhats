@@ -1098,7 +1098,16 @@ func (a *Api) CheckForUpdates() error {
 	return nil
 }
 
-func (a *Api) Login() error {
+// Login is called once by the frontend. The UI deliberately shows a generic
+// sign-in failure so raw errors (proxy URLs with credentials, filesystem paths)
+// never reach the renderer; log the real reason here to backend stderr instead.
+func (a *Api) Login() (err error) {
+	defer func() {
+		if err != nil && !errors.Is(err, context.Canceled) {
+			slog.Error("sign-in failed", "error", err, "source", "auth")
+		}
+	}()
+
 	a.loginMu.Lock()
 	defer a.loginMu.Unlock()
 
