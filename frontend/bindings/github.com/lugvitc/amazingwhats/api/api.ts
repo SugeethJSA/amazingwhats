@@ -918,6 +918,17 @@ export function SetGroupDescription(groupJID: string, description: string): $Can
     return $Call.ByID(2776534117, groupJID, description);
 }
 
+/**
+ * SetGroupDescriptionV2 is the explicitly requested binding name for the
+ * upstream SetGroupDescription call (D-ID WIRE-001 section D), which is itself
+ * a thin alias of SetGroupTopic in the pinned module. It delegates to
+ * WireSetGroupDescriptionV2 so there is a single implementation. The existing
+ * Api.SetGroupDescription (groups_ext.go:235) is untouched for compatibility.
+ */
+export function SetGroupDescriptionV2(groupJID: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(203300257, groupJID, description);
+}
+
 export function SetGroupJoinApprovalMode(groupJID: string, requireApproval: boolean): $CancellablePromise<void> {
     return $Call.ByID(3240271789, groupJID, requireApproval);
 }
@@ -1126,6 +1137,724 @@ export function WaitForConnection(timeoutSeconds: number): $CancellablePromise<b
     return $Call.ByID(3125965210, timeoutSeconds);
 }
 
+export function WireAcceptTOSNotice(noticeID: string, stage: string): $CancellablePromise<void> {
+    return $Call.ByID(186691451, noticeID, stage);
+}
+
+/**
+ * WireAppealBusinessCollection binds Client.AppealBusinessCollection.
+ */
+export function WireAppealBusinessCollection(collectionID: string, reason: string): $CancellablePromise<void> {
+    return $Call.ByID(1067807478, collectionID, reason);
+}
+
+/**
+ * WireAppealBusinessProduct binds Client.AppealBusinessProduct.
+ */
+export function WireAppealBusinessProduct(productID: string, reason: string): $CancellablePromise<void> {
+    return $Call.ByID(328239637, productID, reason);
+}
+
+/**
+ * WireBuildMessageKey mirrors Client.BuildMessageKey. An empty senderJID means
+ * "from me"; a real sender JID is required to address someone else's message
+ * in a group.
+ */
+export function WireBuildMessageKey(chatJID: string, senderJID: string, messageID: string): $CancellablePromise<$models.WireMessageKeyDTO> {
+    return $Call.ByID(4258162303, chatJID, senderJID, messageID).then(($result: any) => {
+        return $$createType59($result);
+    });
+}
+
+/**
+ * WireBuildPollVote looks up the real poll message by chat JID + message ID and
+ * calls Client.BuildPollVote with the reconstructed MessageInfo. optionNames are
+ * the human-readable selected option names; upstream hashes them internally.
+ * The real built message is returned as message_base64; with send=true it is
+ * sent to the poll's chat via Client.SendMessage and its real ID is returned.
+ */
+export function WireBuildPollVote(chatJID: string, pollMessageID: string, optionNames: string[], send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
+    return $Call.ByID(490458616, chatJID, pollMessageID, optionNames, send).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * WireBuildRecentStickerBootstrapRequest binds
+ * Client.BuildRecentStickerBootstrapRequest. It takes no complex input; the
+ * built waE2E.Message is returned as base64 and optionally sent as a peer
+ * message (the primary device must be online to answer).
+ */
+export function WireBuildRecentStickerBootstrapRequest(send: boolean): $CancellablePromise<string> {
+    return $Call.ByID(1191252918, send);
+}
+
+/**
+ * WireBuildStickerReuploadRequest binds Client.BuildStickerReuploadRequest.
+ * hashBase64s holds one or more base64-encoded 32-byte sticker SHA-256 hashes.
+ * The returned string is the base64-serialized waE2E.Message request; with
+ * send=true it is also delivered via SendPeerMessage.
+ */
+export function WireBuildStickerReuploadRequest(hashBase64s: string[], send: boolean): $CancellablePromise<string> {
+    return $Call.ByID(1262368633, hashBase64s, send);
+}
+
+/**
+ * WireBuildUnavailableMessageRequest builds the placeholder-message-resend
+ * request via Client.BuildUnavailableMessageRequest. The real built message is
+ * returned as message_base64; with send=true it is also delivered through the
+ * documented SendPeerMessage path and its real response ID is returned.
+ */
+export function WireBuildUnavailableMessageRequest(chatJID: string, senderJID: string, messageID: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
+    return $Call.ByID(8751581, chatJID, senderJID, messageID, send).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * WireCreateBusinessCatalog binds Client.CreateBusinessCatalog.
+ */
+export function WireCreateBusinessCatalog(): $CancellablePromise<void> {
+    return $Call.ByID(1794712);
+}
+
+/**
+ * WireCreateBusinessCollection binds Client.CreateBusinessCollection.
+ */
+export function WireCreateBusinessCollection(name: string, productIDs: string[]): $CancellablePromise<$models.WireBusinessCollectionMutationResult> {
+    return $Call.ByID(2327875857, name, productIDs).then(($result: any) => {
+        return $$createType61($result);
+    });
+}
+
+/**
+ * WireCreateBusinessProduct binds Client.CreateBusinessProduct. Thumbnail
+ * dimensions are fixed to the library's 100x100 default; no opaque width/height
+ * control is exposed.
+ */
+export function WireCreateBusinessProduct(input: $models.WireBusinessProductInput): $CancellablePromise<$models.WireBusinessProductResult> {
+    return $Call.ByID(1869420204, input).then(($result: any) => {
+        return $$createType62($result);
+    });
+}
+
+/**
+ * WireDeleteBusinessCollections binds Client.DeleteBusinessCollections.
+ */
+export function WireDeleteBusinessCollections(collectionIDs: string[]): $CancellablePromise<void> {
+    return $Call.ByID(1600162731, collectionIDs);
+}
+
+/**
+ * WireDeleteBusinessCoverPhoto binds Client.DeleteBusinessCoverPhoto.
+ */
+export function WireDeleteBusinessCoverPhoto(coverID: string): $CancellablePromise<void> {
+    return $Call.ByID(3112799863, coverID);
+}
+
+/**
+ * WireDeleteBusinessProducts binds Client.DeleteBusinessProducts and reports the
+ * server-confirmed deleted count.
+ */
+export function WireDeleteBusinessProducts(productIDs: string[]): $CancellablePromise<$models.WireBusinessDeleteProductsResult> {
+    return $Call.ByID(1740991918, productIDs).then(($result: any) => {
+        return $$createType63($result);
+    });
+}
+
+export function WireDeleteNewsletter(jid: string): $CancellablePromise<void> {
+    return $Call.ByID(2312476387, jid);
+}
+
+/**
+ * WireDownloadAny binds Client.DownloadAny. messageBase64 is a base64-encoded,
+ * protobuf-marshaled waE2E.Message; the real protobuf object is reconstructed
+ * in Go, so no opaque protobuf type crosses IPC. Downloaded bytes come back as
+ * base64 (the frontend adds the MIME/data-URL prefix).
+ */
+export function WireDownloadAny(messageBase64: string): $CancellablePromise<string> {
+    return $Call.ByID(3254872007, messageBase64);
+}
+
+/**
+ * WireDownloadFB binds Client.DownloadFB. transportBase64 holds a base64-encoded,
+ * protobuf-marshaled waMediaTransport.WAMediaTransport_Integral (the raw
+ * transport cannot be passed through Wails IPC); mediaType is a token accepted
+ * by wireParseMediaType.
+ */
+export function WireDownloadFB(transportBase64: string, mediaType: string): $CancellablePromise<string> {
+    return $Call.ByID(1554122675, transportBase64, mediaType);
+}
+
+/**
+ * WireDownloadFBToFile binds Client.DownloadFBToFile. transportBase64 is a
+ * base64-encoded WAMediaTransport_Integral protobuf; the destination is handled
+ * exactly like WireDownloadMediaWithOnlyPathToFile.
+ */
+export function WireDownloadFBToFile(transportBase64: string, mediaType: string, destinationPath: string): $CancellablePromise<void> {
+    return $Call.ByID(72797656, transportBase64, mediaType, destinationPath);
+}
+
+/**
+ * WireDownloadHistorySync downloads and parses a history-sync blob using the
+ * real Client.DownloadHistorySync. notifBase64 is a base64-encoded,
+ * protobuf-marshaled waE2E.HistorySyncNotification; it is decoded into a real
+ * protobuf inside Go. Only metadata is returned — conversation content and
+ * contacts are already stored by the normal event handler.
+ */
+export function WireDownloadHistorySync(notifBase64: string, synchronousStorage: boolean): $CancellablePromise<$models.WireHistorySyncDTO> {
+    return $Call.ByID(3044828006, notifBase64, synchronousStorage).then(($result: any) => {
+        return $$createType64($result);
+    });
+}
+
+/**
+ * WireDownloadMediaWithOnlyPath binds Client.DownloadMediaWithOnlyPath for
+ * unencrypted/hash-less media. directPath is the plain string parameter of the
+ * library method; the client rejects paths that do not start with a slash.
+ */
+export function WireDownloadMediaWithOnlyPath(directPath: string): $CancellablePromise<string> {
+    return $Call.ByID(81459656, directPath);
+}
+
+/**
+ * WireDownloadMediaWithOnlyPathToFile binds Client.DownloadMediaWithOnlyPathToFile.
+ * The library's File interface is satisfied by the *os.File opened at a validated
+ * absolute destinationPath; a failed download removes the partial file.
+ */
+export function WireDownloadMediaWithOnlyPathToFile(directPath: string, destinationPath: string): $CancellablePromise<void> {
+    return $Call.ByID(2625881991, directPath, destinationPath);
+}
+
+/**
+ * WireDownloadMediaWithPathToFile binds Client.DownloadMediaWithPathToFile with
+ * all encryption fields supplied as base64 strings. Empty hash/key fields decode
+ * to nil slices, which is required by the allowNoHash path.
+ */
+export function WireDownloadMediaWithPathToFile(directPath: string, encFileHashBase64: string, fileHashBase64: string, mediaKeyBase64: string, mediaType: string, mmsType: string, allowNoHash: boolean, destinationPath: string): $CancellablePromise<void> {
+    return $Call.ByID(195371325, directPath, encFileHashBase64, fileHashBase64, mediaKeyBase64, mediaType, mmsType, allowNoHash, destinationPath);
+}
+
+/**
+ * WireDownloadThumbnail binds Client.DownloadThumbnail. The DownloadableThumbnail
+ * interface is reconstructed as one of its two concrete message types: kind is
+ * "extended_text" (link-preview thumbnails, the primary use case) or
+ * "sticker_pack". messageBase64 is the protobuf-marshaled message, base64-encoded.
+ */
+export function WireDownloadThumbnail(messageBase64: string, kind: string): $CancellablePromise<string> {
+    return $Call.ByID(3889267917, messageBase64, kind);
+}
+
+/**
+ * WireEncryptComment encrypts a real comment protobuf supplied as base64
+ * against the stored root message. The DTO's text field stays empty; the real
+ * encrypted message is exposed only as message_base64 and, with send=true, is
+ * delivered to the chat via Client.SendMessage with its real ID returned.
+ */
+export function WireEncryptComment(chatJID: string, rootMessageID: string, commentBase64: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
+    return $Call.ByID(843748669, chatJID, rootMessageID, commentBase64, send).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * WireEncryptPollVote is the lower-level variant: it builds a real
+ * PollVoteMessage from the supplied option names (using upstream's own
+ * HashPollOptions) and calls Client.EncryptPollVote with the stored MessageInfo.
+ * The encrypted update is wrapped in a real waE2E.Message, returned as
+ * message_base64 and, with send=true, sent to the poll's chat via SendMessage.
+ */
+export function WireEncryptPollVote(chatJID: string, pollMessageID: string, optionNames: string[], send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
+    return $Call.ByID(3775759029, chatJID, pollMessageID, optionNames, send).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * WireEncryptReaction builds a real ReactionMessage from the supplied text and
+ * the stored root message key, then encrypts it via Client.EncryptReaction. The
+ * encrypted reaction is wrapped in a real waE2E.Message, returned as
+ * message_base64 and, with send=true, sent to the chat via SendMessage.
+ */
+export function WireEncryptReaction(chatJID: string, rootMessageID: string, reactionText: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
+    return $Call.ByID(1081454115, chatJID, rootMessageID, reactionText, send).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * WireGetBusinessEligibility binds Client.GetBusinessEligibility. features is
+ * optional; supported values are meta_verified, marketing_messages, genai,
+ * genai_image, meta_one and bb_pro (empty means all).
+ */
+export function WireGetBusinessEligibility(features: string[]): $CancellablePromise<$models.WireBusinessEligibilityResult> {
+    return $Call.ByID(1313289848, features).then(($result: any) => {
+        return $$createType65($result);
+    });
+}
+
+/**
+ * WireGetBusinessLinkedAccounts binds Client.GetBusinessLinkedAccounts.
+ */
+export function WireGetBusinessLinkedAccounts(): $CancellablePromise<$models.WireBusinessLinkedAccountsResult> {
+    return $Call.ByID(166698254).then(($result: any) => {
+        return $$createType66($result);
+    });
+}
+
+/**
+ * WireGetBusinessMerchantCompliance binds Client.GetBusinessMerchantCompliance.
+ * The library always queries the logged-in account's own business.
+ */
+export function WireGetBusinessMerchantCompliance(): $CancellablePromise<$models.WireBusinessMerchantComplianceResult> {
+    return $Call.ByID(2556847188).then(($result: any) => {
+        return $$createType67($result);
+    });
+}
+
+/**
+ * WireGetCatalog binds Client.GetCatalog. businessJID is optional and defaults
+ * to the logged-in account; limit 0 applies the library default of 50.
+ */
+export function WireGetCatalog(businessJID: string, after: string, limit: number): $CancellablePromise<$models.WireBusinessCatalogPageResult> {
+    return $Call.ByID(564053616, businessJID, after, limit).then(($result: any) => {
+        return $$createType68($result);
+    });
+}
+
+/**
+ * WireGetCatalogProduct binds Client.GetCatalogProduct.
+ */
+export function WireGetCatalogProduct(businessJID: string, productID: string): $CancellablePromise<$models.WireBusinessProductResult> {
+    return $Call.ByID(18490303, businessJID, productID).then(($result: any) => {
+        return $$createType62($result);
+    });
+}
+
+/**
+ * WireGetCatalogProducts binds Client.GetCatalogProducts for 1..100 unique IDs.
+ */
+export function WireGetCatalogProducts(businessJID: string, productIDs: string[]): $CancellablePromise<$models.WireBusinessProductResult[]> {
+    return $Call.ByID(2284214820, businessJID, productIDs).then(($result: any) => {
+        return $$createType69($result);
+    });
+}
+
+export function WireGetGroupInfoFromInvite(groupJID: string, inviterJID: string, code: string, expiration: number): $CancellablePromise<$models.WireGroupInviteInfo> {
+    return $Call.ByID(3339093073, groupJID, inviterJID, code, expiration).then(($result: any) => {
+        return $$createType70($result);
+    });
+}
+
+/**
+ * WireGetIdentityVerificationCodes returns safety-number codes for another
+ * device. Upstream requires an @lid user JID (ErrIdentityVerificationRequiresLID)
+ * and cannot generate codes for the local user.
+ */
+export function WireGetIdentityVerificationCodes(userJID: string): $CancellablePromise<$models.WireIdentityVerificationCodes> {
+    return $Call.ByID(1997246542, userJID).then(($result: any) => {
+        return $$createType71($result);
+    });
+}
+
+/**
+ * WireGetOrderDetails binds Client.GetOrderDetails. orderID and token are the
+ * values carried by an incoming OrderMessage; both are echoed by the server.
+ */
+export function WireGetOrderDetails(orderID: string, token: string): $CancellablePromise<$models.WireOrderDetailsResult> {
+    return $Call.ByID(2080227735, orderID, token).then(($result: any) => {
+        return $$createType72($result);
+    });
+}
+
+/**
+ * WireGetProductCollection binds Client.GetProductCollection.
+ */
+export function WireGetProductCollection(businessJID: string, collectionID: string, after: string, limit: number): $CancellablePromise<$models.WireBusinessCollectionResult> {
+    return $Call.ByID(2593780088, businessJID, collectionID, after, limit).then(($result: any) => {
+        return $$createType73($result);
+    });
+}
+
+/**
+ * WireGetProductCollections binds Client.GetProductCollections. collectionLimit
+ * defaults to 20 (max 20) and itemLimit defaults to 50 (max 100).
+ */
+export function WireGetProductCollections(businessJID: string, after: string, collectionLimit: number, itemLimit: number): $CancellablePromise<$models.WireBusinessCollectionPageResult> {
+    return $Call.ByID(1800827985, businessJID, after, collectionLimit, itemLimit).then(($result: any) => {
+        return $$createType74($result);
+    });
+}
+
+/**
+ * WireGetServerPushNotificationConfig projects the upstream waBinary.Node into
+ * a JSON-safe DTO. Conversion (hypermeow/binary/node.go): Attrs values with
+ * dynamic type string, types.JID, int, int64 or bool are rendered as strings;
+ * all other values (binary payloads, nested nodes) are omitted. ChildTags lists
+ * the immediate children's tag names. No raw node is returned.
+ */
+export function WireGetServerPushNotificationConfig(): $CancellablePromise<$models.WirePushNotificationConfig> {
+    return $Call.ByID(3153855275).then(($result: any) => {
+        return $$createType75($result);
+    });
+}
+
+export function WireGetUserDevices(jids: string[]): $CancellablePromise<string[]> {
+    return $Call.ByID(1550336653, jids).then(($result: any) => {
+        return $$createType43($result);
+    });
+}
+
+/**
+ * WireGetUserDevicesContext is the context-bearing variant of
+ * WireGetUserDevices (same upstream return type and conversion).
+ */
+export function WireGetUserDevicesContext(jids: string[]): $CancellablePromise<string[]> {
+    return $Call.ByID(4186348068, jids).then(($result: any) => {
+        return $$createType43($result);
+    });
+}
+
+/**
+ * WireInjectNode injects a WhatsApp binary-XML node into the client as if it
+ * arrived from the socket. The input is the exact byte encoding produced by
+ * waBinary.Marshal; this binding decodes it with waBinary.Unmarshal (the strict
+ * upstream decoder, which rejects trailing bytes) and never hands raw input to
+ * the client. Injection can affect protocol state, so it is an advanced API.
+ */
+export function WireInjectNode(node: string): $CancellablePromise<void> {
+    return $Call.ByID(1150891666, node);
+}
+
+export function WireJoinGroupWithInvite(groupJID: string, inviterJID: string, code: string, expiration: number): $CancellablePromise<void> {
+    return $Call.ByID(3735982487, groupJID, inviterJID, code, expiration);
+}
+
+/**
+ * WireRegisterForPushNotifications registers one of the three concrete upstream
+ * PushConfig implementations. platform selects "gcm" (FCMPushConfig: token),
+ * "apple" (APNsPushConfig: token, optional voipToken, optional 32-byte
+ * MsgIDEncKey passed as msgIDEncKey) or "web" (WebPushConfig: endpoint, auth,
+ * p256dh). Unused arguments are ignored for the selected platform.
+ */
+export function WireRegisterForPushNotifications(platform: string, token: string, voipToken: string, endpoint: string, msgIDEncKey: string, auth: string, p256dh: string): $CancellablePromise<void> {
+    return $Call.ByID(856687679, platform, token, voipToken, endpoint, msgIDEncKey, auth, p256dh);
+}
+
+/**
+ * WireRejectCall is HyperMeow's Client.RejectCall (call.go:106), which takes the
+ * caller JID explicitly. It is distinct from the existing Api.RejectCall
+ * (api/calls.go:803) which drives the meowcaller client; that binding is left
+ * untouched. This method sends the protocol reject node directly and does not
+ * mutate meowcaller's call state.
+ */
+export function WireRejectCall(callFromJID: string, callID: string): $CancellablePromise<void> {
+    return $Call.ByID(111135192, callFromJID, callID);
+}
+
+/**
+ * WireReorderBusinessCollections binds Client.ReorderBusinessCollections.
+ */
+export function WireReorderBusinessCollections(moves: $models.WireBusinessCollectionMoveInput[]): $CancellablePromise<void> {
+    return $Call.ByID(2081720157, moves);
+}
+
+/**
+ * WireResolveLID returns the stable @lid JID for a phone-number JID.
+ */
+export function WireResolveLID(phoneJID: string): $CancellablePromise<string> {
+    return $Call.ByID(1113716382, phoneJID);
+}
+
+export function WireResolveUsername(username: string, key: string): $CancellablePromise<$models.WireUsernameResolution> {
+    return $Call.ByID(1723430881, username, key).then(($result: any) => {
+        return $$createType76($result);
+    });
+}
+
+/**
+ * WireRevokeMessage delegates to the pinned module's Client.RevokeMessage
+ * (send.go:538) and returns its server response. The long-standing
+ * Api.RevokeMessage (api/message.go:1026) is intentionally left untouched: it
+ * is owned by a separate change and additionally marks the row deleted locally.
+ * Upstream marks Client.RevokeMessage deprecated in favour of BuildRevoke; this
+ * binding deliberately calls the module method as requested.
+ */
+export function WireRevokeMessage(chatJID: string, messageID: string): $CancellablePromise<$models.WireMessageSendResult> {
+    return $Call.ByID(3942280032, chatJID, messageID).then(($result: any) => {
+        return $$createType77($result);
+    });
+}
+
+/**
+ * WireSendHistorySyncServerErrorReceipt acknowledges a failed history-sync
+ * download. mediaKey is the raw key from the notification.
+ */
+export function WireSendHistorySyncServerErrorReceipt(msgID: string, mediaKey: string): $CancellablePromise<void> {
+    return $Call.ByID(888962477, msgID, mediaKey);
+}
+
+/**
+ * WireSendMediaRetryReceipt binds Client.SendMediaRetryReceipt. The real
+ * *types.MessageInfo is loaded from a.messageStore by JID + message ID (never
+ * synthesized from IPC fields); a missing message is a hard error. IsGroup is
+ * derived from the parsed chat JID because the store does not persist it and
+ * the client needs it to include the participant attribute for group retries.
+ */
+export function WireSendMediaRetryReceipt(chatJID: string, messageID: string, mediaKeyBase64: string): $CancellablePromise<void> {
+    return $Call.ByID(572700765, chatJID, messageID, mediaKeyBase64);
+}
+
+/**
+ * WireSendPasskeyConfirmation confirms a pending passkey pairing. It takes no
+ * arguments upstream. Only call it in response to a real passkey challenge.
+ */
+export function WireSendPasskeyConfirmation(): $CancellablePromise<void> {
+    return $Call.ByID(239462362);
+}
+
+/**
+ * WireSendPrebuiltStanza sends a pre-encoded remote-signal stanza and waits for
+ * the server ack. The bytes are validated with waBinary.Unmarshal (the same
+ * strict binary-XML decoder the module uses; it rejects trailing bytes) before
+ * being handed to upstream, so a malformed stanza is rejected with a plain
+ * error. Upstream requires a remote signal store (ErrRemoteSignalRequired) and
+ * a message id inside the stanza. timeoutMs <= 0 waits until the request context
+ * ends; otherwise it is converted to time.Duration milliseconds.
+ */
+export function WireSendPrebuiltStanza(stanza: string, phash: string, timeoutMs: number): $CancellablePromise<$models.WireSendResponse> {
+    return $Call.ByID(1418464667, stanza, phash, timeoutMs).then(($result: any) => {
+        return $$createType78($result);
+    });
+}
+
+/**
+ * WireSendProtocolMessageReceipt sends a receipt for a protocol message.
+ * "delivered" is accepted as a friendly alias for the upstream empty-string
+ * delivered type. Other values must be one of the upstream ReceiptType
+ * constants (read, played, hist_sync, peer_msg, ...).
+ */
+export function WireSendProtocolMessageReceipt(msgID: string, receiptType: string): $CancellablePromise<void> {
+    return $Call.ByID(2422243720, msgID, receiptType);
+}
+
+/**
+ * WireSetBusinessCartEnabled binds Client.SetBusinessCartEnabled.
+ */
+export function WireSetBusinessCartEnabled(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1107417234, enabled);
+}
+
+/**
+ * WireSetBusinessCoverPhoto binds Client.SetBusinessCoverPhoto. The returned
+ * DTO carries only the server-assigned cover photo ID, never upload tokens.
+ */
+export function WireSetBusinessCoverPhoto(imageBase64: string): $CancellablePromise<$models.WireBusinessCoverPhotoResult> {
+    return $Call.ByID(687143614, imageBase64).then(($result: any) => {
+        return $$createType79($result);
+    });
+}
+
+/**
+ * WireSetBusinessMerchantCompliance binds Client.SetBusinessMerchantCompliance.
+ */
+export function WireSetBusinessMerchantCompliance(input: $models.WireBusinessMerchantComplianceInput): $CancellablePromise<$models.WireBusinessMerchantComplianceResult> {
+    return $Call.ByID(604497496, input).then(($result: any) => {
+        return $$createType67($result);
+    });
+}
+
+/**
+ * WireSetBusinessProductVisibility binds Client.SetBusinessProductVisibility.
+ */
+export function WireSetBusinessProductVisibility(productID: string, hidden: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4040535374, productID, hidden);
+}
+
+/**
+ * WireSetGroupDescriptionV2 calls the pinned module's real SetGroupDescription
+ * API. In the pinned source (group.go:1194-1197) that method is marked Deprecated
+ * and implemented as `return cli.SetGroupTopic(ctx, jid, "", "", description)`
+ * — i.e. it is still a thin alias of SetGroupTopic, NOT a distinct protocol
+ * method. The existing Api.SetGroupDescription (groups_ext.go:235) stays
+ * unchanged for compatibility; this binding simply exposes that upstream API
+ * directly without reimplementing it.
+ */
+export function WireSetGroupDescriptionV2(groupJID: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(3874914234, groupJID, description);
+}
+
+/**
+ * WireSetHistorySyncPolicy sets the five pre-Connect history-sync policy flags
+ * on the Client struct. It is a binding ONLY: no startup code calls it because
+ * there is no persisted setting in internal/settings, and changing the defaults
+ * would alter existing sync behaviour. Set all flags together to avoid a
+ * half-applied policy.
+ */
+export function WireSetHistorySyncPolicy(manualDownload: boolean, disableManualReceipt: boolean, disableReceipt: boolean, disableStorage: boolean, disableMediaDelete: boolean): $CancellablePromise<void> {
+    return $Call.ByID(343120654, manualDownload, disableManualReceipt, disableReceipt, disableStorage, disableMediaDelete);
+}
+
+/**
+ * WireSetMaxParallelRetryReceiptHandling caps concurrent retry-receipt
+ * handling. n <= 0 restores the upstream unlimited default. Must be called
+ * before Connect (upstream warns of data races otherwise).
+ */
+export function WireSetMaxParallelRetryReceiptHandling(n: number): $CancellablePromise<void> {
+    return $Call.ByID(851379725, n);
+}
+
+/**
+ * WireSetMediaHTTPClient sets the client used for media downloads from a
+ * validated http(s) proxy URL. The URL is converted to
+ * &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(u)}} and passed
+ * to the real Client.SetMediaHTTPClient. An empty URL passes nil, matching
+ * upstream's own nil semantics. This replaces any previously configured custom
+ * transport (including proxies set via Api.SetProxy) for media; it must be
+ * called before Connect.
+ */
+export function WireSetMediaHTTPClient(proxyURL: string): $CancellablePromise<void> {
+    return $Call.ByID(1528544784, proxyURL);
+}
+
+/**
+ * WireSetPassive tells the server whether this device is passive. Upstream
+ * already sends SetPassive(false) after connecting unless
+ * DisablePostConnectPassiveIQ is set; this binding is for explicit control.
+ */
+export function WireSetPassive(passive: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3408298834, passive);
+}
+
+/**
+ * WireSetPreLoginHTTPClient sets the pre-login websocket client from a
+ * validated http(s) proxy URL, using the same conversion as
+ * WireSetMediaHTTPClient and calling the real Client.SetPreLoginHTTPClient.
+ * An empty URL passes nil. This replaces any previously configured custom
+ * transport (including proxies set via Api.SetProxy) for pre-login.
+ */
+export function WireSetPreLoginHTTPClient(proxyURL: string): $CancellablePromise<void> {
+    return $Call.ByID(349701208, proxyURL);
+}
+
+/**
+ * WireSetProxy applies an HTTP(S) proxy. The string is parsed and converted by
+ * the pinned upstream helper Client.SetProxyAddress, which calls
+ * SetProxy(http.ProxyURL(u)) for http/https schemes (hypermeow/client.go:426).
+ * Must be called before Connect. The pre-existing Api.SetProxy (account.go:41)
+ * remains for compatibility and already accepts both http(s) and socks5; this
+ * variant adds scheme validation and the pre-Connect guard. An empty URL clears
+ * the proxy (upstream calls SetProxy(nil), restoring env-based defaults).
+ */
+export function WireSetProxy(proxyURL: string): $CancellablePromise<void> {
+    return $Call.ByID(959918135, proxyURL);
+}
+
+/**
+ * WireSetSOCKSProxy applies a SOCKS5 proxy. Client.SetProxyAddress converts a
+ * socks5:// URL with proxy.FromURL and passes the resulting ContextDialer to
+ * SetSOCKSProxy (hypermeow/client.go:437). Must be called before Connect. Uses
+ * the same upstream helper as the existing Api.SetProxy, but rejects non-socks5
+ * schemes. An empty URL clears the proxy.
+ */
+export function WireSetSOCKSProxy(proxyURL: string): $CancellablePromise<void> {
+    return $Call.ByID(3264308410, proxyURL);
+}
+
+/**
+ * WireSetWebsocketHTTPClient sets the logged-in websocket client from a
+ * validated http(s) proxy URL, using the same conversion as
+ * WireSetMediaHTTPClient and calling the real Client.SetWebsocketHTTPClient.
+ * An empty URL passes nil. This replaces any previously configured custom
+ * transport (including proxies set via Api.SetProxy) for the websocket.
+ */
+export function WireSetWebsocketHTTPClient(proxyURL: string): $CancellablePromise<void> {
+    return $Call.ByID(146972363, proxyURL);
+}
+
+/**
+ * WireUpdateBusinessCollection binds Client.UpdateBusinessCollection.
+ */
+export function WireUpdateBusinessCollection(collectionID: string, input: $models.WireBusinessCollectionUpdateInput): $CancellablePromise<$models.WireBusinessCollectionMutationResult> {
+    return $Call.ByID(2535332980, collectionID, input).then(($result: any) => {
+        return $$createType61($result);
+    });
+}
+
+/**
+ * WireUpdateBusinessProduct binds Client.UpdateBusinessProduct.
+ */
+export function WireUpdateBusinessProduct(productID: string, input: $models.WireBusinessProductInput): $CancellablePromise<$models.WireBusinessProductResult> {
+    return $Call.ByID(4009172455, productID, input).then(($result: any) => {
+        return $$createType62($result);
+    });
+}
+
+/**
+ * WireUploadBusinessProductImage binds Client.UploadBusinessProductImage.
+ * imageBase64 is decoded and size-checked here; the library then enforces its
+ * JPEG/PNG requirement and returns the hosted URL.
+ */
+export function WireUploadBusinessProductImage(imageBase64: string): $CancellablePromise<$models.WireBusinessImageUploadResult> {
+    return $Call.ByID(811518160, imageBase64).then(($result: any) => {
+        return $$createType80($result);
+    });
+}
+
+/**
+ * WireUploadNewsletter binds Client.UploadNewsletter (unencrypted newsletter
+ * media). dataBase64 holds the plaintext bytes; mediaType is token-parsed.
+ */
+export function WireUploadNewsletter(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
+    return $Call.ByID(2235414361, dataBase64, mediaType).then(($result: any) => {
+        return $$createType81($result);
+    });
+}
+
+/**
+ * WireUploadNewsletterReader binds Client.UploadNewsletterReader. The required
+ * io.ReadSeeker is a *bytes.Reader built from base64 bytes; no temp file is
+ * needed for the newsletter (unencrypted) path.
+ */
+export function WireUploadNewsletterReader(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
+    return $Call.ByID(3885680242, dataBase64, mediaType).then(($result: any) => {
+        return $$createType81($result);
+    });
+}
+
+/**
+ * WireUploadReader binds Client.UploadReader. The plaintext io.Reader is built
+ * from base64 bytes in Go. tempFile is intentionally nil: an io.ReadWriteSeeker
+ * cannot cross Wails IPC, and the library's documented nil path creates and
+ * removes its own temporary file, which is both safe and equivalent here.
+ */
+export function WireUploadReader(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
+    return $Call.ByID(1077545817, dataBase64, mediaType).then(($result: any) => {
+        return $$createType81($result);
+    });
+}
+
+/**
+ * WireUploadSticker binds Client.UploadSticker. imageBase64 is the image bytes;
+ * mime is validated and returned in the DTO (the library uses image keys and
+ * the sticker MMS path, not a MIME argument).
+ */
+export function WireUploadSticker(imageBase64: string, mime: string): $CancellablePromise<$models.WireMediaUploadResult> {
+    return $Call.ByID(549962489, imageBase64, mime).then(($result: any) => {
+        return $$createType81($result);
+    });
+}
+
+/**
+ * WireUploadStickerPackThumbnail binds Client.UploadStickerPackThumbnail.
+ * packMediaKeyBase64 must decode to the pack's 32-byte master media key.
+ */
+export function WireUploadStickerPackThumbnail(imageBase64: string, packMediaKeyBase64: string, mime: string): $CancellablePromise<$models.WireMediaUploadResult> {
+    return $Call.ByID(2800502224, imageBase64, packMediaKeyBase64, mime).then(($result: any) => {
+        return $$createType81($result);
+    });
+}
+
 // Private type creation functions
 const $$createType0 = $models.Contact.createFrom;
 const $$createType1 = $Create.Array($$createType0);
@@ -1186,3 +1915,26 @@ const $$createType55 = $models.ContactQRLinkResult.createFrom;
 const $$createType56 = $Create.Nullable($$createType55);
 const $$createType57 = $models.SearchResult.createFrom;
 const $$createType58 = $Create.Array($$createType57);
+const $$createType59 = $models.WireMessageKeyDTO.createFrom;
+const $$createType60 = $models.WireBuiltMessageDTO.createFrom;
+const $$createType61 = $models.WireBusinessCollectionMutationResult.createFrom;
+const $$createType62 = $models.WireBusinessProductResult.createFrom;
+const $$createType63 = $models.WireBusinessDeleteProductsResult.createFrom;
+const $$createType64 = $models.WireHistorySyncDTO.createFrom;
+const $$createType65 = $models.WireBusinessEligibilityResult.createFrom;
+const $$createType66 = $models.WireBusinessLinkedAccountsResult.createFrom;
+const $$createType67 = $models.WireBusinessMerchantComplianceResult.createFrom;
+const $$createType68 = $models.WireBusinessCatalogPageResult.createFrom;
+const $$createType69 = $Create.Array($$createType62);
+const $$createType70 = $models.WireGroupInviteInfo.createFrom;
+const $$createType71 = $models.WireIdentityVerificationCodes.createFrom;
+const $$createType72 = $models.WireOrderDetailsResult.createFrom;
+const $$createType73 = $models.WireBusinessCollectionResult.createFrom;
+const $$createType74 = $models.WireBusinessCollectionPageResult.createFrom;
+const $$createType75 = $models.WirePushNotificationConfig.createFrom;
+const $$createType76 = $models.WireUsernameResolution.createFrom;
+const $$createType77 = $models.WireMessageSendResult.createFrom;
+const $$createType78 = $models.WireSendResponse.createFrom;
+const $$createType79 = $models.WireBusinessCoverPhotoResult.createFrom;
+const $$createType80 = $models.WireBusinessImageUploadResult.createFrom;
+const $$createType81 = $models.WireMediaUploadResult.createFrom;

@@ -1297,6 +1297,1292 @@ export class UserInfoResult {
     }
 }
 
+/**
+ * WireBuiltMessageDTO is a JSON-safe description of a built message.
+ * MessageBase64 is the real built waE2E.Message, protobuf-marshaled and then
+ * base64-encoded (the WIRE-002 transport), so the frontend can actually deliver
+ * what was built instead of discarding it. No protobuf pointer crosses IPC.
+ * Type/ProtocolType/TargetKey are scalar projections of that same real message;
+ * Text stays empty because inventing a human-readable body would be misleading.
+ * ID is the target message ID from the built key, or the real SendResponse.ID
+ * when send=true.
+ */
+export class WireBuiltMessageDTO {
+    "type": string;
+    "text"?: string;
+    "id"?: string;
+    "protocolType"?: string;
+    "targetKey"?: WireMessageKeyDTO | null;
+    "message_base64": string;
+
+    /** Creates a new WireBuiltMessageDTO instance. */
+    constructor($$source: Partial<WireBuiltMessageDTO> = {}) {
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("message_base64" in $$source)) {
+            this["message_base64"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBuiltMessageDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBuiltMessageDTO {
+        const $$createField4_0 = $$createType17;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("targetKey" in $$parsedSource) {
+            $$parsedSource["targetKey"] = $$createField4_0($$parsedSource["targetKey"]);
+        }
+        return new WireBuiltMessageDTO($$parsedSource as Partial<WireBuiltMessageDTO>);
+    }
+}
+
+export class WireBusinessAdIdentityResult {
+    "id": string;
+    "hasActiveCtwaAd": boolean;
+    "hasCreatedAd": boolean;
+
+    /** Creates a new WireBusinessAdIdentityResult instance. */
+    constructor($$source: Partial<WireBusinessAdIdentityResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("hasActiveCtwaAd" in $$source)) {
+            this["hasActiveCtwaAd"] = false;
+        }
+        if (!("hasCreatedAd" in $$source)) {
+            this["hasCreatedAd"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessAdIdentityResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessAdIdentityResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessAdIdentityResult($$parsedSource as Partial<WireBusinessAdIdentityResult>);
+    }
+}
+
+export class WireBusinessAddressInput {
+    "street1"?: string;
+    "street2"?: string;
+    "city"?: string;
+    "region"?: string;
+    "postalCode"?: string;
+    "countryCode"?: string;
+
+    /** Creates a new WireBusinessAddressInput instance. */
+    constructor($$source: Partial<WireBusinessAddressInput> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessAddressInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessAddressInput {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessAddressInput($$parsedSource as Partial<WireBusinessAddressInput>);
+    }
+}
+
+/**
+ * WireBusinessCatalogPageResult is a page of products with cursor tokens.
+ */
+export class WireBusinessCatalogPageResult {
+    "next"?: string;
+    "previous"?: string;
+    "products": WireBusinessProductResult[];
+
+    /** Creates a new WireBusinessCatalogPageResult instance. */
+    constructor($$source: Partial<WireBusinessCatalogPageResult> = {}) {
+        if (!("products" in $$source)) {
+            this["products"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCatalogPageResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCatalogPageResult {
+        const $$createField2_0 = $$createType19;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("products" in $$parsedSource) {
+            $$parsedSource["products"] = $$createField2_0($$parsedSource["products"]);
+        }
+        return new WireBusinessCatalogPageResult($$parsedSource as Partial<WireBusinessCatalogPageResult>);
+    }
+}
+
+/**
+ * WireBusinessCollectionMoveInput is one reorder move.
+ */
+export class WireBusinessCollectionMoveInput {
+    "collectionId": string;
+    "fromIndex": number;
+    "toIndex": number;
+
+    /** Creates a new WireBusinessCollectionMoveInput instance. */
+    constructor($$source: Partial<WireBusinessCollectionMoveInput> = {}) {
+        if (!("collectionId" in $$source)) {
+            this["collectionId"] = "";
+        }
+        if (!("fromIndex" in $$source)) {
+            this["fromIndex"] = 0;
+        }
+        if (!("toIndex" in $$source)) {
+            this["toIndex"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCollectionMoveInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCollectionMoveInput {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessCollectionMoveInput($$parsedSource as Partial<WireBusinessCollectionMoveInput>);
+    }
+}
+
+/**
+ * WireBusinessCollectionMutationResult is returned by create/update collection.
+ */
+export class WireBusinessCollectionMutationResult {
+    "id": string;
+    "reviewStatus"?: string;
+
+    /** Creates a new WireBusinessCollectionMutationResult instance. */
+    constructor($$source: Partial<WireBusinessCollectionMutationResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCollectionMutationResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCollectionMutationResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessCollectionMutationResult($$parsedSource as Partial<WireBusinessCollectionMutationResult>);
+    }
+}
+
+/**
+ * WireBusinessCollectionPageResult is a page of collections with a cursor.
+ */
+export class WireBusinessCollectionPageResult {
+    "next"?: string;
+    "collections": WireBusinessCollectionResult[];
+
+    /** Creates a new WireBusinessCollectionPageResult instance. */
+    constructor($$source: Partial<WireBusinessCollectionPageResult> = {}) {
+        if (!("collections" in $$source)) {
+            this["collections"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCollectionPageResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCollectionPageResult {
+        const $$createField1_0 = $$createType21;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("collections" in $$parsedSource) {
+            $$parsedSource["collections"] = $$createField1_0($$parsedSource["collections"]);
+        }
+        return new WireBusinessCollectionPageResult($$parsedSource as Partial<WireBusinessCollectionPageResult>);
+    }
+}
+
+/**
+ * WireBusinessCollectionResult is a collection plus its products and review info.
+ */
+export class WireBusinessCollectionResult {
+    "id": string;
+    "name"?: string;
+    "next"?: string;
+    "previous"?: string;
+    "status"?: string;
+    "canAppeal": boolean;
+    "commerceUrl"?: string;
+    "rejectReason"?: string;
+    "products": WireBusinessProductResult[];
+
+    /** Creates a new WireBusinessCollectionResult instance. */
+    constructor($$source: Partial<WireBusinessCollectionResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("canAppeal" in $$source)) {
+            this["canAppeal"] = false;
+        }
+        if (!("products" in $$source)) {
+            this["products"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCollectionResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCollectionResult {
+        const $$createField8_0 = $$createType19;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("products" in $$parsedSource) {
+            $$parsedSource["products"] = $$createField8_0($$parsedSource["products"]);
+        }
+        return new WireBusinessCollectionResult($$parsedSource as Partial<WireBusinessCollectionResult>);
+    }
+}
+
+/**
+ * WireBusinessCollectionUpdateInput is the editable subset of
+ * types.BusinessCollectionUpdate. An empty Name means "leave unchanged" (the
+ * library rejects an empty collection name, so it cannot be used to clear it).
+ */
+export class WireBusinessCollectionUpdateInput {
+    "name"?: string;
+    "addProductIds"?: string[];
+    "removeProductIds"?: string[];
+
+    /** Creates a new WireBusinessCollectionUpdateInput instance. */
+    constructor($$source: Partial<WireBusinessCollectionUpdateInput> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCollectionUpdateInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCollectionUpdateInput {
+        const $$createField1_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("addProductIds" in $$parsedSource) {
+            $$parsedSource["addProductIds"] = $$createField1_0($$parsedSource["addProductIds"]);
+        }
+        if ("removeProductIds" in $$parsedSource) {
+            $$parsedSource["removeProductIds"] = $$createField2_0($$parsedSource["removeProductIds"]);
+        }
+        return new WireBusinessCollectionUpdateInput($$parsedSource as Partial<WireBusinessCollectionUpdateInput>);
+    }
+}
+
+/**
+ * WireBusinessComplianceInput is the bindable subset of
+ * types.BusinessComplianceInfo.
+ */
+export class WireBusinessComplianceInput {
+    "countryCodeOrigin"?: string;
+    "importerName"?: string;
+    "importerAddress"?: WireBusinessAddressInput | null;
+
+    /** Creates a new WireBusinessComplianceInput instance. */
+    constructor($$source: Partial<WireBusinessComplianceInput> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessComplianceInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessComplianceInput {
+        const $$createField2_0 = $$createType23;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("importerAddress" in $$parsedSource) {
+            $$parsedSource["importerAddress"] = $$createField2_0($$parsedSource["importerAddress"]);
+        }
+        return new WireBusinessComplianceInput($$parsedSource as Partial<WireBusinessComplianceInput>);
+    }
+}
+
+/**
+ * WireBusinessCoverPhotoResult carries the server-assigned cover photo ID.
+ */
+export class WireBusinessCoverPhotoResult {
+    "id": string;
+
+    /** Creates a new WireBusinessCoverPhotoResult instance. */
+    constructor($$source: Partial<WireBusinessCoverPhotoResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessCoverPhotoResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessCoverPhotoResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessCoverPhotoResult($$parsedSource as Partial<WireBusinessCoverPhotoResult>);
+    }
+}
+
+/**
+ * WireBusinessDeleteProductsResult reports the server-confirmed delete count.
+ */
+export class WireBusinessDeleteProductsResult {
+    "deletedCount": number;
+
+    /** Creates a new WireBusinessDeleteProductsResult instance. */
+    constructor($$source: Partial<WireBusinessDeleteProductsResult> = {}) {
+        if (!("deletedCount" in $$source)) {
+            this["deletedCount"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessDeleteProductsResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessDeleteProductsResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessDeleteProductsResult($$parsedSource as Partial<WireBusinessDeleteProductsResult>);
+    }
+}
+
+/**
+ * WireBusinessEligibilityResult mirrors types.BusinessEligibility.
+ */
+export class WireBusinessEligibilityResult {
+    "features": WireBusinessFeatureEligibilityResult[];
+
+    /** Creates a new WireBusinessEligibilityResult instance. */
+    constructor($$source: Partial<WireBusinessEligibilityResult> = {}) {
+        if (!("features" in $$source)) {
+            this["features"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessEligibilityResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessEligibilityResult {
+        const $$createField0_0 = $$createType25;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("features" in $$parsedSource) {
+            $$parsedSource["features"] = $$createField0_0($$parsedSource["features"]);
+        }
+        return new WireBusinessEligibilityResult($$parsedSource as Partial<WireBusinessEligibilityResult>);
+    }
+}
+
+export class WireBusinessFacebookBusinessResult {
+    "id": string;
+    "displayName"?: string;
+    "catalogId"?: string;
+    "catalogState"?: string;
+
+    /** Creates a new WireBusinessFacebookBusinessResult instance. */
+    constructor($$source: Partial<WireBusinessFacebookBusinessResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessFacebookBusinessResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessFacebookBusinessResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessFacebookBusinessResult($$parsedSource as Partial<WireBusinessFacebookBusinessResult>);
+    }
+}
+
+export class WireBusinessFacebookPageResult {
+    "id": string;
+    "displayName"?: string;
+    "profileSync"?: string;
+    "profilePictureUrl"?: string;
+    "showOnProfile": boolean;
+    "whatsappAsPageButton": boolean;
+    "hasActiveCtwaAd": boolean;
+    "hasCreatedAd": boolean;
+
+    /** Creates a new WireBusinessFacebookPageResult instance. */
+    constructor($$source: Partial<WireBusinessFacebookPageResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("showOnProfile" in $$source)) {
+            this["showOnProfile"] = false;
+        }
+        if (!("whatsappAsPageButton" in $$source)) {
+            this["whatsappAsPageButton"] = false;
+        }
+        if (!("hasActiveCtwaAd" in $$source)) {
+            this["hasActiveCtwaAd"] = false;
+        }
+        if (!("hasCreatedAd" in $$source)) {
+            this["hasCreatedAd"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessFacebookPageResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessFacebookPageResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessFacebookPageResult($$parsedSource as Partial<WireBusinessFacebookPageResult>);
+    }
+}
+
+export class WireBusinessFeatureEligibilityResult {
+    "feature": string;
+    "status": string;
+    "expiration"?: number;
+    "additionalParams"?: string;
+    "showPrivacyInterstitial"?: boolean | null;
+    "v1Enabled"?: boolean | null;
+
+    /** Creates a new WireBusinessFeatureEligibilityResult instance. */
+    constructor($$source: Partial<WireBusinessFeatureEligibilityResult> = {}) {
+        if (!("feature" in $$source)) {
+            this["feature"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessFeatureEligibilityResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessFeatureEligibilityResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessFeatureEligibilityResult($$parsedSource as Partial<WireBusinessFeatureEligibilityResult>);
+    }
+}
+
+/**
+ * WireBusinessImageUploadResult carries the URL returned by the product-image
+ * upload endpoint. No media key or upload token is exposed.
+ */
+export class WireBusinessImageUploadResult {
+    "url": string;
+
+    /** Creates a new WireBusinessImageUploadResult instance. */
+    constructor($$source: Partial<WireBusinessImageUploadResult> = {}) {
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessImageUploadResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessImageUploadResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessImageUploadResult($$parsedSource as Partial<WireBusinessImageUploadResult>);
+    }
+}
+
+export class WireBusinessInstagramResult {
+    "handle"?: string;
+    "displayName"?: string;
+    "profilePictureUrl"?: string;
+    "showOnProfile": boolean;
+
+    /** Creates a new WireBusinessInstagramResult instance. */
+    constructor($$source: Partial<WireBusinessInstagramResult> = {}) {
+        if (!("showOnProfile" in $$source)) {
+            this["showOnProfile"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessInstagramResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessInstagramResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessInstagramResult($$parsedSource as Partial<WireBusinessInstagramResult>);
+    }
+}
+
+/**
+ * WireBusinessLinkedAccountsResult mirrors types.BusinessLinkedAccounts. Absent
+ * accounts stay nil so the UI can distinguish "not linked" from empty strings.
+ */
+export class WireBusinessLinkedAccountsResult {
+    "facebookPage"?: WireBusinessFacebookPageResult | null;
+    "facebookBusiness"?: WireBusinessFacebookBusinessResult | null;
+    "instagramProfessional"?: WireBusinessInstagramResult | null;
+    "whatsappAdIdentity"?: WireBusinessAdIdentityResult | null;
+
+    /** Creates a new WireBusinessLinkedAccountsResult instance. */
+    constructor($$source: Partial<WireBusinessLinkedAccountsResult> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessLinkedAccountsResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessLinkedAccountsResult {
+        const $$createField0_0 = $$createType27;
+        const $$createField1_0 = $$createType29;
+        const $$createField2_0 = $$createType31;
+        const $$createField3_0 = $$createType33;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("facebookPage" in $$parsedSource) {
+            $$parsedSource["facebookPage"] = $$createField0_0($$parsedSource["facebookPage"]);
+        }
+        if ("facebookBusiness" in $$parsedSource) {
+            $$parsedSource["facebookBusiness"] = $$createField1_0($$parsedSource["facebookBusiness"]);
+        }
+        if ("instagramProfessional" in $$parsedSource) {
+            $$parsedSource["instagramProfessional"] = $$createField2_0($$parsedSource["instagramProfessional"]);
+        }
+        if ("whatsappAdIdentity" in $$parsedSource) {
+            $$parsedSource["whatsappAdIdentity"] = $$createField3_0($$parsedSource["whatsappAdIdentity"]);
+        }
+        return new WireBusinessLinkedAccountsResult($$parsedSource as Partial<WireBusinessLinkedAccountsResult>);
+    }
+}
+
+/**
+ * WireBusinessMediaItem is one product image or video. The URL is the original
+ * media URL; product images fall back to the request URL when the original is
+ * absent, while videos carry no request URL and may also expose a thumbnail URL.
+ * Nothing is synthesized.
+ */
+export class WireBusinessMediaItem {
+    "id": string;
+    "url"?: string;
+    "thumbnailUrl"?: string;
+
+    /** Creates a new WireBusinessMediaItem instance. */
+    constructor($$source: Partial<WireBusinessMediaItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessMediaItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessMediaItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessMediaItem($$parsedSource as Partial<WireBusinessMediaItem>);
+    }
+}
+
+/**
+ * WireBusinessMerchantComplianceInput is a flattened, primitive-only form of
+ * types.BusinessMerchantCompliance.
+ */
+export class WireBusinessMerchantComplianceInput {
+    "entityName": string;
+    "entityType": string;
+    "isRegistered"?: boolean;
+    "entityTypeCustom"?: string;
+    "customerCareEmail"?: string;
+    "customerCareLandline"?: string;
+    "customerCareMobile"?: string;
+    "grievanceOfficerName"?: string;
+    "grievanceOfficerEmail"?: string;
+    "grievanceOfficerLandline"?: string;
+    "grievanceOfficerMobile"?: string;
+
+    /** Creates a new WireBusinessMerchantComplianceInput instance. */
+    constructor($$source: Partial<WireBusinessMerchantComplianceInput> = {}) {
+        if (!("entityName" in $$source)) {
+            this["entityName"] = "";
+        }
+        if (!("entityType" in $$source)) {
+            this["entityType"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessMerchantComplianceInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessMerchantComplianceInput {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessMerchantComplianceInput($$parsedSource as Partial<WireBusinessMerchantComplianceInput>);
+    }
+}
+
+/**
+ * WireBusinessMerchantComplianceResult is the bindable subset of
+ * types.BusinessMerchantCompliance (contact details are flattened scalars).
+ */
+export class WireBusinessMerchantComplianceResult {
+    "entityName"?: string;
+    "entityType"?: string;
+    "isRegistered": boolean;
+    "entityTypeCustom"?: string;
+    "customerCare": WireBusinessMerchantContactResult;
+    "grievanceOfficer": WireBusinessMerchantOfficerResult;
+
+    /** Creates a new WireBusinessMerchantComplianceResult instance. */
+    constructor($$source: Partial<WireBusinessMerchantComplianceResult> = {}) {
+        if (!("isRegistered" in $$source)) {
+            this["isRegistered"] = false;
+        }
+        if (!("customerCare" in $$source)) {
+            this["customerCare"] = (new WireBusinessMerchantContactResult());
+        }
+        if (!("grievanceOfficer" in $$source)) {
+            this["grievanceOfficer"] = (new WireBusinessMerchantOfficerResult());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessMerchantComplianceResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessMerchantComplianceResult {
+        const $$createField4_0 = $$createType34;
+        const $$createField5_0 = $$createType35;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("customerCare" in $$parsedSource) {
+            $$parsedSource["customerCare"] = $$createField4_0($$parsedSource["customerCare"]);
+        }
+        if ("grievanceOfficer" in $$parsedSource) {
+            $$parsedSource["grievanceOfficer"] = $$createField5_0($$parsedSource["grievanceOfficer"]);
+        }
+        return new WireBusinessMerchantComplianceResult($$parsedSource as Partial<WireBusinessMerchantComplianceResult>);
+    }
+}
+
+export class WireBusinessMerchantContactResult {
+    "email"?: string;
+    "landlineNumber"?: string;
+    "mobileNumber"?: string;
+
+    /** Creates a new WireBusinessMerchantContactResult instance. */
+    constructor($$source: Partial<WireBusinessMerchantContactResult> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessMerchantContactResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessMerchantContactResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessMerchantContactResult($$parsedSource as Partial<WireBusinessMerchantContactResult>);
+    }
+}
+
+export class WireBusinessMerchantOfficerResult {
+    "name"?: string;
+    "email"?: string;
+    "landlineNumber"?: string;
+    "mobileNumber"?: string;
+
+    /** Creates a new WireBusinessMerchantOfficerResult instance. */
+    constructor($$source: Partial<WireBusinessMerchantOfficerResult> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessMerchantOfficerResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessMerchantOfficerResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireBusinessMerchantOfficerResult($$parsedSource as Partial<WireBusinessMerchantOfficerResult>);
+    }
+}
+
+/**
+ * WireBusinessProductInput is the primitive-only form of
+ * types.BusinessProductInput. Empty optional strings are treated as unset by
+ * the library, so no sentinel pointers are needed at the IPC boundary.
+ */
+export class WireBusinessProductInput {
+    "name": string;
+    "description"?: string;
+    "currency"?: string;
+    "price"?: string;
+    "salePrice"?: string;
+    "url"?: string;
+    "retailerId"?: string;
+    "hidden"?: boolean;
+    "imageUrls": string[];
+    "videoUrls"?: string[];
+    "complianceCategory"?: string;
+    "compliance"?: WireBusinessComplianceInput | null;
+
+    /** Creates a new WireBusinessProductInput instance. */
+    constructor($$source: Partial<WireBusinessProductInput> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("imageUrls" in $$source)) {
+            this["imageUrls"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessProductInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessProductInput {
+        const $$createField8_0 = $$createType0;
+        const $$createField9_0 = $$createType0;
+        const $$createField11_0 = $$createType37;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("imageUrls" in $$parsedSource) {
+            $$parsedSource["imageUrls"] = $$createField8_0($$parsedSource["imageUrls"]);
+        }
+        if ("videoUrls" in $$parsedSource) {
+            $$parsedSource["videoUrls"] = $$createField9_0($$parsedSource["videoUrls"]);
+        }
+        if ("compliance" in $$parsedSource) {
+            $$parsedSource["compliance"] = $$createField11_0($$parsedSource["compliance"]);
+        }
+        return new WireBusinessProductInput($$parsedSource as Partial<WireBusinessProductInput>);
+    }
+}
+
+/**
+ * WireBusinessProductResult is the bindable subset of types.BusinessProduct.
+ * Nested compliance/variant structures are intentionally omitted; the scalar
+ * compliance category and review status are preserved.
+ */
+export class WireBusinessProductResult {
+    "id": string;
+    "retailerId"?: string;
+    "belongsTo"?: string;
+    "name"?: string;
+    "description"?: string;
+    "price"?: string;
+    "currency"?: string;
+    "url"?: string;
+    "shimmedUrl"?: string;
+    "hidden": boolean;
+    "sanctioned": boolean;
+    "maxAvailable"?: number;
+    "availability"?: string;
+    "complianceCategory"?: string;
+    "status"?: string;
+    "canAppeal": boolean;
+    "images": WireBusinessMediaItem[];
+    "videos": WireBusinessMediaItem[];
+    "salePrice"?: string;
+    "saleStart"?: string;
+    "saleEnd"?: string;
+
+    /** Creates a new WireBusinessProductResult instance. */
+    constructor($$source: Partial<WireBusinessProductResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("hidden" in $$source)) {
+            this["hidden"] = false;
+        }
+        if (!("sanctioned" in $$source)) {
+            this["sanctioned"] = false;
+        }
+        if (!("canAppeal" in $$source)) {
+            this["canAppeal"] = false;
+        }
+        if (!("images" in $$source)) {
+            this["images"] = [];
+        }
+        if (!("videos" in $$source)) {
+            this["videos"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireBusinessProductResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireBusinessProductResult {
+        const $$createField16_0 = $$createType39;
+        const $$createField17_0 = $$createType39;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("images" in $$parsedSource) {
+            $$parsedSource["images"] = $$createField16_0($$parsedSource["images"]);
+        }
+        if ("videos" in $$parsedSource) {
+            $$parsedSource["videos"] = $$createField17_0($$parsedSource["videos"]);
+        }
+        return new WireBusinessProductResult($$parsedSource as Partial<WireBusinessProductResult>);
+    }
+}
+
+export class WireGroupInviteInfo {
+    "jid": string;
+    "owner_jid": string;
+    "name": string;
+    "topic": string;
+    "topic_deleted": boolean;
+    "participant_count": number;
+    "is_parent": boolean;
+    "is_default_sub_group": boolean;
+    "linked_parent_jid"?: string;
+    "suspended": boolean;
+
+    /** Creates a new WireGroupInviteInfo instance. */
+    constructor($$source: Partial<WireGroupInviteInfo> = {}) {
+        if (!("jid" in $$source)) {
+            this["jid"] = "";
+        }
+        if (!("owner_jid" in $$source)) {
+            this["owner_jid"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("topic" in $$source)) {
+            this["topic"] = "";
+        }
+        if (!("topic_deleted" in $$source)) {
+            this["topic_deleted"] = false;
+        }
+        if (!("participant_count" in $$source)) {
+            this["participant_count"] = 0;
+        }
+        if (!("is_parent" in $$source)) {
+            this["is_parent"] = false;
+        }
+        if (!("is_default_sub_group" in $$source)) {
+            this["is_default_sub_group"] = false;
+        }
+        if (!("suspended" in $$source)) {
+            this["suspended"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireGroupInviteInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireGroupInviteInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireGroupInviteInfo($$parsedSource as Partial<WireGroupInviteInfo>);
+    }
+}
+
+/**
+ * WireHistorySyncDTO is the JSON-safe, metadata-only projection of a parsed
+ * waHistorySync.HistorySync. No conversation content, push names or contacts
+ * are returned: the client already stores those through the normal event path.
+ */
+export class WireHistorySyncDTO {
+    "syncType": string;
+    "chunkOrder": number;
+    "progress": number;
+    "conversations": number;
+    "pushNames": number;
+    "inlineContacts": number;
+    "recentStickers": number;
+    "callLogRecords": number;
+    "hasGlobalSettings": boolean;
+
+    /** Creates a new WireHistorySyncDTO instance. */
+    constructor($$source: Partial<WireHistorySyncDTO> = {}) {
+        if (!("syncType" in $$source)) {
+            this["syncType"] = "";
+        }
+        if (!("chunkOrder" in $$source)) {
+            this["chunkOrder"] = 0;
+        }
+        if (!("progress" in $$source)) {
+            this["progress"] = 0;
+        }
+        if (!("conversations" in $$source)) {
+            this["conversations"] = 0;
+        }
+        if (!("pushNames" in $$source)) {
+            this["pushNames"] = 0;
+        }
+        if (!("inlineContacts" in $$source)) {
+            this["inlineContacts"] = 0;
+        }
+        if (!("recentStickers" in $$source)) {
+            this["recentStickers"] = 0;
+        }
+        if (!("callLogRecords" in $$source)) {
+            this["callLogRecords"] = 0;
+        }
+        if (!("hasGlobalSettings" in $$source)) {
+            this["hasGlobalSettings"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireHistorySyncDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireHistorySyncDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireHistorySyncDTO($$parsedSource as Partial<WireHistorySyncDTO>);
+    }
+}
+
+export class WireIdentityVerificationCodes {
+    "user_id": string;
+    "phone_number": string;
+    "username"?: string;
+    "numeric_code": string;
+    "display_qr_code"?: string;
+    "verification_qr_code"?: string;
+
+    /** Creates a new WireIdentityVerificationCodes instance. */
+    constructor($$source: Partial<WireIdentityVerificationCodes> = {}) {
+        if (!("user_id" in $$source)) {
+            this["user_id"] = "";
+        }
+        if (!("phone_number" in $$source)) {
+            this["phone_number"] = "";
+        }
+        if (!("numeric_code" in $$source)) {
+            this["numeric_code"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireIdentityVerificationCodes instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireIdentityVerificationCodes {
+        const $$createField4_0 = $Create.ByteSlice;
+        const $$createField5_0 = $Create.ByteSlice;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("display_qr_code" in $$parsedSource) {
+            $$parsedSource["display_qr_code"] = $$createField4_0($$parsedSource["display_qr_code"]);
+        }
+        if ("verification_qr_code" in $$parsedSource) {
+            $$parsedSource["verification_qr_code"] = $$createField5_0($$parsedSource["verification_qr_code"]);
+        }
+        return new WireIdentityVerificationCodes($$parsedSource as Partial<WireIdentityVerificationCodes>);
+    }
+}
+
+/**
+ * WireMediaUploadResult is the frontend-safe subset of a HyperMeow
+ * UploadResponse. The media key, file hashes and streaming sidecar are
+ * deliberately NOT exposed here: they belong inside the protobuf message built
+ * for the send path, never in a generic IPC DTO.
+ */
+export class WireMediaUploadResult {
+    "url": string;
+    "directPath": string;
+    "handle": string;
+    "objectId": string;
+    "fileLength": number;
+    "mime"?: string;
+
+    /** Creates a new WireMediaUploadResult instance. */
+    constructor($$source: Partial<WireMediaUploadResult> = {}) {
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("directPath" in $$source)) {
+            this["directPath"] = "";
+        }
+        if (!("handle" in $$source)) {
+            this["handle"] = "";
+        }
+        if (!("objectId" in $$source)) {
+            this["objectId"] = "";
+        }
+        if (!("fileLength" in $$source)) {
+            this["fileLength"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireMediaUploadResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireMediaUploadResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireMediaUploadResult($$parsedSource as Partial<WireMediaUploadResult>);
+    }
+}
+
+/**
+ * WireMessageKeyDTO mirrors waCommon.MessageKey without exposing the protobuf.
+ */
+export class WireMessageKeyDTO {
+    "remoteJid"?: string;
+    "fromMe": boolean;
+    "id"?: string;
+    "participant"?: string;
+
+    /** Creates a new WireMessageKeyDTO instance. */
+    constructor($$source: Partial<WireMessageKeyDTO> = {}) {
+        if (!("fromMe" in $$source)) {
+            this["fromMe"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireMessageKeyDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireMessageKeyDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireMessageKeyDTO($$parsedSource as Partial<WireMessageKeyDTO>);
+    }
+}
+
+/**
+ * WireMessageSendResult is the JSON-safe projection of whatsmeow.SendResponse.
+ */
+export class WireMessageSendResult {
+    "id": string;
+    "serverId"?: number;
+    "timestamp"?: number;
+    "sender"?: string;
+    "chat"?: string;
+    "pHashMismatch": boolean;
+
+    /** Creates a new WireMessageSendResult instance. */
+    constructor($$source: Partial<WireMessageSendResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("pHashMismatch" in $$source)) {
+            this["pHashMismatch"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireMessageSendResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireMessageSendResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireMessageSendResult($$parsedSource as Partial<WireMessageSendResult>);
+    }
+}
+
+/**
+ * WireOrderDetailsResult is the bindable subset of types.OrderDetails.
+ */
+export class WireOrderDetailsResult {
+    "id": string;
+
+    /**
+     * Unix seconds
+     */
+    "createdAt": number;
+    "catalogId"?: string;
+    "subtotal": number;
+    "total": number;
+    "currency"?: string;
+    "priceStatus"?: string;
+    "products": WireOrderProductResult[];
+
+    /** Creates a new WireOrderDetailsResult instance. */
+    constructor($$source: Partial<WireOrderDetailsResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+        if (!("subtotal" in $$source)) {
+            this["subtotal"] = 0;
+        }
+        if (!("total" in $$source)) {
+            this["total"] = 0;
+        }
+        if (!("products" in $$source)) {
+            this["products"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireOrderDetailsResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireOrderDetailsResult {
+        const $$createField7_0 = $$createType41;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("products" in $$parsedSource) {
+            $$parsedSource["products"] = $$createField7_0($$parsedSource["products"]);
+        }
+        return new WireOrderDetailsResult($$parsedSource as Partial<WireOrderDetailsResult>);
+    }
+}
+
+/**
+ * WireOrderProductResult is one line item of WireOrderDetailsResult.
+ */
+export class WireOrderProductResult {
+    "id": string;
+    "name"?: string;
+    "imageId"?: string;
+    "imageUrl"?: string;
+    "price": number;
+    "currency"?: string;
+    "quantity": number;
+    "variantProperties"?: string;
+
+    /** Creates a new WireOrderProductResult instance. */
+    constructor($$source: Partial<WireOrderProductResult> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("price" in $$source)) {
+            this["price"] = 0;
+        }
+        if (!("quantity" in $$source)) {
+            this["quantity"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireOrderProductResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireOrderProductResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireOrderProductResult($$parsedSource as Partial<WireOrderProductResult>);
+    }
+}
+
+/**
+ * WirePushNotificationConfig is a lossy, JSON-safe projection of the
+ * waBinary.Node returned by Client.GetServerPushNotificationConfig. Only
+ * scalar string/int/bool/JID attributes and immediate child tags are exposed;
+ * binary content and nested nodes are intentionally dropped.
+ */
+export class WirePushNotificationConfig {
+    "attrs": { [_ in string]?: string };
+    "child_tags": string[];
+
+    /** Creates a new WirePushNotificationConfig instance. */
+    constructor($$source: Partial<WirePushNotificationConfig> = {}) {
+        if (!("attrs" in $$source)) {
+            this["attrs"] = {};
+        }
+        if (!("child_tags" in $$source)) {
+            this["child_tags"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WirePushNotificationConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WirePushNotificationConfig {
+        const $$createField0_0 = $$createType42;
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("attrs" in $$parsedSource) {
+            $$parsedSource["attrs"] = $$createField0_0($$parsedSource["attrs"]);
+        }
+        if ("child_tags" in $$parsedSource) {
+            $$parsedSource["child_tags"] = $$createField1_0($$parsedSource["child_tags"]);
+        }
+        return new WirePushNotificationConfig($$parsedSource as Partial<WirePushNotificationConfig>);
+    }
+}
+
+export class WireSendResponse {
+    "id": string;
+    "server_id"?: number;
+    "timestamp"?: number;
+    "sender"?: string;
+    "chat"?: string;
+    "p_hash_mismatch": boolean;
+
+    /** Creates a new WireSendResponse instance. */
+    constructor($$source: Partial<WireSendResponse> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("p_hash_mismatch" in $$source)) {
+            this["p_hash_mismatch"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireSendResponse instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireSendResponse {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireSendResponse($$parsedSource as Partial<WireSendResponse>);
+    }
+}
+
+export class WireUsernameResolution {
+    "lid": string;
+    "username": string;
+    "key_required": boolean;
+
+    /** Creates a new WireUsernameResolution instance. */
+    constructor($$source: Partial<WireUsernameResolution> = {}) {
+        if (!("lid" in $$source)) {
+            this["lid"] = "";
+        }
+        if (!("username" in $$source)) {
+            this["username"] = "";
+        }
+        if (!("key_required" in $$source)) {
+            this["key_required"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WireUsernameResolution instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WireUsernameResolution {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WireUsernameResolution($$parsedSource as Partial<WireUsernameResolution>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = $Create.Array($Create.Any);
 const $$createType1 = $Create.Nullable($$createType0);
@@ -1314,3 +2600,30 @@ const $$createType12 = $Create.Array($$createType11);
 const $$createType13 = $Create.Array($Create.Any);
 const $$createType14 = StickerPackItem.createFrom;
 const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = WireMessageKeyDTO.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = WireBusinessProductResult.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = WireBusinessCollectionResult.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = WireBusinessAddressInput.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = WireBusinessFeatureEligibilityResult.createFrom;
+const $$createType25 = $Create.Array($$createType24);
+const $$createType26 = WireBusinessFacebookPageResult.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);
+const $$createType28 = WireBusinessFacebookBusinessResult.createFrom;
+const $$createType29 = $Create.Nullable($$createType28);
+const $$createType30 = WireBusinessInstagramResult.createFrom;
+const $$createType31 = $Create.Nullable($$createType30);
+const $$createType32 = WireBusinessAdIdentityResult.createFrom;
+const $$createType33 = $Create.Nullable($$createType32);
+const $$createType34 = WireBusinessMerchantContactResult.createFrom;
+const $$createType35 = WireBusinessMerchantOfficerResult.createFrom;
+const $$createType36 = WireBusinessComplianceInput.createFrom;
+const $$createType37 = $Create.Nullable($$createType36);
+const $$createType38 = WireBusinessMediaItem.createFrom;
+const $$createType39 = $Create.Array($$createType38);
+const $$createType40 = WireOrderProductResult.createFrom;
+const $$createType41 = $Create.Array($$createType40);
+const $$createType42 = $Create.Map($Create.Any, $Create.Any);
