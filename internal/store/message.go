@@ -220,6 +220,10 @@ func NewMessageStore() (*MessageStore, error) {
 		if err != nil {
 			return err
 		}
+		_, err = tx.Exec(query.CreateMessageReceiptsTable)
+		if err != nil {
+			return err
+		}
 		_, err = tx.Exec(query.CreateCallLogTable)
 		if err != nil {
 			return err

@@ -1408,6 +1408,7 @@ func (a *Api) mainEventHandler(evt any) {
 		case "played-self":
 			status = "played"
 		}
+		a.persistReceiptEvent(v)
 		a.app.Event.Emit("wa:message_receipt", map[string]any{
 			"chatId":     v.Chat.String(),
 			"status":     status,

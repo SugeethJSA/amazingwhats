@@ -414,6 +414,18 @@ export function GetMediaHubItems(kind: string): $CancellablePromise<$models.Medi
 }
 
 /**
+ * GetMessageReceipts returns the durable per-message read-receipt ledger for a
+ * message. It is a Wails binding: callers must supply both a chat JID and a
+ * message ID. When nobody has read the message an empty slice is returned; no
+ * readers are ever fabricated.
+ */
+export function GetMessageReceipts(chatJID: string, messageID: string): $CancellablePromise<store$0.MessageReceipt[]> {
+    return $Call.ByID(711711196, chatJID, messageID).then(($result: any) => {
+        return $$createType34($result);
+    });
+}
+
+/**
  * GetMyBusinessProfile returns the logged-in account's own business profile.
  * It deliberately bypasses businessProfileCache: self data must be fresh,
  * especially immediately after an update.
@@ -435,25 +447,25 @@ export function GetMyJID(): $CancellablePromise<string> {
 
 export function GetNewsletterByInvite(inviteCode: string): $CancellablePromise<$models.NewsletterInfo | null> {
     return $Call.ByID(3138587213, inviteCode).then(($result: any) => {
-        return $$createType34($result);
+        return $$createType36($result);
     });
 }
 
 export function GetNewsletterInfo(jidStr: string): $CancellablePromise<$models.NewsletterInfo | null> {
     return $Call.ByID(501436645, jidStr).then(($result: any) => {
-        return $$createType34($result);
+        return $$createType36($result);
     });
 }
 
 export function GetNewsletterMessageUpdates(jidStr: string, count: number, afterServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
     return $Call.ByID(1665409314, jidStr, count, afterServerID).then(($result: any) => {
-        return $$createType36($result);
+        return $$createType38($result);
     });
 }
 
 export function GetNewsletterMessages(jidStr: string, count: number, beforeServerID: number): $CancellablePromise<$models.NewsletterMessageItem[]> {
     return $Call.ByID(3794345109, jidStr, count, beforeServerID).then(($result: any) => {
-        return $$createType36($result);
+        return $$createType38($result);
     });
 }
 
@@ -466,7 +478,7 @@ export function GetNotificationsEnabled(): $CancellablePromise<boolean> {
 
 export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.PinnedMessage[]> {
     return $Call.ByID(1468747240, chatJID).then(($result: any) => {
-        return $$createType38($result);
+        return $$createType40($result);
     });
 }
 
@@ -477,7 +489,7 @@ export function GetPinnedMessages(chatJID: string): $CancellablePromise<store$0.
  */
 export function GetPollVotes(chatJID: string, pollMessageID: string): $CancellablePromise<$models.PollVotesResult> {
     return $Call.ByID(139090880, chatJID, pollMessageID).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType41($result);
     });
 }
 
@@ -486,7 +498,7 @@ export function GetPollVotes(chatJID: string, pollMessageID: string): $Cancellab
  */
 export function GetPrivacySettings(): $CancellablePromise<$models.PrivacySettingsResponse> {
     return $Call.ByID(502605871).then(($result: any) => {
-        return $$createType40($result);
+        return $$createType42($result);
     });
 }
 
@@ -507,13 +519,13 @@ export function GetProfileColor(jidStr: string): $CancellablePromise<string> {
  */
 export function GetRecentCalls(limit: number): $CancellablePromise<store$0.CallLogEntry[]> {
     return $Call.ByID(1741939722, limit).then(($result: any) => {
-        return $$createType42($result);
+        return $$createType44($result);
     });
 }
 
 export function GetSearchSuggestions(query: string, limit: number): $CancellablePromise<string[]> {
     return $Call.ByID(2906839967, query, limit).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
@@ -536,19 +548,19 @@ export function GetSettings(): $CancellablePromise<{ [_ in string]?: any }> {
 
 export function GetStatusPrivacy(): $CancellablePromise<$models.StatusPrivacyEntry[]> {
     return $Call.ByID(2740959596).then(($result: any) => {
-        return $$createType45($result);
+        return $$createType47($result);
     });
 }
 
 export function GetSubscribedNewsletters(): $CancellablePromise<$models.NewsletterInfo[]> {
     return $Call.ByID(3249859926).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
 export function GetUserInfo(jidStrs: string[]): $CancellablePromise<$models.UserInfoResult[]> {
     return $Call.ByID(3312952789, jidStrs).then(($result: any) => {
-        return $$createType48($result);
+        return $$createType50($result);
     });
 }
 
@@ -578,7 +590,7 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 
 export function IsOnWhatsApp(phoneNumbers: string[]): $CancellablePromise<$models.OnWhatsAppResult[]> {
     return $Call.ByID(3447764437, phoneNumbers).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType52($result);
     });
 }
 
@@ -687,7 +699,7 @@ export function PairPhone(phone: string): $CancellablePromise<string> {
  */
 export function PickAttachmentFile(): $CancellablePromise<$models.PickedFile | null> {
     return $Call.ByID(3178011844).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType54($result);
     });
 }
 
@@ -745,13 +757,13 @@ export function ResetConnection(): $CancellablePromise<void> {
 
 export function ResolveBusinessMessageLink(code: string): $CancellablePromise<$models.BusinessLinkResult | null> {
     return $Call.ByID(517205543, code).then(($result: any) => {
-        return $$createType54($result);
+        return $$createType56($result);
     });
 }
 
 export function ResolveContactQRLink(code: string): $CancellablePromise<$models.ContactQRLinkResult | null> {
     return $Call.ByID(3762761161, code).then(($result: any) => {
-        return $$createType56($result);
+        return $$createType58($result);
     });
 }
 
@@ -786,7 +798,7 @@ export function SearchContacts(query: string): $CancellablePromise<$models.Conta
 
 export function SearchMessages(params: $models.SearchParams): $CancellablePromise<$models.SearchResult[]> {
     return $Call.ByID(3343739474, params).then(($result: any) => {
-        return $$createType58($result);
+        return $$createType60($result);
     });
 }
 
@@ -1100,7 +1112,7 @@ export function ToggleMessageLabel(jidStr: string, messageID: string, labelID: s
  */
 export function TryFetchPrivacySettings(ignoreCache: boolean): $CancellablePromise<$models.PrivacySettingsResponse> {
     return $Call.ByID(3316594262, ignoreCache).then(($result: any) => {
-        return $$createType40($result);
+        return $$createType42($result);
     });
 }
 
@@ -1162,7 +1174,7 @@ export function WireAppealBusinessProduct(productID: string, reason: string): $C
  */
 export function WireBuildMessageKey(chatJID: string, senderJID: string, messageID: string): $CancellablePromise<$models.WireMessageKeyDTO> {
     return $Call.ByID(4258162303, chatJID, senderJID, messageID).then(($result: any) => {
-        return $$createType59($result);
+        return $$createType61($result);
     });
 }
 
@@ -1175,7 +1187,7 @@ export function WireBuildMessageKey(chatJID: string, senderJID: string, messageI
  */
 export function WireBuildPollVote(chatJID: string, pollMessageID: string, optionNames: string[], send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
     return $Call.ByID(490458616, chatJID, pollMessageID, optionNames, send).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -1207,7 +1219,7 @@ export function WireBuildStickerReuploadRequest(hashBase64s: string[], send: boo
  */
 export function WireBuildUnavailableMessageRequest(chatJID: string, senderJID: string, messageID: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
     return $Call.ByID(8751581, chatJID, senderJID, messageID, send).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -1223,7 +1235,7 @@ export function WireCreateBusinessCatalog(): $CancellablePromise<void> {
  */
 export function WireCreateBusinessCollection(name: string, productIDs: string[]): $CancellablePromise<$models.WireBusinessCollectionMutationResult> {
     return $Call.ByID(2327875857, name, productIDs).then(($result: any) => {
-        return $$createType61($result);
+        return $$createType63($result);
     });
 }
 
@@ -1234,7 +1246,7 @@ export function WireCreateBusinessCollection(name: string, productIDs: string[])
  */
 export function WireCreateBusinessProduct(input: $models.WireBusinessProductInput): $CancellablePromise<$models.WireBusinessProductResult> {
     return $Call.ByID(1869420204, input).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType64($result);
     });
 }
 
@@ -1258,7 +1270,7 @@ export function WireDeleteBusinessCoverPhoto(coverID: string): $CancellablePromi
  */
 export function WireDeleteBusinessProducts(productIDs: string[]): $CancellablePromise<$models.WireBusinessDeleteProductsResult> {
     return $Call.ByID(1740991918, productIDs).then(($result: any) => {
-        return $$createType63($result);
+        return $$createType65($result);
     });
 }
 
@@ -1304,7 +1316,7 @@ export function WireDownloadFBToFile(transportBase64: string, mediaType: string,
  */
 export function WireDownloadHistorySync(notifBase64: string, synchronousStorage: boolean): $CancellablePromise<$models.WireHistorySyncDTO> {
     return $Call.ByID(3044828006, notifBase64, synchronousStorage).then(($result: any) => {
-        return $$createType64($result);
+        return $$createType66($result);
     });
 }
 
@@ -1353,7 +1365,7 @@ export function WireDownloadThumbnail(messageBase64: string, kind: string): $Can
  */
 export function WireEncryptComment(chatJID: string, rootMessageID: string, commentBase64: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
     return $Call.ByID(843748669, chatJID, rootMessageID, commentBase64, send).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -1366,7 +1378,7 @@ export function WireEncryptComment(chatJID: string, rootMessageID: string, comme
  */
 export function WireEncryptPollVote(chatJID: string, pollMessageID: string, optionNames: string[], send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
     return $Call.ByID(3775759029, chatJID, pollMessageID, optionNames, send).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -1378,7 +1390,7 @@ export function WireEncryptPollVote(chatJID: string, pollMessageID: string, opti
  */
 export function WireEncryptReaction(chatJID: string, rootMessageID: string, reactionText: string, send: boolean): $CancellablePromise<$models.WireBuiltMessageDTO> {
     return $Call.ByID(1081454115, chatJID, rootMessageID, reactionText, send).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -1389,7 +1401,7 @@ export function WireEncryptReaction(chatJID: string, rootMessageID: string, reac
  */
 export function WireGetBusinessEligibility(features: string[]): $CancellablePromise<$models.WireBusinessEligibilityResult> {
     return $Call.ByID(1313289848, features).then(($result: any) => {
-        return $$createType65($result);
+        return $$createType67($result);
     });
 }
 
@@ -1398,7 +1410,7 @@ export function WireGetBusinessEligibility(features: string[]): $CancellableProm
  */
 export function WireGetBusinessLinkedAccounts(): $CancellablePromise<$models.WireBusinessLinkedAccountsResult> {
     return $Call.ByID(166698254).then(($result: any) => {
-        return $$createType66($result);
+        return $$createType68($result);
     });
 }
 
@@ -1408,7 +1420,7 @@ export function WireGetBusinessLinkedAccounts(): $CancellablePromise<$models.Wir
  */
 export function WireGetBusinessMerchantCompliance(): $CancellablePromise<$models.WireBusinessMerchantComplianceResult> {
     return $Call.ByID(2556847188).then(($result: any) => {
-        return $$createType67($result);
+        return $$createType69($result);
     });
 }
 
@@ -1418,7 +1430,7 @@ export function WireGetBusinessMerchantCompliance(): $CancellablePromise<$models
  */
 export function WireGetCatalog(businessJID: string, after: string, limit: number): $CancellablePromise<$models.WireBusinessCatalogPageResult> {
     return $Call.ByID(564053616, businessJID, after, limit).then(($result: any) => {
-        return $$createType68($result);
+        return $$createType70($result);
     });
 }
 
@@ -1427,7 +1439,7 @@ export function WireGetCatalog(businessJID: string, after: string, limit: number
  */
 export function WireGetCatalogProduct(businessJID: string, productID: string): $CancellablePromise<$models.WireBusinessProductResult> {
     return $Call.ByID(18490303, businessJID, productID).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType64($result);
     });
 }
 
@@ -1436,13 +1448,13 @@ export function WireGetCatalogProduct(businessJID: string, productID: string): $
  */
 export function WireGetCatalogProducts(businessJID: string, productIDs: string[]): $CancellablePromise<$models.WireBusinessProductResult[]> {
     return $Call.ByID(2284214820, businessJID, productIDs).then(($result: any) => {
-        return $$createType69($result);
+        return $$createType71($result);
     });
 }
 
 export function WireGetGroupInfoFromInvite(groupJID: string, inviterJID: string, code: string, expiration: number): $CancellablePromise<$models.WireGroupInviteInfo> {
     return $Call.ByID(3339093073, groupJID, inviterJID, code, expiration).then(($result: any) => {
-        return $$createType70($result);
+        return $$createType72($result);
     });
 }
 
@@ -1453,7 +1465,7 @@ export function WireGetGroupInfoFromInvite(groupJID: string, inviterJID: string,
  */
 export function WireGetIdentityVerificationCodes(userJID: string): $CancellablePromise<$models.WireIdentityVerificationCodes> {
     return $Call.ByID(1997246542, userJID).then(($result: any) => {
-        return $$createType71($result);
+        return $$createType73($result);
     });
 }
 
@@ -1463,7 +1475,7 @@ export function WireGetIdentityVerificationCodes(userJID: string): $CancellableP
  */
 export function WireGetOrderDetails(orderID: string, token: string): $CancellablePromise<$models.WireOrderDetailsResult> {
     return $Call.ByID(2080227735, orderID, token).then(($result: any) => {
-        return $$createType72($result);
+        return $$createType74($result);
     });
 }
 
@@ -1472,7 +1484,7 @@ export function WireGetOrderDetails(orderID: string, token: string): $Cancellabl
  */
 export function WireGetProductCollection(businessJID: string, collectionID: string, after: string, limit: number): $CancellablePromise<$models.WireBusinessCollectionResult> {
     return $Call.ByID(2593780088, businessJID, collectionID, after, limit).then(($result: any) => {
-        return $$createType73($result);
+        return $$createType75($result);
     });
 }
 
@@ -1482,7 +1494,7 @@ export function WireGetProductCollection(businessJID: string, collectionID: stri
  */
 export function WireGetProductCollections(businessJID: string, after: string, collectionLimit: number, itemLimit: number): $CancellablePromise<$models.WireBusinessCollectionPageResult> {
     return $Call.ByID(1800827985, businessJID, after, collectionLimit, itemLimit).then(($result: any) => {
-        return $$createType74($result);
+        return $$createType76($result);
     });
 }
 
@@ -1495,13 +1507,13 @@ export function WireGetProductCollections(businessJID: string, after: string, co
  */
 export function WireGetServerPushNotificationConfig(): $CancellablePromise<$models.WirePushNotificationConfig> {
     return $Call.ByID(3153855275).then(($result: any) => {
-        return $$createType75($result);
+        return $$createType77($result);
     });
 }
 
 export function WireGetUserDevices(jids: string[]): $CancellablePromise<string[]> {
     return $Call.ByID(1550336653, jids).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
@@ -1511,7 +1523,7 @@ export function WireGetUserDevices(jids: string[]): $CancellablePromise<string[]
  */
 export function WireGetUserDevicesContext(jids: string[]): $CancellablePromise<string[]> {
     return $Call.ByID(4186348068, jids).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
@@ -1568,7 +1580,7 @@ export function WireResolveLID(phoneJID: string): $CancellablePromise<string> {
 
 export function WireResolveUsername(username: string, key: string): $CancellablePromise<$models.WireUsernameResolution> {
     return $Call.ByID(1723430881, username, key).then(($result: any) => {
-        return $$createType76($result);
+        return $$createType78($result);
     });
 }
 
@@ -1582,7 +1594,7 @@ export function WireResolveUsername(username: string, key: string): $Cancellable
  */
 export function WireRevokeMessage(chatJID: string, messageID: string): $CancellablePromise<$models.WireMessageSendResult> {
     return $Call.ByID(3942280032, chatJID, messageID).then(($result: any) => {
-        return $$createType77($result);
+        return $$createType79($result);
     });
 }
 
@@ -1624,7 +1636,7 @@ export function WireSendPasskeyConfirmation(): $CancellablePromise<void> {
  */
 export function WireSendPrebuiltStanza(stanza: string, phash: string, timeoutMs: number): $CancellablePromise<$models.WireSendResponse> {
     return $Call.ByID(1418464667, stanza, phash, timeoutMs).then(($result: any) => {
-        return $$createType78($result);
+        return $$createType80($result);
     });
 }
 
@@ -1651,7 +1663,7 @@ export function WireSetBusinessCartEnabled(enabled: boolean): $CancellablePromis
  */
 export function WireSetBusinessCoverPhoto(imageBase64: string): $CancellablePromise<$models.WireBusinessCoverPhotoResult> {
     return $Call.ByID(687143614, imageBase64).then(($result: any) => {
-        return $$createType79($result);
+        return $$createType81($result);
     });
 }
 
@@ -1660,7 +1672,7 @@ export function WireSetBusinessCoverPhoto(imageBase64: string): $CancellableProm
  */
 export function WireSetBusinessMerchantCompliance(input: $models.WireBusinessMerchantComplianceInput): $CancellablePromise<$models.WireBusinessMerchantComplianceResult> {
     return $Call.ByID(604497496, input).then(($result: any) => {
-        return $$createType67($result);
+        return $$createType69($result);
     });
 }
 
@@ -1777,7 +1789,7 @@ export function WireSetWebsocketHTTPClient(proxyURL: string): $CancellablePromis
  */
 export function WireUpdateBusinessCollection(collectionID: string, input: $models.WireBusinessCollectionUpdateInput): $CancellablePromise<$models.WireBusinessCollectionMutationResult> {
     return $Call.ByID(2535332980, collectionID, input).then(($result: any) => {
-        return $$createType61($result);
+        return $$createType63($result);
     });
 }
 
@@ -1786,7 +1798,7 @@ export function WireUpdateBusinessCollection(collectionID: string, input: $model
  */
 export function WireUpdateBusinessProduct(productID: string, input: $models.WireBusinessProductInput): $CancellablePromise<$models.WireBusinessProductResult> {
     return $Call.ByID(4009172455, productID, input).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType64($result);
     });
 }
 
@@ -1797,7 +1809,7 @@ export function WireUpdateBusinessProduct(productID: string, input: $models.Wire
  */
 export function WireUploadBusinessProductImage(imageBase64: string): $CancellablePromise<$models.WireBusinessImageUploadResult> {
     return $Call.ByID(811518160, imageBase64).then(($result: any) => {
-        return $$createType80($result);
+        return $$createType82($result);
     });
 }
 
@@ -1807,7 +1819,7 @@ export function WireUploadBusinessProductImage(imageBase64: string): $Cancellabl
  */
 export function WireUploadNewsletter(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
     return $Call.ByID(2235414361, dataBase64, mediaType).then(($result: any) => {
-        return $$createType81($result);
+        return $$createType83($result);
     });
 }
 
@@ -1818,7 +1830,7 @@ export function WireUploadNewsletter(dataBase64: string, mediaType: string): $Ca
  */
 export function WireUploadNewsletterReader(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
     return $Call.ByID(3885680242, dataBase64, mediaType).then(($result: any) => {
-        return $$createType81($result);
+        return $$createType83($result);
     });
 }
 
@@ -1830,7 +1842,7 @@ export function WireUploadNewsletterReader(dataBase64: string, mediaType: string
  */
 export function WireUploadReader(dataBase64: string, mediaType: string): $CancellablePromise<$models.WireMediaUploadResult> {
     return $Call.ByID(1077545817, dataBase64, mediaType).then(($result: any) => {
-        return $$createType81($result);
+        return $$createType83($result);
     });
 }
 
@@ -1841,7 +1853,7 @@ export function WireUploadReader(dataBase64: string, mediaType: string): $Cancel
  */
 export function WireUploadSticker(imageBase64: string, mime: string): $CancellablePromise<$models.WireMediaUploadResult> {
     return $Call.ByID(549962489, imageBase64, mime).then(($result: any) => {
-        return $$createType81($result);
+        return $$createType83($result);
     });
 }
 
@@ -1851,7 +1863,7 @@ export function WireUploadSticker(imageBase64: string, mime: string): $Cancellab
  */
 export function WireUploadStickerPackThumbnail(imageBase64: string, packMediaKeyBase64: string, mime: string): $CancellablePromise<$models.WireMediaUploadResult> {
     return $Call.ByID(2800502224, imageBase64, packMediaKeyBase64, mime).then(($result: any) => {
-        return $$createType81($result);
+        return $$createType83($result);
     });
 }
 
@@ -1889,52 +1901,54 @@ const $$createType29 = $models.LinkPreviewResult.createFrom;
 const $$createType30 = $Create.Nullable($$createType29);
 const $$createType31 = $models.MediaHubItem.createFrom;
 const $$createType32 = $Create.Array($$createType31);
-const $$createType33 = $models.NewsletterInfo.createFrom;
-const $$createType34 = $Create.Nullable($$createType33);
-const $$createType35 = $models.NewsletterMessageItem.createFrom;
-const $$createType36 = $Create.Array($$createType35);
-const $$createType37 = store$0.PinnedMessage.createFrom;
+const $$createType33 = store$0.MessageReceipt.createFrom;
+const $$createType34 = $Create.Array($$createType33);
+const $$createType35 = $models.NewsletterInfo.createFrom;
+const $$createType36 = $Create.Nullable($$createType35);
+const $$createType37 = $models.NewsletterMessageItem.createFrom;
 const $$createType38 = $Create.Array($$createType37);
-const $$createType39 = $models.PollVotesResult.createFrom;
-const $$createType40 = $models.PrivacySettingsResponse.createFrom;
-const $$createType41 = store$0.CallLogEntry.createFrom;
-const $$createType42 = $Create.Array($$createType41);
-const $$createType43 = $Create.Array($Create.Any);
-const $$createType44 = $models.StatusPrivacyEntry.createFrom;
-const $$createType45 = $Create.Array($$createType44);
-const $$createType46 = $Create.Array($$createType33);
-const $$createType47 = $models.UserInfoResult.createFrom;
-const $$createType48 = $Create.Array($$createType47);
-const $$createType49 = $models.OnWhatsAppResult.createFrom;
+const $$createType39 = store$0.PinnedMessage.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = $models.PollVotesResult.createFrom;
+const $$createType42 = $models.PrivacySettingsResponse.createFrom;
+const $$createType43 = store$0.CallLogEntry.createFrom;
+const $$createType44 = $Create.Array($$createType43);
+const $$createType45 = $Create.Array($Create.Any);
+const $$createType46 = $models.StatusPrivacyEntry.createFrom;
+const $$createType47 = $Create.Array($$createType46);
+const $$createType48 = $Create.Array($$createType35);
+const $$createType49 = $models.UserInfoResult.createFrom;
 const $$createType50 = $Create.Array($$createType49);
-const $$createType51 = $models.PickedFile.createFrom;
-const $$createType52 = $Create.Nullable($$createType51);
-const $$createType53 = $models.BusinessLinkResult.createFrom;
+const $$createType51 = $models.OnWhatsAppResult.createFrom;
+const $$createType52 = $Create.Array($$createType51);
+const $$createType53 = $models.PickedFile.createFrom;
 const $$createType54 = $Create.Nullable($$createType53);
-const $$createType55 = $models.ContactQRLinkResult.createFrom;
+const $$createType55 = $models.BusinessLinkResult.createFrom;
 const $$createType56 = $Create.Nullable($$createType55);
-const $$createType57 = $models.SearchResult.createFrom;
-const $$createType58 = $Create.Array($$createType57);
-const $$createType59 = $models.WireMessageKeyDTO.createFrom;
-const $$createType60 = $models.WireBuiltMessageDTO.createFrom;
-const $$createType61 = $models.WireBusinessCollectionMutationResult.createFrom;
-const $$createType62 = $models.WireBusinessProductResult.createFrom;
-const $$createType63 = $models.WireBusinessDeleteProductsResult.createFrom;
-const $$createType64 = $models.WireHistorySyncDTO.createFrom;
-const $$createType65 = $models.WireBusinessEligibilityResult.createFrom;
-const $$createType66 = $models.WireBusinessLinkedAccountsResult.createFrom;
-const $$createType67 = $models.WireBusinessMerchantComplianceResult.createFrom;
-const $$createType68 = $models.WireBusinessCatalogPageResult.createFrom;
-const $$createType69 = $Create.Array($$createType62);
-const $$createType70 = $models.WireGroupInviteInfo.createFrom;
-const $$createType71 = $models.WireIdentityVerificationCodes.createFrom;
-const $$createType72 = $models.WireOrderDetailsResult.createFrom;
-const $$createType73 = $models.WireBusinessCollectionResult.createFrom;
-const $$createType74 = $models.WireBusinessCollectionPageResult.createFrom;
-const $$createType75 = $models.WirePushNotificationConfig.createFrom;
-const $$createType76 = $models.WireUsernameResolution.createFrom;
-const $$createType77 = $models.WireMessageSendResult.createFrom;
-const $$createType78 = $models.WireSendResponse.createFrom;
-const $$createType79 = $models.WireBusinessCoverPhotoResult.createFrom;
-const $$createType80 = $models.WireBusinessImageUploadResult.createFrom;
-const $$createType81 = $models.WireMediaUploadResult.createFrom;
+const $$createType57 = $models.ContactQRLinkResult.createFrom;
+const $$createType58 = $Create.Nullable($$createType57);
+const $$createType59 = $models.SearchResult.createFrom;
+const $$createType60 = $Create.Array($$createType59);
+const $$createType61 = $models.WireMessageKeyDTO.createFrom;
+const $$createType62 = $models.WireBuiltMessageDTO.createFrom;
+const $$createType63 = $models.WireBusinessCollectionMutationResult.createFrom;
+const $$createType64 = $models.WireBusinessProductResult.createFrom;
+const $$createType65 = $models.WireBusinessDeleteProductsResult.createFrom;
+const $$createType66 = $models.WireHistorySyncDTO.createFrom;
+const $$createType67 = $models.WireBusinessEligibilityResult.createFrom;
+const $$createType68 = $models.WireBusinessLinkedAccountsResult.createFrom;
+const $$createType69 = $models.WireBusinessMerchantComplianceResult.createFrom;
+const $$createType70 = $models.WireBusinessCatalogPageResult.createFrom;
+const $$createType71 = $Create.Array($$createType64);
+const $$createType72 = $models.WireGroupInviteInfo.createFrom;
+const $$createType73 = $models.WireIdentityVerificationCodes.createFrom;
+const $$createType74 = $models.WireOrderDetailsResult.createFrom;
+const $$createType75 = $models.WireBusinessCollectionResult.createFrom;
+const $$createType76 = $models.WireBusinessCollectionPageResult.createFrom;
+const $$createType77 = $models.WirePushNotificationConfig.createFrom;
+const $$createType78 = $models.WireUsernameResolution.createFrom;
+const $$createType79 = $models.WireMessageSendResult.createFrom;
+const $$createType80 = $models.WireSendResponse.createFrom;
+const $$createType81 = $models.WireBusinessCoverPhotoResult.createFrom;
+const $$createType82 = $models.WireBusinessImageUploadResult.createFrom;
+const $$createType83 = $models.WireMediaUploadResult.createFrom;

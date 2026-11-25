@@ -11,6 +11,7 @@ export {
     DocumentMessageContent,
     ExtendedTextContent,
     MediaMessageContent,
+    MessageReceipt,
     PinnedMessage,
     Reaction
 } from "./models.js";

@@ -377,6 +377,49 @@ export class MediaMessageContent {
 }
 
 /**
+ * MessageReceipt is one durable read-receipt row: who (reader_jid) read a
+ * given message (message_id) in a chat (chat_jid), with the raw receipt type
+ * and the event timestamp. It is a flat, JSON-tagged value so it can cross the
+ * Wails binding boundary unchanged.
+ */
+export class MessageReceipt {
+    "chat_jid": string;
+    "message_id": string;
+    "reader_jid": string;
+    "receipt_type": string;
+    "timestamp": number;
+
+    /** Creates a new MessageReceipt instance. */
+    constructor($$source: Partial<MessageReceipt> = {}) {
+        if (!("chat_jid" in $$source)) {
+            this["chat_jid"] = "";
+        }
+        if (!("message_id" in $$source)) {
+            this["message_id"] = "";
+        }
+        if (!("reader_jid" in $$source)) {
+            this["reader_jid"] = "";
+        }
+        if (!("receipt_type" in $$source)) {
+            this["receipt_type"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MessageReceipt instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MessageReceipt {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MessageReceipt($$parsedSource as Partial<MessageReceipt>);
+    }
+}
+
+/**
  * PinnedMessage is a pinned message row joined with its stored text, used by
  * the pinned-messages banner in a chat.
  */
