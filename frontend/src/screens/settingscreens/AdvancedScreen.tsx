@@ -18,6 +18,7 @@ import {
   ActionButton,
   StatusBanner,
 } from "../../components/settings/ui-kit"
+import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
 function CodeEditorCard({
   title,
@@ -103,6 +104,8 @@ const AdvancedScreen = () => {
   const [jsSaved, setJsSaved] = useState(false)
   const [reloadMsg, setReloadMsg] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  const giphyApiKey = useAppSettingsStore(state => state.giphyApiKey)
+  const updateSetting = useAppSettingsStore(state => state.updateSetting)
 
   const cssDirty = customCSS !== cssBaseline
   const jsDirty = customJS !== jsBaseline
@@ -388,6 +391,26 @@ const AdvancedScreen = () => {
             {proxyResult}
           </StatusBanner>
         )}
+      </SectionCard>
+
+      <SectionCard
+        title="GIF search"
+        description="Add your own GIPHY API key to search and send GIFs from the attach menu. Without a key you can still attach GIFs from a local file."
+      >
+        <TextField
+          label="GIPHY API key"
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          value={giphyApiKey}
+          onChange={e => void updateSetting("giphyApiKey", e.target.value)}
+          placeholder="Paste your GIPHY beta API key"
+        />
+        <p className="text-[12px] leading-relaxed text-light-muted dark:text-dark-muted">
+          GIPHY beta keys are free (100 calls/hour). GIFs you send are attributed to GIPHY. Your
+          key is stored locally in this app and is masked above; requests are made directly from
+          the app to GIPHY.
+        </p>
       </SectionCard>
 
       <SectionCard

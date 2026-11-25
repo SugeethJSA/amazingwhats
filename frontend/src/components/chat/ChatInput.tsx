@@ -26,6 +26,8 @@ import { sanitizeHtml } from "../../lib/utils"
 import { PollDialog } from "./PollDialog"
 import { ContactShareDialog } from "./ContactShareDialog"
 import { useVoiceRecorder } from "../../hooks/useVoiceRecorder"
+import { GifPicker } from "./GifPicker"
+import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
 interface ChatInputProps {
@@ -58,6 +60,8 @@ interface ChatInputProps {
   /** Send the selected video as an animated GIF (gifPlayback message). */
   sendAsGif?: boolean
   onToggleSendAsGif?: () => void
+  /** Stage a real GIF File through the same path used for local GIF files. */
+  onGifSelect?: (file: File) => void
   /** Schedule the current text draft for a future timestamp (ms epoch). */
   onScheduleMessage?: (sendAt: number) => void
 }
@@ -101,6 +105,13 @@ const AudioIcon = () => (
 const MicIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
     <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v5.5A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h2v1H9v-1h2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z" />
+  </svg>
+)
+
+/** Local grid glyph for GIF search — no bundled brand assets. */
+const GifIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+    <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h8v8h-8v-8Zm2 2v4h4v-4h-4Z" />
   </svg>
 )
 
@@ -279,6 +290,7 @@ export function ChatInput({
   selectedMentions,
   sendAsGif,
   onToggleSendAsGif,
+  onGifSelect,
   onScheduleMessage,
 }: ChatInputProps) {
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([])
@@ -300,8 +312,10 @@ export function ChatInput({
   const [locationError, setLocationError] = useState("")
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [scheduleAt, setScheduleAt] = useState("")
+  const [gifPickerOpen, setGifPickerOpen] = useState(false)
 
   const addNotification = useUIStore(state => state.addNotification)
+  const giphyApiKey = useAppSettingsStore(state => state.giphyApiKey)
   const voiceRecorder = useVoiceRecorder()
   // Distinguishes an intentional Cancel from a real recording failure while a
   // stop() is in flight, so cancelling does not show a spurious error toast.
@@ -339,6 +353,13 @@ export function ChatInput({
         durationMs: 6000,
       })
     }
+  }
+
+  // No-key path: narrow the existing file input to GIFs and let its onChange
+  // (onFileSelect) stage the File, which sets selectedFileType to "gif".
+  const pickGifFromFile = () => {
+    setFileAccept("image/gif")
+    setTimeout(() => fileInputRef.current?.click(), 0)
   }
 
   const handleStartVoiceRecording = async () => {
@@ -1035,6 +1056,18 @@ export function ChatInput({
                       </button>
                       {[
                         {
+                          label: "Audio file",
+                          icon: <AudioIcon />,
+                          color: "text-warning-bright",
+                          act: () => void pickAudioFile(),
+                        },
+                        {
+                          label: "Poll",
+                          icon: <PollIcon />,
+                          color: "text-purple-500",
+                          act: () => setPollOpen(true),
+                        },
+                        {
                           label: "Contact",
                           icon: <ContactIcon />,
                           color: "text-yellow-500",
@@ -1108,16 +1141,16 @@ export function ChatInput({
                           },
                         },
                         {
-                          label: "Audio file",
-                          icon: <AudioIcon />,
-                          color: "text-warning-bright",
-                          act: () => void pickAudioFile(),
+                          label: "GIF",
+                          icon: <GifIcon />,
+                          color: "text-purple-500",
+                          act: () => setGifPickerOpen(true),
                         },
                         {
-                          label: "Poll",
-                          icon: <PollIcon />,
-                          color: "text-purple-500",
-                          act: () => setPollOpen(true),
+                          label: "GIF from file",
+                          icon: <PhotosIcon />,
+                          color: "text-blue-500",
+                          act: pickGifFromFile,
                         },
                       ].map(item => (
                         <button
@@ -1392,6 +1425,24 @@ export function ChatInput({
           </div>,
           document.body,
         )}
+      {gifPickerOpen && (
+        <GifPicker
+          apiKey={giphyApiKey}
+          onClose={() => setGifPickerOpen(false)}
+          onPickFromFile={pickGifFromFile}
+          onSelect={file => {
+            setGifPickerOpen(false)
+            if (onGifSelect) {
+              onGifSelect(file)
+            } else {
+              // Hosts without onGifSelect still stage through the same path.
+              onFileSelect({
+                target: { files: [file] },
+              } as unknown as React.ChangeEvent<HTMLInputElement>)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

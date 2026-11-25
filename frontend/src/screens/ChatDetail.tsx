@@ -1148,6 +1148,23 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     setSendAsGif(false)
   }
 
+  // Single staging path for every File that enters the composer (disk pickers,
+  // pasted/dropped GIFs, and GIPHY downloads). Exact image/gif becomes a
+  // gifPlayback message in handleSendMessage; no send code is duplicated.
+  const stageSelectedFile = (file: File) => {
+    voiceMetaRef.current = null
+    setSelectedFile(file)
+    setSendAsGif(false)
+    const generalType = file.type.split("/")[0]
+    setSelectedFileType(
+      file.type.toLowerCase() === "image/gif"
+        ? "gif"
+        : generalType === "image" || generalType === "video" || generalType === "audio"
+          ? generalType
+          : "document",
+    )
+  }
+
   useEffect(() => {
     const generation = ++requestGenerationRef.current
     loadingMoreRef.current = false
@@ -1579,21 +1596,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           onVoiceRecord={handleVoiceRecord}
           onFileSelect={e => {
             const file = e.target.files?.[0]
-            if (file) {
-              voiceMetaRef.current = null
-              setSelectedFile(file)
-              setSendAsGif(false)
-              const generalType = file.type.split("/")[0]
-              // Animated GIF files are sent as gifPlayback videos, not images.
-              setSelectedFileType(
-                file.type.toLowerCase() === "image/gif"
-                  ? "gif"
-                  : generalType === "image" || generalType === "video" || generalType === "audio"
-                    ? generalType
-                    : "document",
-              )
-            }
+            if (file) stageSelectedFile(file)
           }}
+          onGifSelect={stageSelectedFile}
           onRemoveFile={() => {
             voiceMetaRef.current = null
             setSelectedFile(null)

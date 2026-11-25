@@ -62,6 +62,10 @@ export interface AppSettings {
   spellCheck: boolean
   replaceTextWithEmojis: boolean
   enterIsSend: boolean
+
+  // Integrations
+  /** Optional user-supplied GIPHY beta API key. Empty = local GIF files only. */
+  giphyApiKey: string
 }
 
 const defaultSettings: AppSettings = {
@@ -89,6 +93,8 @@ const defaultSettings: AppSettings = {
   spellCheck: true,
   replaceTextWithEmojis: true,
   enterIsSend: true,
+
+  giphyApiKey: "",
 }
 
 function extractSettings(state: AppSettingsStore): AppSettings {
