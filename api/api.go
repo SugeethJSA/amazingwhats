@@ -128,7 +128,14 @@ type Api struct {
 	// updaterReady is set by cmd/run.go only after the GitHub provider and the
 	// Wails updater are both configured. Every Updater call is guarded by it so
 	// an uninitialised updater is never touched (offline/dev init failure).
-	updaterReady atomic.Bool
+	updaterReady  atomic.Bool
+	startedHidden bool
+
+	// On-demand per-chat history backfill. Maps are lazily initialised.
+	historyBackfillMu  sync.Mutex
+	pendingBackfills   map[string]*historyBackfill
+	backfillByChat     map[string]string
+	lastHistoryRequest time.Time
 
 	taskCh         chan func()
 	workerWg       sync.WaitGroup
@@ -605,6 +612,13 @@ func (a *Api) SetWindowFocused(focused bool) {
 	a.windowFocused.Store(focused)
 }
 
+// SetStartedHidden records that the main window was created hidden (tray-only
+// start). ServiceStartup uses it to initialise focus state so notifications
+// are not suppressed while no window is visible.
+func (a *Api) SetStartedHidden(hidden bool) {
+	a.startedHidden = hidden
+}
+
 // notificationSenderJID resolves a LID sender to its phone number before any
 // contact lookup so the name shown in a notification matches the chat list.
 func (a *Api) notificationSenderJID(v *events.Message) types.JID {
@@ -685,6 +699,16 @@ func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
 // handleNotificationAction restores the window, then emits the exact events
 // the frontend listens for. Lookup work happens before InvokeAsync so no disk
 // or network I/O runs on the UI thread.
+// notificationReplyAutoSend decides whether an activation can be answered
+// directly from the backend. Empty submissions must never send a blank reply.
+func notificationReplyAutoSend(action, text string) (bool, string) {
+	if action != notify.ActionReply {
+		return false, ""
+	}
+	trimmed := strings.TrimSpace(text)
+	return trimmed != "", trimmed
+}
+
 func (a *Api) handleNotificationAction(action, chatJID, messageID, text string) {
 	if a.app == nil || chatJID == "" {
 		return
@@ -708,6 +732,49 @@ func (a *Api) handleNotificationAction(action, chatJID, messageID, text string) 
 		if msg, err := a.messageStore.GetMessageWithMediaByID(messageID); err == nil && msg != nil && !msg.Info.Sender.IsEmpty() {
 			senderJID = msg.Info.Sender.String()
 		}
+	}
+
+	// A typed reply is sent straight from the background. Do not restore or
+	// focus the window: the whole point of the inline Reply action is to answer
+	// without opening the app. Only Open (or a failed/empty Reply) shows UI.
+	if canSend, replyText := notificationReplyAutoSend(action, text); canSend {
+		replyChat := chatJID
+		a.startBackground(func() {
+			id, err := a.SendMessage(replyChat, MessageContent{
+				Type:            "text",
+				Text:            replyText,
+				QuotedMessageID: messageID,
+			})
+			if a.app == nil {
+				return
+			}
+			if err == nil {
+				a.app.Event.Emit("wa:notification_reply_sent", map[string]any{
+					"chatJid":   replyChat,
+					"messageId": id,
+					"ok":        true,
+				})
+				return
+			}
+			// Offline or send failure: keep the typed text by falling back to
+			// the composer instead of silently dropping it.
+			application.InvokeAsync(func() {
+				if a.window != nil {
+					a.window.UnMinimise()
+					a.window.Show()
+					a.window.Focus()
+				}
+				a.app.Event.Emit("wa:notification_reply", map[string]any{
+					"chatJid":   replyChat,
+					"messageId": messageID,
+					"senderJid": senderJID,
+					"name":      name,
+					"avatar":    avatar,
+					"text":      replyText,
+				})
+			})
+		})
+		return
 	}
 
 	application.InvokeAsync(func() {
@@ -986,10 +1053,13 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// Keep the settings file handle open for the whole app lifetime; the
 	// matching CloseSettings lives in ServiceShutdown.
 	store.LoadSettings()
+	// Reconcile the OS autostart entry with the persisted setting on every
+	// launch (the registry can be removed externally).
+	a.applyStartAtLogin()
 
-	// The window is focused when the app launches; the frontend keeps this in
-	// sync via SetWindowFocused so we don't notify while the user is looking.
-	a.windowFocused.Store(true)
+	// A hidden (tray-only) start means the window is NOT focused; reporting it
+	// as focused would suppress notifications until the user opened the app.
+	a.windowFocused.Store(!a.startedHidden)
 	// Keep the request context before anything that may emit an event (the
 	// in-process system tray listens for wa:notifications_toggled).
 	a.ctx = ctx
@@ -1132,6 +1202,9 @@ func (a *Api) Login() (err error) {
 	a.lifecycleMu.Unlock()
 
 	if client.Store.ID == nil {
+		// New pairing only: honour the opt-in full-history re-link setting.
+		restore := a.applyFullHistoryRelink()
+		defer restore()
 		loginCtx, cancel := context.WithCancel(a.ctx)
 		a.lifecycleMu.Lock()
 		a.loginCancel = cancel
@@ -1742,16 +1815,20 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 	if len(conversations) == 0 {
 		return
 	}
+	pending, sessionID, correlated := a.historyBackfillFor(v)
+	onDemand := isOnDemandHistorySync(v)
 	stored := 0
 	failed := 0
 	totalConvs := len(conversations)
-	a.app.Event.Emit("wa:history_progress", map[string]any{
-		"type":                   v.Data.GetSyncType().String(),
-		"totalConversations":     totalConvs,
-		"processedConversations": 0,
-		"totalMessages":          0,
-		"processedMessages":      0,
-	})
+	if !onDemand {
+		a.app.Event.Emit("wa:history_progress", map[string]any{
+			"type":                   v.Data.GetSyncType().String(),
+			"totalConversations":     totalConvs,
+			"processedConversations": 0,
+			"totalMessages":          0,
+			"processedMessages":      0,
+		})
+	}
 	for _, conv := range conversations {
 		chatJID, err := types.ParseJID(conv.GetID())
 		if err != nil {
@@ -1781,20 +1858,31 @@ func (a *Api) processHistorySync(v *events.HistorySync) {
 			}
 		}
 	}
-	progress := map[string]any{
-		"type":                   v.Data.GetSyncType().String(),
-		"totalConversations":     totalConvs,
-		"processedConversations": totalConvs,
-		"totalMessages":          0,
-		"processedMessages":      stored,
-		"done":                   true,
+	if onDemand {
+		if correlated {
+			exhausted := historyBackfillExhausted(v, pending.chatJID)
+			a.emitHistoryBackfill(pending.chatJID, sessionID, "chunk", stored, exhausted, false)
+			if exhausted {
+				a.finishHistoryBackfill(sessionID, true, false)
+			}
+		}
+		// Per-chat backfill never drives the global startup sync strip.
+	} else {
+		progress := map[string]any{
+			"type":                   v.Data.GetSyncType().String(),
+			"totalConversations":     totalConvs,
+			"processedConversations": totalConvs,
+			"totalMessages":          0,
+			"processedMessages":      stored,
+			"done":                   true,
+		}
+		if stored == 0 && failed > 0 {
+			// The frontend never renders diagnostic strings; it only needs the flag.
+			progress["failed"] = true
+			progress["error"] = "none_stored"
+		}
+		a.app.Event.Emit("wa:history_progress", progress)
 	}
-	if stored == 0 && failed > 0 {
-		// The frontend never renders diagnostic strings; it only needs the flag.
-		progress["failed"] = true
-		progress["error"] = "none_stored"
-	}
-	a.app.Event.Emit("wa:history_progress", progress)
 	slog.Info(fmt.Sprintf("Stored %d messages from %d conversations", stored, len(conversations)), "source", "history")
 	a.app.Event.Emit("wa:chat_list_refresh")
 }

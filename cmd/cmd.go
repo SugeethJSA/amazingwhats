@@ -45,14 +45,20 @@ func GetApp(assets fs.FS, bArgs BuildArgs) *cli.App {
 	}
 
 	return &cli.App{
-		Name:                   AppName,
-		HelpName:               AppName,
-		Usage:                  "An unofficial WhatsApp client.",
-		Version:                fmt.Sprintf("%s-%s", bArgs.Version, bArgs.BuildType),
-		UsageText:              "amazingwhats <command> [arguments...]",
-		Description:            DESCRIPTION,
-		CustomAppHelpTemplate:  HelpTempl,
-		OnUsageError:           common.UsageErrorCallback,
+		Name:                  AppName,
+		HelpName:              AppName,
+		Usage:                 "An unofficial WhatsApp client.",
+		Version:               fmt.Sprintf("%s-%s", bArgs.Version, bArgs.BuildType),
+		UsageText:             "amazingwhats <command> [arguments...]",
+		Description:           DESCRIPTION,
+		CustomAppHelpTemplate: HelpTempl,
+		OnUsageError:          common.UsageErrorCallback,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "hidden",
+				Usage: "start with the window hidden (tray only)",
+			},
+		},
 		Commands:               commands,
 		Action:                 run(assets),
 		UseShortOptionHandling: true,

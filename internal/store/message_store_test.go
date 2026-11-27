@@ -90,6 +90,26 @@ func TestMessagePaginationUsesStableCompoundCursor(t *testing.T) {
 	}
 }
 
+func TestGetOldestMessageInfoUsesOldestAnchor(t *testing.T) {
+	ms := newTestMessageStore(t)
+	const chat = "123@s.whatsapp.net"
+	// Distinct timestamps so the test detects a reversed ORDER BY, and
+	// insertion order is deliberately newest-first.
+	insertTestMessage(t, ms, "e", chat, 1_700_000_003, "")
+	insertTestMessage(t, ms, "c", chat, 1_700_000_002, "")
+	insertTestMessage(t, ms, "a", chat, 1_700_000_001, "")
+	got, err := ms.GetOldestMessageInfo(chat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got.ID) != "a" {
+		t.Fatalf("anchor = %q, want oldest message %q", got.ID, "a")
+	}
+	if got.Chat.String() != chat {
+		t.Fatalf("anchor chat = %q, want %q", got.Chat.String(), chat)
+	}
+}
+
 func TestPagedQuotedMessagesAreShallow(t *testing.T) {
 	ms := newTestMessageStore(t)
 	const chat = "123@s.whatsapp.net"

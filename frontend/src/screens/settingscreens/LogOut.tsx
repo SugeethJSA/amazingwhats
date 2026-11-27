@@ -1,12 +1,14 @@
 import { useState } from "react"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import { Logout } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
-import { ActionButton, SettingsCard, StatusBanner } from "../../components/settings/ui-kit"
+import { ActionButton, RowList, SettingsCard, StatusBanner, SwitchRow } from "../../components/settings/ui-kit"
+import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
 const LogOut = () => {
   const [busy, setBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { relinkWithFullHistory, updateSetting } = useAppSettingsStore()
 
   const handleLogout = async () => {
     setConfirmOpen(false)
@@ -26,6 +28,26 @@ const LogOut = () => {
 
   return (
     <div className="mx-auto mt-4 max-w-xl">
+      <SettingsCard className="p-6">
+        <h2 className="text-lg font-bold tracking-tight text-light-text dark:text-dark-text">
+          Recover older messages
+        </h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-light-muted dark:text-dark-muted">
+          Full history is sent by your phone only when a device is linked. To recover messages
+          that are missing, turn this on, log out, remove this device from WhatsApp on your phone
+          (Settings → Linked Devices), then scan the QR code again. Keep the phone nearby and
+          online until the sync finishes. Your phone decides how much history it sends.
+        </p>
+        <RowList className="mt-3">
+          <SwitchRow
+            title="Request full history on next link"
+            description="Applies to new pairings until turned off. Existing sessions are unaffected."
+            enabled={relinkWithFullHistory}
+            onToggle={() => updateSetting("relinkWithFullHistory", !relinkWithFullHistory)}
+          />
+        </RowList>
+      </SettingsCard>
+
       <SettingsCard className="p-6">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
           <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">

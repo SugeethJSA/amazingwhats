@@ -66,6 +66,14 @@ export interface AppSettings {
   // Integrations
   /** Optional user-supplied GIPHY beta API key. Empty = local GIF files only. */
   giphyApiKey: string
+
+  // Account recovery
+  /** Ask the phone for full history on the NEXT pairing, not existing sessions. */
+  relinkWithFullHistory: boolean
+
+  // Background mode
+  /** Keep the app in the tray and start with no visible window. */
+  runInBackground: boolean
 }
 
 const defaultSettings: AppSettings = {
@@ -95,6 +103,8 @@ const defaultSettings: AppSettings = {
   enterIsSend: true,
 
   giphyApiKey: "",
+  relinkWithFullHistory: false,
+  runInBackground: false,
 }
 
 function extractSettings(state: AppSettingsStore): AppSettings {
@@ -192,22 +202,21 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   },
 
   updateSetting: async (key, value) => {
-    set(state => {
-      const next = { ...state, [key]: value }
-
-      if (key === "theme") {
-        cacheTheme(next.theme)
-      }
-      if (key === "fontSize") {
-        applyFontSize(next.fontSize)
-      }
-
-      SaveSettings(extractSettings(next)).catch(err => {
-        console.error("Failed to save setting:", err)
-      })
-
-      return next
-    })
+    const next = { ...get(), [key]: value } as AppSettingsStore
+    if (key === "theme") {
+      cacheTheme(next.theme)
+    }
+    if (key === "fontSize") {
+      applyFontSize(next.fontSize)
+    }
+    set(next)
+    // Awaiting matters: callers such as Log out reload the page immediately,
+    // and a fire-and-forget save could lose the just-toggled value.
+    try {
+      await SaveSettings(extractSettings(next))
+    } catch (err) {
+      console.error("Failed to save setting:", err)
+    }
   },
 
   toggleTheme: async () => {

@@ -12,6 +12,7 @@ import {
   MakeCall,
   MakeGroupCall,
   StarMessage,
+  RequestHistorySync,
 } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import {
   addScheduledMessage,
@@ -185,6 +186,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const [canSend, setCanSend] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [backfillPending, setBackfillPending] = useState(false)
   const [initialLoad, setInitialLoad] = useState(true)
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState(false)
@@ -718,6 +720,44 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     })
     return request
   }, [chatId, isNewsletter, prependMessages, addNotification])
+
+  // Per-chat backfill events are separate from the global startup sync strip.
+  useEffect(() => {
+    const unsub = EventsOn(
+      "wa:history_backfill",
+      (data: { chatJID?: string; phase?: string; exhausted?: boolean; failed?: boolean }) => {
+        if (data?.chatJID !== chatId) return
+        if (data.phase === "done") {
+          setBackfillPending(false)
+          if (data.exhausted) {
+            hasMoreRef.current = false
+            setHasMore(false)
+            return
+          }
+          if (data.failed) {
+            addNotification("Couldn't load older messages from your phone. Try again.", { tone: "error" })
+            return
+          }
+        }
+        // New older rows are in the local DB now; pull them into the open list.
+        hasMoreRef.current = true
+        setHasMore(true)
+        void loadMoreMessages()
+      },
+    )
+    return () => unsub()
+  }, [chatId, loadMoreMessages, addNotification])
+
+  const requestOlderFromPhone = useCallback(async () => {
+    if (backfillPending) return
+    setBackfillPending(true)
+    try {
+      await RequestHistorySync(chatId, 50)
+    } catch {
+      setBackfillPending(false)
+      addNotification("Couldn't ask your phone for older messages. Try again.", { tone: "error" })
+    }
+  }, [chatId, backfillPending, addNotification])
 
   const handleQuotedClick = useCallback(
     async (messageId: string) => {
@@ -1501,6 +1541,22 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           </button>
 
           <div className={clsx("relative z-10 h-full", (!isReady || initialLoad) && "invisible")}>
+            {!isNewsletter && isReady && !hasMore && !backfillPending && (
+              <button
+                type="button"
+                onClick={() => void requestOlderFromPhone()}
+                className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 text-xs text-gray-200 backdrop-blur transition-colors hover:bg-black/80"
+                aria-label="Load older messages from your phone"
+                title="Load older messages from your phone"
+              >
+                Load older from phone
+              </button>
+            )}
+            {backfillPending && (
+              <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-gray-300 backdrop-blur">
+                Asking your phone for older messages...
+              </div>
+            )}
             <MessageList
               key={`${chatId}:${isReady ? "ready" : "loading"}`}
               ref={messageListRef}

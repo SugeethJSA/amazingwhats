@@ -125,6 +125,17 @@ const (
 	ORDER BY m.timestamp ASC, m.message_id ASC
 	`
 
+	// SelectOldestMessageInfoByChat returns the local anchor for on-demand
+	// history backfill. WA Web pages backwards from the OLDEST local message;
+	// using the newest one would only re-fetch messages we already have.
+	SelectOldestMessageInfoByChat = `
+	SELECT message_id, is_from_me, timestamp
+	FROM messages
+	WHERE chat_jid = ?
+	ORDER BY timestamp ASC, message_id ASC
+	LIMIT 1;
+	`
+
 	// SelectDecodedMessagesByIDPrefix is completed with a placeholder list and
 	// a closing parenthesis. It loads quoted-message summaries in one query.
 	SelectDecodedMessagesByIDPrefix = `

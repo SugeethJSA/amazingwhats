@@ -8,10 +8,32 @@ import (
 	"strings"
 
 	"github.com/polymorfa/hypermeow"
+	wastore "github.com/polymorfa/hypermeow/store"
+	"google.golang.org/protobuf/proto"
 )
 
 // minPhoneLen is the minimum length for a phone number (country code + number).
 const minPhoneLen = 7
+
+// applyFullHistoryRelink opts the NEXT pairing into a full-history request when
+// the user enabled "Request full history on next link". DeviceProps is only
+// read while building the registration payload, so an existing session can
+// never be affected. The returned function restores the previous value so two
+// pairings in one process cannot leak the flag into each other.
+func (a *Api) applyFullHistoryRelink() func() {
+	value, ok := a.GetSettings()["relinkWithFullHistory"]
+	if !ok || value == nil || wastore.DeviceProps == nil {
+		return func() {}
+	}
+	enabled, ok := value.(bool)
+	if !ok || !enabled {
+		return func() {}
+	}
+	previous := wastore.DeviceProps.RequireFullSync
+	wastore.DeviceProps.RequireFullSync = proto.Bool(true)
+	slog.Info("Full-history re-link requested for next pairing", "source", "auth")
+	return func() { wastore.DeviceProps.RequireFullSync = previous }
+}
 
 // redactPhone keeps only the last four digits so pairing logs never expose a
 // full phone number. Unexpectedly short inputs are fully masked.
@@ -65,6 +87,8 @@ func (a *Api) PairPhone(phone string) (string, error) {
 	if len(phone) < minPhoneLen {
 		return "", fmt.Errorf("phone number too short (min %d digits)", minPhoneLen)
 	}
+	restore := a.applyFullHistoryRelink()
+	defer restore()
 	code, err := client.PairPhone(a.ctx, phone, true, whatsmeow.PairClientChrome, "Chrome (Windows)")
 	if err != nil {
 		slog.Error(fmt.Sprintf("PairPhone failed for %s: %v", redactPhone(phone), err), "source", "auth")

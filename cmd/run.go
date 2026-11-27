@@ -8,6 +8,7 @@ import (
 	apiPkg "github.com/lugvitc/amazingwhats/api"
 	"github.com/lugvitc/amazingwhats/internal/misc"
 	"github.com/lugvitc/amazingwhats/internal/server"
+	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/lugvitc/amazingwhats/internal/tray"
 	"github.com/urfave/cli"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -45,6 +46,15 @@ func run(assets fs.FS) cli.ActionFunc {
 		// capture the variable and guard against an early notification.
 		var window *application.WebviewWindow
 		var systray *tray.Tray
+
+		// Read the saved setting before creating the window so a background
+		// start never flashes a visible window. --hidden is used by the OS
+		// autostart entry and by anyone launching from the command line.
+		store.LoadSettings()
+		startHidden := ctx.Bool("hidden")
+		if value, ok := store.GetSettings()["runInBackground"].(bool); ok && value {
+			startHidden = true
+		}
 
 		app := application.New(application.Options{
 			Name:        misc.AppName,
@@ -86,6 +96,7 @@ func run(assets fs.FS) cli.ActionFunc {
 			Title:  misc.AppName,
 			Width:  1024,
 			Height: 768,
+			Hidden: startHidden,
 			// A:1 is preserved byte-for-byte from the v2 RGBA option.
 			BackgroundColour: application.NewRGBA(27, 38, 54, 1),
 			Linux: application.LinuxWindow{
@@ -97,6 +108,7 @@ func run(assets fs.FS) cli.ActionFunc {
 		})
 
 		api := apiPkg.New(app, window)
+		api.SetStartedHidden(startHidden)
 		app.RegisterService(application.NewService(api))
 
 		// General > "Minimize to system tray" controls close behaviour.
@@ -123,8 +135,8 @@ func run(assets fs.FS) cli.ActionFunc {
 		// when call events fire. This window is intentionally separate from
 		// the single-instance/tray restore path used for the main window.
 		callWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-			Title:       "amazingwhats Call",
-			URL:         "/call.html",
+			Title: "amazingwhats Call",
+			URL:   "/call.html",
 			// A compact but genuinely usable stage: the 420x560 card used to
 			// cram remote video, tiles and four rows of tiny buttons into a
 			// phone-sized window. The window stays resizable.

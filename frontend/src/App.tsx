@@ -384,6 +384,12 @@ function App() {
     // Security-code changes are recorded as an info line in the contact's chat
     // by the backend. They deliberately do not raise a toast or side alert.
 
+    // A reply sent from a Windows notification is confirmed quietly when the
+    // app happens to be open; no window is opened for the send itself.
+    const unsubReplySent = EventsOn("wa:notification_reply_sent", () => {
+      addNotification("Reply sent", { tone: "success", durationMs: 2500 })
+    })
+
     // Background/startup update discovery. The EventsOn shim passes
     // `event.data` straight to the callback, so the payload object arrives here
     // directly. The callback stays synchronous (addNotification is sync), so no
@@ -465,6 +471,7 @@ function App() {
       unsubDownloadDone()
       unsubDownloadError()
       unsubError()
+      unsubReplySent()
       unsubUpdateAvailable()
       unsubUpdateError()
       unsubHistory()

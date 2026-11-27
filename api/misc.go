@@ -36,7 +36,12 @@ func (a *Api) Reinitialize() error {
 }
 
 func (a *Api) SaveSettings(s map[string]any) error {
-	return store.SaveSettings(s)
+	if err := store.SaveSettings(s); err != nil {
+		return err
+	}
+	// Keep the Windows autostart entry in sync with the saved setting.
+	a.applyStartAtLogin()
+	return nil
 }
 
 func (a *Api) GetSettings() map[string]any {

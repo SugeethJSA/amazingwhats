@@ -32,9 +32,9 @@ type MessageContent struct {
 	// MentionAll encodes WhatsApp's non-JID "@all" group mention. It is a
 	// separate flag because "@all" is NOT a MentionedJID: WhatsApp Web sets
 	// ContextInfo.nonJIDMentions = MENTION_ALL (1) instead.
-	MentionAll      bool     `json:"mentionAll,omitempty"`
-	ClientTempID    string   `json:"clientTempId,omitempty"`
-	Forwarded       bool     `json:"forwarded,omitempty"`
+	MentionAll   bool   `json:"mentionAll,omitempty"`
+	ClientTempID string `json:"clientTempId,omitempty"`
+	Forwarded    bool   `json:"forwarded,omitempty"`
 	// GifPlayback marks a video message as an animated GIF (whatsmeow's GIF
 	// format: a video upload with the gifPlayback flag set).
 	GifPlayback bool `json:"gifPlayback,omitempty"`
@@ -234,7 +234,21 @@ func (a *Api) buildQuotedContext(chatJID types.JID, quotedMessageID string) (*wa
 
 	msg, err := a.messageStore.GetMessageWithMedia(chatJID.String(), quotedMessageID)
 	if err != nil {
-		return nil, fmt.Errorf("quoted message not found")
+		// Notification replies can arrive with an LID chat key while the local
+		// row is stored under the canonical PN JID. Try both forms, then fall
+		// back to a chat-unscoped ID lookup so the quote is not silently lost.
+		if a.waClient != nil && a.waClient.Store != nil {
+			canonical := canonicalUserJID(a.ctx, a.waClient, chatJID)
+			if canonical.String() != chatJID.String() {
+				msg, err = a.messageStore.GetMessageWithMedia(canonical.String(), quotedMessageID)
+			}
+		}
+		if err != nil {
+			msg, err = a.messageStore.GetMessageWithMediaByID(quotedMessageID)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("quoted message not found")
+		}
 	}
 
 	quotedMessage := buildQuotedMessage(msg)
@@ -635,6 +649,7 @@ func (a *Api) SendMessage(chatJID string, content MessageContent) (string, error
 		"parsedHTML":   parsedHTML,
 		"timestamp":    resp.Timestamp.Unix(),
 		"sender":       "You",
+		"isFromMe":     true,
 	})
 
 	return resp.ID, nil

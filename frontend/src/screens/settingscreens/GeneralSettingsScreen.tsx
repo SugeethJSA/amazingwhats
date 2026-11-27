@@ -23,7 +23,8 @@ const FONT_OPTIONS = [
 ]
 
 const GeneralSettingsScreen = () => {
-  const { startAtLogin, minimizeToTray, language, fontSize, updateSetting } = useAppSettingsStore()
+  const { startAtLogin, runInBackground, minimizeToTray, language, fontSize, updateSetting } =
+    useAppSettingsStore()
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,6 +35,12 @@ const GeneralSettingsScreen = () => {
             description="Launch amazingwhats automatically when you sign in to your computer"
             enabled={startAtLogin}
             onToggle={() => updateSetting("startAtLogin", !startAtLogin)}
+          />
+          <SwitchRow
+            title="Run in background"
+            description="Start with no window and keep the app in the tray, so messages and calls still arrive"
+            enabled={runInBackground}
+            onToggle={() => updateSetting("runInBackground", !runInBackground)}
           />
           <SwitchRow
             title="Minimize to system tray"

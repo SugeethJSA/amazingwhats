@@ -1638,6 +1638,33 @@ type quotedContent struct {
 	content *DecodedMessageContent
 }
 
+// GetOldestMessageInfo returns the oldest locally stored message in a chat.
+// It is the anchor for on-demand history backfill: the primary device sends
+// messages immediately BEFORE the given message, so the newest message would
+// just re-fetch history we already have.
+func (ms *MessageStore) GetOldestMessageInfo(chatJID string) (types.MessageInfo, error) {
+	var (
+		id       string
+		isFromMe bool
+		unixSec  int64
+	)
+	err := ms.db.QueryRow(query.SelectOldestMessageInfoByChat, chatJID).
+		Scan(&id, &isFromMe, &unixSec)
+	if err != nil {
+		return types.MessageInfo{}, err
+	}
+	jid, err := types.ParseJID(chatJID)
+	if err != nil {
+		return types.MessageInfo{}, err
+	}
+	return types.MessageInfo{
+		ID:        types.MessageID(id),
+		Chat:      jid,
+		IsFromMe:  isFromMe,
+		Timestamp: time.Unix(unixSec, 0),
+	}, nil
+}
+
 // GetDecodedMessagesPaged returns a stable page of decoded messages. The
 // timestamp and message ID form a compound cursor, so messages that share the
 // same second cannot fall between pages.
