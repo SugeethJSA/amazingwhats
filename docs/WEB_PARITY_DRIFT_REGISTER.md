@@ -19,6 +19,18 @@ Source of truth for the current WhatsApp-Windows parity swarm. A row is only `FI
 | D-PINNED-001 | A pinned-message subheader appears below the chat header on the chat body pane, showing the pinned message and jumping to it when clicked. | `frontend/src/screens/ChatDetail.tsx`, `frontend/src/components/chat/MessageList.tsx`, new component if needed | FIXED |
 | D-VOICE-001 | Voice messages render like WhatsApp: play/pause, waveform progress slider with duration, playback speed toggle, sender avatar, quoted-message preview and timestamp. | `frontend/src/components/chat/MediaContent.tsx`, new component under `frontend/src/components/chat/` | FIXED |
 
+## HyperMeow source verification (pinned `v0.0.0-20261121205317-6e3f26d9b53f`)
+
+Checked directly against the module source (`%USERPROFILE%\go\pkg\mod\github.com\polymorfa\hypermeow@...`, 239 Go files), not worker reports:
+
+- **D-TIMER-001, UPSTREAM-BLOCKED confirmed.** `privacysettings.go:118` has only `SetDefaultDisappearingTimer`; `types.PrivacySettings` (`types/user.go:250-261`) has no timer field; no appstate action or handled `disappearing_mode` notification exists; `IsOnWhatsApp` (`user.go:186`) requests `disappearing_mode` but `types.IsOnWhatsAppResponse` (`types/user.go:178-189`) discards it. There is no exported generic IQ sender (`sendIQ` takes the unexported `infoQuery` type), so a clean read is impossible. A real write-only binding (`SetDisappearingTimerDefault`, generated `api.ts:1014`) does exist but is intentionally not shown as a value picker.
+- **D-STARRED-001.** `events.Star` (`types/events/appstate.go:62-71`) fields match usage; `waSyncAction.StarAction.GetStarred()` exists (`proto/waSyncAction/WAWebProtobufSyncAction.pb.go:8646`); star patches live in `WAPatchRegularHigh` (`appstate/keys.go:31`). `GetAppStateVersion`/`FetchAppState` signatures match. The version-gated bootstrap is correct because `api/api.go:223-231` already full-syncs `regular_high` on connect.
+- **D-QUICKREPLY-001.** `appstate.BuildQuickReply(id, shortcut, message, keywords, count, associatedLabelIDs...)` and `BuildQuickReplyDelete(id)` exist (`appstate/encode.go:249,259`) and both write `WAPatchRegular`, matching the app's bootstrap collection. `SendAppState` is exported (`appstate.go:640`).
+- **D-COVER-001.** `GetProfilePictureInfo(ctx, jid, *GetProfilePictureParams)` sends `ExistingID` as the `id` attribute (`user.go:742-760`); `types.ProfilePictureInfo` exposes `ID`/`URL`/`Type`. The exact-ID match guard is sound.
+- **D-STATUSREACT-001.** No dedicated status-reaction event exists; `events.Message.Message` is `*waE2E.Message` (`types/events/events.go:362-364`) and reactions arrive via `GetReactionMessage()`, as the app assumes.
+- **D-CALLNOTIF-001.** HyperMeow has no `AcceptCall` (only `RejectCall`, `call.go:106`), but the app answers via its `meowcaller` call object (`api/calls.go:456 Call.Answer()`, `:921 Call.Reject()`), so notification actions are genuinely wired; `WireRejectCall` correctly uses HyperMeow's `RejectCall` for the wire path.
+- **D-VOICE-001.** `waE2E.AudioMessage.Waveform` is a real `[]byte` field (`proto/waE2E/WAWebProtobufsE2E.pb.go:16763`); the player accepts the base64 string shape Wails produces and a numeric array.
+
 ## Rules
 
 - One worker per D-ID (tight cluster allowed for D-SELECTLIST-001).
