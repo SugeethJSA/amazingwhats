@@ -69,7 +69,7 @@ function asStringList(value: unknown): string[] {
  * The backend always emits these keys (empty strings/arrays for absent data),
  * so "absent" must be normalized to null/[] before deciding what to render.
  */
-function normalizeProfile(raw: { [key: string]?: unknown } | null | undefined): BusinessProfile {
+function normalizeProfile(raw: { [key: string]: unknown } | null | undefined): BusinessProfile {
   const categories = asStringList(raw?.categories)
   const singleCategory = asText(raw?.category)
   return {

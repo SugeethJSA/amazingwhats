@@ -5,6 +5,7 @@ import { AnnouncementAvatar, type AnnouncementIdentity } from "./AnnouncementAva
 import { useMediaHubStore } from "../../store/useMediaHubStore"
 import { useChatStore } from "../../store/useChatStore"
 import { useUIStore } from "../../store"
+import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 import { getAvatarColor, AVATAR_ICON_COLOR } from "../../lib/utils"
 import { runShortcut } from "../../lib/shortcuts"
 import {
