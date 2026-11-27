@@ -903,9 +903,10 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
     }
   }, [activeCall?.callID, showStats])
 
-  if (!activeCall) return null
-
   const handleAccept = async () => {
+    // These handlers are declared before the early null return so hooks above
+    // them keep a stable order; guard explicitly instead of relying on narrowing.
+    if (!activeCall) return
     const callID = activeCall.callID
     try {
       await AcceptCall(callID)
@@ -918,6 +919,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   }
 
   const handleReject = async () => {
+    if (!activeCall) return
     const callID = activeCall.callID
     try {
       await RejectCall(callID)
@@ -928,6 +930,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   }
 
   const handleEnd = async () => {
+    if (!activeCall) return
     const callID = activeCall.callID
     try {
       await EndCall(callID)
@@ -1107,12 +1110,51 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
   const displaySupported = videoSupported && displayCaptureIsSupported()
 
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  useEffect(() => {
+    const el = localVideoRef.current
+    const stream = localStreamRef.current
+    if (el && stream) {
+      el.srcObject = stream
+      void el.play().catch(() => {})
+    }
+  }, [videoStarted, cameraOn, videoReady])
+
+  // All hooks above run on every render; the early return lives below them so
+  // the hook order never changes when a call starts or ends.
+  if (!activeCall) return null
+
+  const showVideoStage =
+    videoSupported &&
+    activeCall.status === "active" &&
+    (activeCall.isVideo ||
+      videoStarted ||
+      pendingUpgrade ||
+      videoReady ||
+      screenSharing ||
+      screenShareActive ||
+      participantKeys.length > 0)
+
+  const callKindLabel = activeCall.isGroup
+    ? activeCall.isVideo
+      ? "Group video call"
+      : "Group voice call"
+    : activeCall.isVideo
+      ? "Video call"
+      : "Voice call"
+
+  const roundBtn =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-gray-100 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Call with ${activeCall.contactName}`}
       className={
         standalone
-          ? "fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300"
-          : "fixed z-[9999] animate-in fade-in duration-300"
+          ? "fixed inset-0 z-[9999] flex select-none flex-col bg-call-bg text-white"
+          : "fixed z-[9999] w-80 max-w-[calc(100vw_-_2rem)] select-none overflow-hidden rounded-2xl border border-white/10 bg-call-bg text-white shadow-2xl"
       }
       style={
         standalone
@@ -1122,439 +1164,347 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
             : { right: "1.5rem", bottom: "1.5rem" }
       }
     >
-      <div
-        role="dialog"
-        aria-label={`Call with ${activeCall.contactName}`}
-        className={`${standalone ? "w-full max-w-[400px]" : "w-80 max-w-[calc(100vw_-_2rem)]"} rounded-2xl p-5 shadow-2xl border flex flex-col items-center select-none`}
-        style={{
-          background: "#121b22",
-          borderColor: "rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 14px 40px rgba(0, 0, 0, 0.45)",
-        }}
-      >
+      {!standalone && (
         <div
-          className={`w-full flex items-center justify-between pb-3 mb-4 border-b border-white/10 text-xs font-medium text-gray-400 cursor-grab active:cursor-grabbing touch-none${standalone ? " hidden" : ""}`}
+          className="flex touch-none cursor-grab items-center justify-between border-b border-white/10 px-3 py-2 text-xs text-dark-subtle active:cursor-grabbing"
           onPointerDown={onDragStart}
           onPointerMove={onDragMove}
           onPointerUp={onDragEnd}
           onPointerCancel={onDragEnd}
-          title="Drag to move"
         >
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green animate-pulse" />
-          </div>
-          <span className="text-xs text-gray-300">
-            {activeCall.isGroup
-              ? activeCall.isVideo
-                ? "Group Video Call"
-                : "Group Audio Call"
-              : activeCall.isVideo
-                ? "Video Call"
-                : "Audio Call"}
-          </span>
+          <span className="h-2 w-2 rounded-full bg-green animate-pulse motion-reduce:animate-none" />
+          <span>{callKindLabel}</span>
         </div>
+      )}
 
-        {/* Contact Avatar */}
-        <div className="relative mb-3 flex items-center justify-center">
-          {activeCall.status !== "active" && (
-            <div className="absolute inset-0 rounded-full bg-green/20 animate-ping motion-reduce:animate-none" />
-          )}
-          {activeCall.avatarUrl ? (
-            <img
-              src={activeCall.avatarUrl}
-              alt=""
-              className="w-20 h-20 rounded-full object-cover shadow-xl relative z-10"
-              style={{ border: "2px solid rgba(33, 192, 99, 0.4)" }}
-            />
-          ) : (
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-xl relative z-10"
-              style={{
-                background: "linear-gradient(135deg, #1f2c34, #0b141a)",
-                border: "2px solid rgba(33, 192, 99, 0.4)",
-              }}
-            >
-              {activeCall.contactName.charAt(0).toUpperCase()}
-            </div>
-          )}
+      {standalone && (
+        <div className="flex items-center justify-center gap-1.5 border-b border-white/5 py-3 text-xs text-dark-subtle">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.13l7 3.11V11c0 4.81-3.06 9.36-7 10.93C8.06 20.36 5 15.81 5 11V6.24l7-3.11zm-1 6.87h2v5h-2v-5z" />
+          </svg>
+          <span>End-to-end encrypted</span>
         </div>
+      )}
 
-        {/* Contact Name & Call Status */}
-        <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base font-semibold text-white tracking-tight mb-0.5">
-            {activeCall.contactName}
-          </h3>
-          {activeCall.remoteMuted && (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] text-gray-400"
-              title="Peer microphone is off"
-              aria-label="Peer microphone off"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
-              </svg>
-              Microphone off
-            </span>
-          )}
-        </div>
-        {activeCall.isGroup && activeCall.participants > 0 && (
-          <p className="text-[11px] text-gray-400 mb-0.5">{activeCall.participants} participants</p>
-        )}
-        {mediaError && (
-          <p role="alert" className="text-[11px] text-amber-400 mb-0.5 text-center px-2">
-            {mediaError}
-          </p>
-        )}
-        <p className="text-xs text-emerald-400 font-mono mb-6">
-          {activeCall.status === "ringing"
-            ? activeCall.isGroup
-              ? "Incoming group call..."
-              : "Incoming Call..."
-            : activeCall.status === "calling"
-              ? "Calling..."
-              : formatTimer(callDuration)}
-        </p>
-
-        {/* Remote video + participant tiles (D-ID CALL-002b) */}
-        {!videoSupported && (
-          <p
-            className="mb-3 text-center text-[10px] text-gray-500"
-            title="Video requires WebCodecs"
-          >
-            Video requires WebCodecs
-          </p>
-        )}
-        {videoSupported &&
-          activeCall.status === "active" &&
-          (activeCall.isVideo ||
-            videoStarted ||
-            pendingUpgrade ||
-            videoReady ||
-            screenSharing ||
-            screenShareActive ||
-            participantKeys.length > 0) && (
-            <div className="w-full mb-3">
-              <div
-                className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black"
-                style={{ aspectRatio: "16 / 9" }}
-              >
-                <canvas
-                  ref={videoCanvasRef}
-                  width={640}
-                  height={360}
-                  className="h-full w-full object-contain"
-                  aria-label="Remote call video"
-                />
-                {!videoReady && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-3 text-center text-[11px] text-gray-400">
-                    {pendingUpgrade
-                      ? "Video incoming — accept to join"
-                      : videoStarted || screenSharing
-                        ? "Waiting for peer video…"
-                        : "Start video to see your peer"}
-                  </div>
-                )}
-                {screenShareActive && (
-                  <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-emerald-300">
-                    Screen sharing
-                  </span>
-                )}
+      {/* Stage: video fills the window; voice calls show a centered identity. */}
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-28 pt-4">
+        {showVideoStage ? (
+          <div className="flex min-h-0 w-full flex-1 flex-col gap-2">
+            {participantKeys.length > 0 && (
+              <div className="flex shrink-0 gap-2 overflow-x-auto pb-1">
+                {participantKeys.map(key => (
+                  <canvas
+                    key={key}
+                    ref={el => {
+                      if (el) participantCanvasesRef.current.set(key, el)
+                      else participantCanvasesRef.current.delete(key)
+                    }}
+                    width={160}
+                    height={90}
+                    className="h-16 w-28 shrink-0 rounded-lg bg-black"
+                    aria-label={`Participant ${key} video`}
+                  />
+                ))}
               </div>
-              {participantKeys.length > 0 && (
-                <div className="mt-2">
-                  <p className="mb-1 text-[10px] text-gray-400">Participant video</p>
-                  <div className="flex gap-1 overflow-x-auto pb-1">
-                    {participantKeys.map(key => (
-                      <canvas
-                        key={key}
-                        ref={el => {
-                          if (el) participantCanvasesRef.current.set(key, el)
-                          else participantCanvasesRef.current.delete(key)
-                        }}
-                        width={160}
-                        height={90}
-                        className="h-16 w-28 shrink-0 rounded bg-black"
-                        aria-label={`Participant ${key} video`}
-                      />
-                    ))}
-                  </div>
+            )}
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
+              <canvas
+                ref={videoCanvasRef}
+                width={640}
+                height={360}
+                className="h-full w-full object-contain"
+                aria-label="Remote call video"
+              />
+              {cameraOn && (
+                <video
+                  ref={localVideoRef}
+                  muted
+                  playsInline
+                  autoPlay
+                  className="absolute bottom-3 right-3 h-24 w-36 rounded-lg border border-white/20 bg-black object-cover"
+                  aria-label="Your camera preview"
+                />
+              )}
+              {!videoReady && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-dark-muted">
+                  {pendingUpgrade
+                    ? "Video incoming - accept to join"
+                    : videoStarted || screenSharing
+                      ? "Waiting for peer video."
+                      : "Start video to see your peer"}
+                </div>
+              )}
+              {screenShareActive && (
+                <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-green-light">
+                  Screen sharing
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center">
+            <div className="relative mb-4">
+              {activeCall.status !== "active" && (
+                <div className="absolute inset-0 rounded-full bg-green-muted animate-ping motion-reduce:animate-none" />
+              )}
+              {activeCall.avatarUrl ? (
+                <img
+                  src={activeCall.avatarUrl}
+                  alt=""
+                  className="relative z-10 h-28 w-28 rounded-full object-cover shadow-xl ring-2 ring-green/40"
+                />
+              ) : (
+                <div className="relative z-10 flex h-28 w-28 items-center justify-center rounded-full bg-call-surface text-4xl font-semibold shadow-xl ring-2 ring-green/40">
+                  {activeCall.contactName.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-          )}
+            <h2 className="text-2xl font-semibold tracking-tight">{activeCall.contactName}</h2>
+            {activeCall.isGroup && activeCall.participants > 0 && (
+              <p className="mt-1 text-xs text-dark-subtle">{activeCall.participants} participants</p>
+            )}
+            {activeCall.remoteMuted && (
+              <p className="mt-1 text-xs text-dark-subtle">Microphone off</p>
+            )}
+            <p className="mt-2 text-sm text-green-light">
+              {activeCall.status === "ringing"
+                ? activeCall.isGroup
+                  ? "Incoming group call..."
+                  : "Incoming call..."
+                : activeCall.status === "calling"
+                  ? activeCall.isGroup
+                    ? "Calling group..."
+                    : "Calling..."
+                  : formatTimer(callDuration)}
+            </p>
+          </div>
+        )}
+        {mediaError && (
+          <p role="alert" className="absolute bottom-24 left-1/2 max-w-sm -translate-x-1/2 px-3 text-center text-xs text-warning">
+            {mediaError}
+          </p>
+        )}
+        {!videoSupported && activeCall.status === "active" && (
+          <p className="mt-3 text-center text-xs text-dark-subtle" title="Video requires WebCodecs">
+            Video requires WebCodecs
+          </p>
+        )}
+      </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-6 w-full pt-1">
-          {activeCall.status === "active" && (
+      {/* Reaction picker and live indicators. */}
+      {activeCall.status === "active" && showReactions && (
+        <div
+          role="group"
+          aria-label="Reaction picker"
+          className="absolute bottom-24 left-1/2 z-20 flex -translate-x-1/2 gap-1 rounded-full bg-black/50 p-1.5"
+        >
+          {REACTIONS.map(emoji => (
             <button
-              onClick={handleToggleMute}
-              disabled={activeCall.status !== "active"}
-              className={`p-3 rounded-full transition-all duration-150 disabled:opacity-50 ${
-                activeCall.muted
-                  ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                  : "bg-white/10 text-gray-300 hover:bg-white/20"
-              }`}
-              aria-label={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
-              title={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
+              key={emoji}
+              onClick={() => handleSendReaction(emoji)}
+              className="rounded-full px-2 py-1 text-lg leading-none transition-colors hover:bg-white/10"
+              aria-label={`Send ${emoji} reaction`}
+              title={`Send ${emoji} reaction`}
             >
-              {activeCall.muted ? (
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
-                </svg>
-              ) : (
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                </svg>
-              )}
+              {emoji}
             </button>
+          ))}
+        </div>
+      )}
+      {(reaction || remoteHandRaised || screenShareActive || participantKeys.length > 0) && (
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 text-xs text-gray-200">
+          {reaction && (
+            <span key={reaction.id} className="animate-bounce text-xl motion-reduce:animate-none" role="status">
+              {reaction.emoji}
+            </span>
           )}
+          {remoteHandRaised && <span>Hand raised</span>}
+          {screenShareActive && <span>Screen sharing</span>}
+          {participantKeys.length > 0 && <span>{participantKeys.length} participant video</span>}
+        </div>
+      )}
 
-          {activeCall.status === "active" && (
-            <button
-              onClick={() => {
-                setAddSearch("")
-                setShowAddParticipant(true)
-              }}
-              className="p-3 rounded-full bg-white/10 text-gray-300 hover:bg-white/20 transition-all duration-150"
-              aria-label="Add participant to call"
-              title="Add participant to call"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 12a3 3 0 100-6 3 3 0 000 6zm0-8a5 5 0 110 10 5 5 0 010-10zm0 11c-2.67 0-8 1.34-8 4v2h11v-2H3v-1c0-1.22 3.5-3 6-3 .9 0 1.74.12 2.48.32-.66-.5-1.25-1.1-1.7-1.78A10.9 10.9 0 009 15zm11 1v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z" />
-              </svg>
-            </button>
-          )}
-
-          {activeCall.status === "ringing" ? (
+      {showStats && stats && (
+        <div className="absolute bottom-24 left-1/2 z-30 w-full max-w-xs -translate-x-1/2 rounded-xl border border-white/10 bg-call-surface/95 p-3 text-xs text-dark-subtle">
+          <div className="flex justify-between"><span>Phase</span><span className="capitalize text-gray-100">{String(stats.state).replace(/_/g, " ")}</span></div>
+          <div className="flex justify-between"><span>Duration</span><span className="text-gray-100">{formatTimer(callDuration)}</span></div>
+          <div className="flex justify-between"><span>Peer</span><span className="text-gray-100">{stats.peer_jid.split("@")[0]}</span></div>
+          {stats.is_group && (
             <>
-              <button
-                onClick={handleReject}
-                className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 transition-transform hover:scale-105 active:scale-95"
-                aria-label="Decline call"
-                title="Decline Call"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleAccept}
-                className="w-12 h-12 rounded-full bg-green text-white flex items-center justify-center shadow-lg shadow-green/40 transition-transform hover:scale-105 active:scale-95 animate-pulse"
-                aria-label="Accept call"
-                title="Accept Call"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" />
-                </svg>
-              </button>
+              <div className="flex justify-between"><span>Group</span><span className="text-gray-100">{stats.group_jid.split("@")[0]}</span></div>
+              <div className="flex justify-between"><span>Participants</span><span className="text-gray-100">{stats.participants}</span></div>
             </>
-          ) : (
-            <button
-              onClick={handleEnd}
-              className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 transition-transform hover:scale-105 active:scale-95"
-              aria-label="End call"
-              title="End Call"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-              </svg>
-            </button>
           )}
         </div>
+      )}
 
-        {/* Video / screen-share controls (D-ID CALL-002b). Hidden entirely when
-            WebCodecs is unavailable; the short note above explains why. */}
-        {activeCall.status === "active" && videoSupported && (
-          <div className="w-full mt-3 pt-3 border-t border-white/10">
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {!videoStarted && !pendingUpgrade && (
-                <button
-                  onClick={handleStartVideo}
-                  className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-gray-200 hover:bg-white/20 transition-colors"
-                  aria-label="Start video"
-                  title="Start video"
-                >
-                  Start video
+      {/* Floating control bar. Every control keeps its previous handler. */}
+      <div className="absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2">
+        {activeCall.status === "active" && (
+          <button
+            onClick={() => setShowStats(v => !v)}
+            className="text-[11px] text-dark-subtle transition-colors hover:text-white"
+            aria-expanded={showStats}
+          >
+            {showStats ? "Hide details" : "Show details"}
+          </button>
+        )}
+        <div className="flex items-center gap-2 rounded-full bg-call-surface/95 px-3 py-2 shadow-2xl ring-1 ring-white/10 backdrop-blur">
+          {activeCall.status === "active" ? (
+            <>
+              <button
+                onClick={handleToggleMute}
+                className={`${roundBtn} ${activeCall.muted ? "bg-danger-tint text-danger-soft" : ""}`}
+                aria-label={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
+                aria-pressed={activeCall.muted}
+                title={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
+              >
+                {activeCall.muted ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                )}
+              </button>
+
+              {videoSupported && !videoStarted && !pendingUpgrade && (
+                <button onClick={handleStartVideo} className={roundBtn} aria-label="Start video" title="Start video">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
+                  </svg>
                 </button>
               )}
-              {pendingUpgrade && !screenSharing && (
-                <button
-                  onClick={handleAcceptVideo}
-                  className="rounded-full bg-green/25 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-green/40 transition-colors"
-                  aria-label="Accept video"
-                  title="Accept video"
-                >
-                  Accept video
+              {videoSupported && pendingUpgrade && !screenSharing && (
+                <button onClick={handleAcceptVideo} className={`${roundBtn} bg-green-muted text-green-light`} aria-label="Accept video" title="Accept video">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
+                  </svg>
+                </button>
+              )}
+              {videoSupported && videoStarted && (
+                <button onClick={handleStopVideo} className={`${roundBtn} bg-danger-tint text-danger-soft`} aria-label="Stop video" title="Stop video">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M3 3L21 21M17 10.5V7a2 2 0 00-2-2H9l10 10m-2 2v.5a2 2 0 01-2 2H4a2 2 0 01-2-2V7c0-.7.36-1.31.9-1.66L17 19.5V10.5l4 4v-11l-4 4z" />
+                  </svg>
                 </button>
               )}
               {videoStarted && (
                 <button
-                  onClick={handleStopVideo}
-                  className="rounded-full bg-red-500/20 px-3 py-1.5 text-[11px] text-red-300 hover:bg-red-500/30 transition-colors"
-                  aria-label="Stop video"
-                  title="Stop video"
-                >
-                  Stop video
-                </button>
-              )}
-              {videoStarted && !screenSharing && (
-                <button
                   onClick={handleToggleCamera}
-                  className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-gray-200 hover:bg-white/20 transition-colors"
+                  className={`${roundBtn} ${cameraOn ? "" : "bg-danger-tint text-danger-soft"}`}
                   aria-label={cameraOn ? "Turn camera off" : "Turn camera on"}
+                  aria-pressed={cameraOn}
                   title={cameraOn ? "Turn camera off" : "Turn camera on"}
                 >
-                  {cameraOn ? "Camera off" : "Camera on"}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
+                  </svg>
                 </button>
               )}
               {videoStarted && displaySupported && (
                 <button
                   onClick={handleToggleScreen}
-                  className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-gray-200 hover:bg-white/20 transition-colors"
+                  className={`${roundBtn} ${screenSharing ? "bg-green-muted text-green-light" : ""}`}
                   aria-label={screenSharing ? "Stop sharing screen" : "Share screen"}
+                  aria-pressed={screenSharing}
                   title={screenSharing ? "Stop sharing screen" : "Share screen"}
                 >
-                  {screenSharing ? "Stop sharing" : "Share screen"}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20 3H4a2 2 0 00-2 2v11a2 2 0 002 2h6v2h4v-2h6a2 2 0 002-2V5a2 2 0 00-2-2zm0 13H4V5h16v11zM11 7h2v4h3l-4 4-4-4h3V7z" />
+                  </svg>
                 </button>
               )}
-            </div>
-          </div>
-        )}
 
-        {/* Reactions and hand-raise use call app-data only, so they stay
-            available on browsers without WebCodecs. */}
-        {activeCall.status === "active" && (
-          <div
-            className={`w-full flex flex-wrap items-center justify-center gap-1.5 ${
-              videoSupported ? "mt-2" : "mt-3 pt-3 border-t border-white/10"
-            }`}
-          >
-            <button
-              onClick={() => setShowReactions(v => !v)}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-gray-200 hover:bg-white/20 transition-colors"
-              aria-label="Send a reaction"
-              aria-expanded={showReactions}
-              title="Send a reaction"
-            >
-              React
-            </button>
-            <button
-              onClick={handleToggleHand}
-              className={`rounded-full px-3 py-1.5 text-[11px] transition-colors ${
-                handRaised
-                  ? "bg-amber-400/25 text-amber-300 hover:bg-amber-400/40"
-                  : "bg-white/10 text-gray-200 hover:bg-white/20"
-              }`}
-              aria-label={handRaised ? "Lower hand" : "Raise hand"}
-              aria-pressed={handRaised}
-              title={handRaised ? "Lower hand" : "Raise hand"}
-            >
-              {handRaised ? "Lower hand" : "Raise hand"}
-            </button>
-          </div>
-        )}
-        {activeCall.status === "active" && showReactions && (
-          <div
-            role="group"
-            aria-label="Reaction picker"
-            className="mt-2 flex justify-center gap-1 rounded-lg bg-black/40 p-1.5"
-          >
-            {REACTIONS.map(emoji => (
               <button
-                key={emoji}
-                onClick={() => handleSendReaction(emoji)}
-                className="rounded px-1.5 py-1 text-base leading-none hover:bg-white/10 transition-colors"
-                aria-label={`Send ${emoji} reaction`}
-                title={`Send ${emoji} reaction`}
+                onClick={() => { setAddSearch(""); setShowAddParticipant(true) }}
+                className={roundBtn}
+                aria-label="Add participant to call"
+                title="Add participant to call"
               >
-                {emoji}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M9 12a3 3 0 100-6 3 3 0 000 6zm0-8a5 5 0 110 10 5 5 0 010-10zm0 11c-2.67 0-8 1.34-8 4v2h11v-2H3v-1c0-1.22 3.5-3 6-3 .9 0 1.74.12 2.48.32-.66-.5-1.25-1.1-1.7-1.78A10.9 10.9 0 009 15zm11 1v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z" />
+                </svg>
               </button>
-            ))}
-          </div>
-        )}
-        {(reaction || remoteHandRaised || screenShareActive || participantKeys.length > 0) && (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[11px] text-gray-300">
-            {reaction && (
-              <span key={reaction.id} className="animate-bounce text-lg motion-reduce:animate-none" role="status">
-                {reaction.emoji}
-              </span>
-            )}
-            {remoteHandRaised && (
-              <span title="A participant raised their hand">✋ Hand raised</span>
-            )}
-            {screenShareActive && (
-              <span title="A participant is sharing their screen">🖥️ Screen sharing</span>
-            )}
-            {participantKeys.length > 0 && (
-              <span title="Participant video streams available">
-                {participantKeys.length} participant video
-                {participantKeys.length === 1 ? "" : "s"}
-              </span>
-            )}
-          </div>
-        )}
+              <button
+                onClick={() => setShowReactions(v => !v)}
+                className={`${roundBtn} ${showReactions ? "bg-white/20" : ""}`}
+                aria-label="Send a reaction"
+                aria-expanded={showReactions}
+                title="Send a reaction"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zM8.5 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm7 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12 17.5c2.3 0 4.3-1.4 5-3.5H7c.7 2.1 2.7 3.5 5 3.5z" />
+                </svg>
+              </button>
+              <button
+                onClick={handleToggleHand}
+                className={`${roundBtn} ${handRaised ? "bg-warning/25 text-warning" : ""}`}
+                aria-label={handRaised ? "Lower hand" : "Raise hand"}
+                aria-pressed={handRaised}
+                title={handRaised ? "Lower hand" : "Raise hand"}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M11 2a1.5 1.5 0 013 0v8l1.5-1.5a1.5 1.5 0 012.1 2.1L16 12.2V5.5a1.5 1.5 0 013 0v7.8l1.6-1.6a1.5 1.5 0 012.1 2.1l-5.2 5.2A4 4 0 0115 20h-2.4a4 4 0 01-3.1-1.5L5.2 13a1.5 1.5 0 012.2-2l1.6 1.8V2z" />
+                </svg>
+              </button>
 
-        {/* Call Stats Toggle */}
-        {activeCall.status === "active" && (
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="mt-3 text-xs text-gray-400 hover:text-white transition-colors"
-          >
-            {showStats ? "Hide Details" : "Show Details"}
-          </button>
-        )}
-
-        {/* Stats Panel */}
-        {showStats && stats && (
-          <div className="mt-3 w-full rounded-lg bg-black/30 p-3 text-[11px] font-mono text-gray-400 space-y-1 border border-white/5">
-            <div className="flex justify-between">
-              <span>Phase</span>
-              <span className="text-gray-200 capitalize">{stats.state}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Duration</span>
-              <span className="text-gray-200">{formatTimer(callDuration)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Peer</span>
-              <span className="text-gray-200 truncate max-w-[140px]" title={stats.peer_jid}>
-                {stats.peer_jid.split("@")[0]}
+              <span className="mx-1 h-6 w-px bg-white/15" />
+              <button
+                onClick={handleEnd}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-danger text-white shadow-lg shadow-danger/30 transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                aria-label="End call"
+                title="End call"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+                </svg>
+              </button>
+            </>
+          ) : activeCall.status === "ringing" ? (
+            <>
+              <span className="mr-2 text-sm text-gray-200">
+                Incoming {activeCall.isGroup ? "group " : ""}{activeCall.isVideo ? "video" : "voice"} call
               </span>
-            </div>
-            {stats.is_group && (
-              <div className="flex justify-between">
-                <span>Group</span>
-                <span className="text-gray-200 truncate max-w-[140px]" title={stats.group_jid}>
-                  {stats.group_jid.split("@")[0]}
-                </span>
-              </div>
-            )}
-            {stats.is_group && (
-              <div className="flex justify-between">
-                <span>Participants</span>
-                <span className="text-gray-200">{stats.participants}</span>
-              </div>
-            )}
-          </div>
-        )}
+              <button
+                onClick={handleReject}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-danger text-white shadow-lg shadow-danger/30 transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                aria-label="Decline call"
+                title="Decline call"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+                </svg>
+              </button>
+              <button
+                onClick={handleAccept}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-green text-white shadow-lg shadow-green/40 transition-transform hover:scale-105 active:scale-95 animate-pulse motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                aria-label="Accept call"
+                title="Accept call"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="mr-2 text-sm text-gray-200">{callKindLabel}</span>
+              <button
+                onClick={handleEnd}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-danger text-white shadow-lg shadow-danger/30 transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                aria-label="Cancel call"
+                title="Cancel call"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Add participant picker */}

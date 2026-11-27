@@ -134,6 +134,10 @@ label[for] {
   --color-dark-surface-alt: #202121;
   --color-dark-surface-mid: #2a2c2c;
   --color-dark-surface-soft: #222222;
+
+  /* Dedicated call window surfaces (WhatsApp-style dark call UI). */
+  --color-call-bg: #0b141a;
+  --color-call-surface: #1f2c34;
   --color-dark-ink-deep: #0e100f;
   --color-dark-panel: #202c33;
   --color-muted-subtle: #5a6670;

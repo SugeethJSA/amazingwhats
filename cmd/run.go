@@ -125,8 +125,11 @@ func run(assets fs.FS) cli.ActionFunc {
 		callWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 			Title:       "amazingwhats Call",
 			URL:         "/call.html",
-			Width:       420,
-			Height:      560,
+			// A compact but genuinely usable stage: the 420x560 card used to
+			// cram remote video, tiles and four rows of tiny buttons into a
+			// phone-sized window. The window stays resizable.
+			Width:       760,
+			Height:      600,
 			AlwaysOnTop: true,
 			Hidden:      true,
 		})
