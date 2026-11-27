@@ -719,8 +719,10 @@ export function ChatInput({
         return next
       })
 
-      // Load avatars for contacts not in cache
+      // Load avatars for contacts not in cache. "@all" is a non-JID mention
+      // with no profile picture, so never send it to the avatar RPC.
       for (const contact of contactsToLoad) {
+        if (contact.isAll) continue
         try {
           const userJid = contact.raw_jid
           const avatar = await GetCachedAvatar(userJid, false)

@@ -741,6 +741,13 @@ export class MessageContent {
     "fileName"?: string;
     "quotedMessageId"?: string;
     "mentions"?: string[];
+
+    /**
+     * MentionAll encodes WhatsApp's non-JID "@all" group mention. It is a
+     * separate flag because "@all" is NOT a MentionedJID: WhatsApp Web sets
+     * ContextInfo.nonJIDMentions = MENTION_ALL (1) instead.
+     */
+    "mentionAll"?: boolean;
     "clientTempId"?: string;
     "forwarded"?: boolean;
 

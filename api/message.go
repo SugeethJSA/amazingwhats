@@ -29,6 +29,10 @@ type MessageContent struct {
 	FileName        string   `json:"fileName,omitempty"`
 	QuotedMessageID string   `json:"quotedMessageId,omitempty"`
 	Mentions        []string `json:"mentions,omitempty"`
+	// MentionAll encodes WhatsApp's non-JID "@all" group mention. It is a
+	// separate flag because "@all" is NOT a MentionedJID: WhatsApp Web sets
+	// ContextInfo.nonJIDMentions = MENTION_ALL (1) instead.
+	MentionAll      bool     `json:"mentionAll,omitempty"`
 	ClientTempID    string   `json:"clientTempId,omitempty"`
 	Forwarded       bool     `json:"forwarded,omitempty"`
 	// GifPlayback marks a video message as an animated GIF (whatsmeow's GIF
@@ -69,30 +73,35 @@ func (a *Api) processMessageText(msg *waE2E.Message) string {
 	}
 	var text string
 	var mentionedJIDs []string
+	var nonJIDMentions uint32
 
 	if msg.GetConversation() != "" {
 		text = msg.GetConversation()
 	} else if msg.GetExtendedTextMessage() != nil {
 		text = msg.GetExtendedTextMessage().GetText()
-		if msg.GetExtendedTextMessage().GetContextInfo() != nil {
-			mentionedJIDs = msg.GetExtendedTextMessage().GetContextInfo().GetMentionedJID()
+		if ci := msg.GetExtendedTextMessage().GetContextInfo(); ci != nil {
+			mentionedJIDs = ci.GetMentionedJID()
+			nonJIDMentions = ci.GetNonJIDMentions()
 		}
 	} else {
 		switch {
 		case msg.GetImageMessage() != nil:
 			text = msg.GetImageMessage().GetCaption()
-			if msg.GetImageMessage().GetContextInfo() != nil {
-				mentionedJIDs = msg.GetImageMessage().GetContextInfo().GetMentionedJID()
+			if ci := msg.GetImageMessage().GetContextInfo(); ci != nil {
+				mentionedJIDs = ci.GetMentionedJID()
+				nonJIDMentions = ci.GetNonJIDMentions()
 			}
 		case msg.GetVideoMessage() != nil:
 			text = msg.GetVideoMessage().GetCaption()
-			if msg.GetVideoMessage().GetContextInfo() != nil {
-				mentionedJIDs = msg.GetVideoMessage().GetContextInfo().GetMentionedJID()
+			if ci := msg.GetVideoMessage().GetContextInfo(); ci != nil {
+				mentionedJIDs = ci.GetMentionedJID()
+				nonJIDMentions = ci.GetNonJIDMentions()
 			}
 		case msg.GetDocumentMessage() != nil:
 			text = msg.GetDocumentMessage().GetCaption()
-			if msg.GetDocumentMessage().GetContextInfo() != nil {
-				mentionedJIDs = msg.GetDocumentMessage().GetContextInfo().GetMentionedJID()
+			if ci := msg.GetDocumentMessage().GetContextInfo(); ci != nil {
+				mentionedJIDs = ci.GetMentionedJID()
+				nonJIDMentions = ci.GetNonJIDMentions()
 			}
 		}
 	}
@@ -108,9 +117,15 @@ func (a *Api) processMessageText(msg *waE2E.Message) string {
 	if len(mentionedJIDs) > 0 {
 		htmlText = replaceMentions(htmlText, mentionedJIDs, a)
 	}
+	if nonJIDMentions&nonJIDMentionAll != 0 {
+		htmlText = replaceMentionAll(htmlText)
+	}
 
 	return htmlText
 }
+
+// nonJIDMentionAll is WAWebNonJidMentionType.MENTION_ALL from WhatsApp Web.
+const nonJIDMentionAll uint32 = 1
 
 // maxPageSize is the hard upper bound for any frontend-supplied page/search
 // limit. A negative limit would become "unlimited" in SQLite (huge scan) and
@@ -288,6 +303,14 @@ func (a *Api) SendMessage(chatJID string, content MessageContent) (string, error
 			contextInfo = &waE2E.ContextInfo{}
 		}
 		contextInfo.IsForwarded = proto.Bool(true)
+	}
+	if content.MentionAll {
+		// Verified from WhatsApp Web's own bundle: @all sets
+		// ContextInfo.nonJIDMentions = MENTION_ALL (1), not a MentionedJID.
+		if contextInfo == nil {
+			contextInfo = &waE2E.ContextInfo{}
+		}
+		contextInfo.NonJIDMentions = proto.Uint32(nonJIDMentionAll)
 	}
 
 	switch content.Type {

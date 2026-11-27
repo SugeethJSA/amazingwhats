@@ -2,6 +2,7 @@ package api
 
 import (
 	"html"
+	"regexp"
 	"strings"
 
 	"github.com/lugvitc/amazingwhats/internal/misc"
@@ -82,6 +83,17 @@ func replaceMentions(text string, mentionedJIDs []string, a *Api) string {
 	}
 
 	return result
+}
+
+// replaceMentionAll renders WhatsApp's non-JID "@all" mention. It is not a
+// MentionedJID, so replaceMentions cannot handle it (parsing "@all" as a JID
+// would produce an empty user part and corrupt every "@" in the message).
+// Match on a word boundary like WhatsApp Web's /@all\b/ so "@alliance" and
+// "support@all.com" are left untouched.
+var allMentionPattern = regexp.MustCompile(`(^|[^A-Za-z0-9_])@all\b`)
+
+func replaceMentionAll(text string) string {
+	return allMentionPattern.ReplaceAllString(text, `${1}<span class="mention">@all</span>`)
 }
 
 func (a *Api) GetProfileColor(jidStr string) string {

@@ -70,6 +70,8 @@ type SendPayload = {
   fileName?: string
   quotedMessageId?: string
   mentions?: string[]
+  /** WhatsApp non-JID @all mention (ContextInfo.nonJIDMentions = 1). */
+  mentionAll?: boolean
   gifPlayback?: boolean
   /** Push-to-talk metadata from a real microphone recording. */
   ptt?: boolean
@@ -119,6 +121,16 @@ function blobToDataURL(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(blob)
   })
+}
+
+// WhatsApp Web's mention picker offers a non-JID "@all" entry in groups.
+// It is encoded as ContextInfo.nonJIDMentions = 1, not a MentionedJID.
+const MENTION_ALL_CONTACT = {
+  jid: "@all",
+  raw_jid: "@all",
+  phno: "all",
+  full_name: "all",
+  isAll: true,
 }
 
 export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailProps) {
@@ -278,12 +290,12 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               .map((p: any) => p.contact)
               .filter((c: any) => c && c.phno !== self.phno && c.jid !== self.jid)
             setChatSubtitle(["You", ...others.map(participantLabel).filter(Boolean)].join(", "))
-            setMentionableContacts(others)
+            setMentionableContacts([...others, MENTION_ALL_CONTACT])
           } catch (err) {
             setCanSend(true)
             const contacts = groupInfo.group_participants.map((p: any) => p.contact)
             setChatSubtitle(contacts.map(participantLabel).filter(Boolean).join(", "))
-            setMentionableContacts(contacts)
+            setMentionableContacts([...contacts, MENTION_ALL_CONTACT])
           }
         } catch (error) {
           console.error("Failed to fetch group info:", error)
@@ -891,6 +903,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     if (!text || pastedImage || selectedFile) return
     let processedText = text
     const mentionsToSend: string[] = []
+    let mentionAll = false
     const sorted = [...selectedMentions].sort((a, b) => {
       const name = (m: any) => m.full_name || (m.push_name ? `~ ${m.push_name}` : m.short || m.phno)
       return name(b).length - name(a).length
@@ -900,8 +913,13 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
       if (!name) name = mention.push_name ? `~ ${mention.push_name}` : mention.short || mention.phno
       const token = `@${name}`
       if (processedText.includes(token)) {
-        processedText = processedText.replaceAll(token, `@${mention.jid.split("@")[0]}`)
-        mentionsToSend.push(mention.jid)
+        // @all is a non-JID mention: keep the literal token and set the flag.
+        if (mention.jid === "@all") {
+          mentionAll = true
+        } else {
+          processedText = processedText.replaceAll(token, `@${mention.jid.split("@")[0]}`)
+          mentionsToSend.push(mention.jid)
+        }
       }
     }
     addScheduledMessage(
@@ -911,6 +929,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         text: processedText,
         quotedMessageId: replyingTo?.Info.ID,
         mentions: mentionsToSend,
+        mentionAll: mentionAll || undefined,
         clientTempId: `sched-${Date.now()}`,
       },
       sendAt,
@@ -1042,6 +1061,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
 
     let processedText = textToSend
     const mentionsToSend: string[] = []
+    let mentionAll = false
     if (selectedMentions.length > 0) {
       const sortedMentions = [...selectedMentions].sort((a, b) => {
         let nameA = a.full_name
@@ -1065,12 +1085,18 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         const mentionText = `@${name}`
 
         if (processedText.includes(mentionText)) {
-          const userPart = mention.jid.split("@")[0]
-          const replacement = `@${userPart}`
+          // @all is a non-JID mention: WhatsApp Web encodes it as
+          // ContextInfo.nonJIDMentions = 1, never as a MentionedJID.
+          if (mention.jid === "@all") {
+            mentionAll = true
+          } else {
+            const userPart = mention.jid.split("@")[0]
+            const replacement = `@${userPart}`
 
-          processedText = processedText.replaceAll(mentionText, replacement)
+            processedText = processedText.replaceAll(mentionText, replacement)
 
-          mentionsToSend.push(mention.jid)
+            mentionsToSend.push(mention.jid)
+          }
         }
       }
     }
@@ -1086,6 +1112,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
+          mentionAll: mentionAll || undefined,
         }
       } else if (fileToSend) {
         const dataURL = await blobToDataURL(fileToSend)
@@ -1098,6 +1125,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
+          mentionAll: mentionAll || undefined,
         }
         // The backend has distinct image/video/audio/document branches. Sending
         // every File as "video" made PDFs and other documents arrive as video.
@@ -1121,6 +1149,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           text: processedText,
           quotedMessageId,
           mentions: mentionsToSend,
+          mentionAll: mentionAll || undefined,
         }
       }
     } catch (err) {
