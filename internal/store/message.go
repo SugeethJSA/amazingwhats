@@ -437,6 +437,12 @@ func (ms *MessageStore) Close() error {
 	<-ms.writerDone
 
 	var closeErr error
+	// Fold the WAL back into the main file on a clean shutdown. This keeps
+	// messages.db self-contained across restarts and updates, and avoids
+	// leaving a sidecar that a later startup could replay incorrectly.
+	if _, err := ms.db.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`); err != nil {
+		closeErr = errors.Join(closeErr, fmt.Errorf("wal checkpoint: %w", err))
+	}
 	for _, stmt := range []*sql.Stmt{
 		ms.stmtInsertMessage,
 		ms.stmtInsertMedia,

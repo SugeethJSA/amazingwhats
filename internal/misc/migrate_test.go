@@ -7,6 +7,53 @@ import (
 	"testing"
 )
 
+func TestMigrateLegacyConfigSkipsSQLiteSidecars(t *testing.T) {
+	root := t.TempDir()
+	legacy := filepath.Join(root, legacyAppName)
+	newDir := filepath.Join(root, AppName)
+	if err := os.MkdirAll(legacy, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"messages.db", "messages.db-wal", "messages.db-shm", "messages.db-journal"} {
+		if err := os.WriteFile(filepath.Join(legacy, name), []byte("legacy"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := migrateLegacyConfig(newDir); err != nil {
+		t.Fatalf("migration: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(newDir, "messages.db")); err != nil {
+		t.Fatalf("main legacy database should be migrated: %v", err)
+	}
+	for _, name := range []string{"messages.db-wal", "messages.db-shm", "messages.db-journal"} {
+		if _, err := os.Stat(filepath.Join(newDir, name)); !os.IsNotExist(err) {
+			t.Errorf("SQLite sidecar %s must not be migrated: %v", name, err)
+		}
+	}
+
+	// The reported failure is the UPGRADE case: a fresh messages.db already
+	// exists in the new directory while the legacy dir still has stale sidecars.
+	upgradeDir := filepath.Join(root, "upgrade")
+	if err := os.MkdirAll(upgradeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(upgradeDir, "messages.db"), []byte("current"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateLegacyConfig(upgradeDir); err != nil {
+		t.Fatalf("upgrade migration: %v", err)
+	}
+	mainDB, err := os.ReadFile(filepath.Join(upgradeDir, "messages.db"))
+	if err != nil || string(mainDB) != "current" {
+		t.Fatalf("existing messages.db was overwritten: %q, %v", mainDB, err)
+	}
+	for _, name := range []string{"messages.db-wal", "messages.db-shm", "messages.db-journal"} {
+		if _, err := os.Stat(filepath.Join(upgradeDir, name)); !os.IsNotExist(err) {
+			t.Errorf("upgrade case copied sidecar %s: %v", name, err)
+		}
+	}
+}
+
 func TestMigrateLegacyConfigNoLegacyDir(t *testing.T) {
 	root := t.TempDir()
 	newDir := filepath.Join(root, AppName)

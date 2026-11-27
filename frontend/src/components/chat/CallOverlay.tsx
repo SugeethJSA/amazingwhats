@@ -389,8 +389,14 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       return false
     }
     const settings: any = typeof track.getSettings === "function" ? track.getSettings() : {}
-    const width = Number(settings.width) || 1280
-    const height = Number(settings.height) || 720
+    // Baseline Level 3.1 (avc1.42E01F) cannot encode above 1280x720, and a
+    // captured window is often larger or odd-sized. Scale to a supported,
+    // even-dimension frame instead of feeding an unsupported config.
+    const rawWidth = Number(settings.width) || 1280
+    const rawHeight = Number(settings.height) || 720
+    const scale = Math.min(1, 1280 / rawWidth, 720 / rawHeight)
+    const width = Math.max(2, Math.floor((rawWidth * scale) / 2) * 2)
+    const height = Math.max(2, Math.floor((rawHeight * scale) / 2) * 2)
     const bitrate = Math.min(2000000, Math.max(250000, width * height * 2))
     let encoder: any
     try {
@@ -407,7 +413,12 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
             console.error("VideoEncoder output failed:", err)
           }
         },
-        error: (err: any) => console.error("[VoIP] VideoEncoder error:", err),
+        error: (err: any) => {
+          console.error("[VoIP] VideoEncoder error:", err)
+          if (activeCallIDRef.current === callID) {
+            setMediaError("Video encoding failed for this screen. Try a smaller window.")
+          }
+        },
       })
       encoder.configure({
         codec: "avc1.42E01F",
@@ -1043,6 +1054,9 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
   const handleToggleCamera = async () => {
     if (!activeCall) return
+    // Starting the camera would stopCapture() and kill the live display track
+    // while the backend still thinks screen sharing is active.
+    if (screenSharing) return
     const callID = activeCall.callID
     if (cameraOn) {
       stopCapture()
@@ -1073,10 +1087,12 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
     }
     const wasCameraOn = cameraOn
     if (wasCameraOn) cameraWasActiveRef.current = true
+    // Unmount the camera preview BEFORE the display stream is installed.
+    // The preview element must never consume a screen-capture track.
+    setCameraOn(false)
     const ok = await startCapture(callID, "screen")
     if (ok && activeCallIDRef.current === callID) {
       setScreenSharing(true)
-      setCameraOn(false)
     } else {
       // Go rejected the share (or capture failed): revert to the camera that
       // was running before, so no capture is silently lost.
@@ -1118,7 +1134,16 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       el.srcObject = stream
       void el.play().catch(() => {})
     }
-  }, [videoStarted, cameraOn, videoReady])
+    // Release the native capture surface when the preview unmounts. Sharing a
+    // display track between this element and MediaStreamTrackProcessor can
+    // crash WebView2's graphics pipeline.
+    return () => {
+      if (el) {
+        el.pause()
+        el.srcObject = null
+      }
+    }
+  }, [videoStarted, cameraOn, videoReady, screenSharing])
 
   // All hooks above run on every render; the early return lives below them so
   // the hook order never changes when a call starts or ends.
@@ -1215,7 +1240,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 className="h-full w-full object-contain"
                 aria-label="Remote call video"
               />
-              {cameraOn && (
+              {cameraOn && !screenSharing && (
                 <video
                   ref={localVideoRef}
                   muted
@@ -1391,7 +1416,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                   </svg>
                 </button>
               )}
-              {videoStarted && (
+              {videoStarted && !screenSharing && (
                 <button
                   onClick={handleToggleCamera}
                   className={`${roundBtn} ${cameraOn ? "" : "bg-danger-tint text-danger-soft"}`}

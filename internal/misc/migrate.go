@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // legacyAppName is the on-disk directory name used before the runtime identity
@@ -92,6 +93,16 @@ func copyLegacyTree(srcDir, dstDir string, stats *migrationStats) error {
 		src := filepath.Join(srcDir, entry.Name())
 		dst := filepath.Join(dstDir, entry.Name())
 
+		// SQLite WAL/SHM/JOURNAL sidecars belong to a specific database file
+		// and can never be copied between installs. A stale sidecar paired
+		// with a healthy messages.db makes SQLite report "database disk image
+		// is malformed" on open, which wipes the local chat history. Skip
+		// them even when the destination DB exists (the normal upgrade case).
+		if isSQLiteSidecar(entry.Name()) {
+			stats.skipped++
+			continue
+		}
+
 		if _, err := os.Lstat(dst); err == nil {
 			stats.skipped++
 			continue
@@ -144,6 +155,14 @@ func copyLegacyTree(srcDir, dstDir string, stats *migrationStats) error {
 		}
 	}
 	return nil
+}
+
+// isSQLiteSidecar reports whether name is a transient SQLite journal file that
+// must never be copied between config directories.
+func isSQLiteSidecar(name string) bool {
+	return strings.HasSuffix(name, "-wal") ||
+		strings.HasSuffix(name, "-shm") ||
+		strings.HasSuffix(name, "-journal")
 }
 
 // copyLegacyFile writes a single file with O_EXCL so even a race cannot
