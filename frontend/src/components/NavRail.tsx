@@ -3,6 +3,7 @@ import { useUIStore, type SidebarView } from "../store/useUIStore"
 import { useSelfAvatarStore } from "../store/useSelfAvatarStore"
 import { connectionView } from "../lib/connection"
 import { SettingsIcon } from "../assets/svgs/settings_icons"
+import { HEALTH_TOGGLE_ID } from "./HealthPanel"
 
 /* Inline rail glyphs — owned assets only, no Meta artwork. Decorative: every
    control carries its own accessible name via aria-label/title. */
@@ -28,6 +29,25 @@ function StatusIcon() {
     <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
       <circle cx="11" cy="13" r="7.5" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="18.5" cy="5.5" r="3" fill="var(--color-green)" />
+    </svg>
+  )
+}
+
+/** Original inline health glyph: a shield with a heartbeat trace. */
+function HealthIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2.8 4.6 5.6v5.8c0 4.9 3.1 8.3 7.4 10 4.3-1.7 7.4-5.1 7.4-10V5.6L12 2.8Z" />
+      <path d="M7.2 11.9h2.2l1.4-3.1 2.3 5.8 1.4-2.7h2.3" />
     </svg>
   )
 }
@@ -87,6 +107,30 @@ export function NavRail() {
   const selfAvatar = useSelfAvatarStore(state => state.selfAvatar)
   const connectionStatus = useUIStore(state => state.connectionStatus)
   const connection = connectionView(connectionStatus)
+  const statusAlertCount = useUIStore(
+    state => state.notifications.filter(notification => notification.kind === "status").length,
+  )
+  const healthPanelOpen = useUIStore(state => state.healthPanelOpen)
+  const setHealthPanelOpen = useUIStore(state => state.setHealthPanelOpen)
+
+  // Red wins when the server link is down; yellow covers connecting/reconnecting
+  // and any pending status alert; green is a clean, connected state.
+  const healthTone =
+    connection.tone === "offline"
+      ? "offline"
+      : connection.tone === "connecting" || statusAlertCount > 0
+        ? "alert"
+        : "online"
+  const toneClass =
+    healthTone === "offline"
+      ? "text-[var(--color-danger)]"
+      : healthTone === "alert"
+        ? "text-[var(--color-warning)]"
+        : "text-[var(--color-green)]"
+  const alertLine =
+    statusAlertCount > 0
+      ? `${statusAlertCount} alert${statusAlertCount === 1 ? "" : "s"} need attention`
+      : "No pending alerts"
 
   const items: RailItem[] = [
     { view: "chats", label: "Chats", icon: <ChatsIcon /> },
@@ -178,18 +222,33 @@ export function NavRail() {
         </div>
       </div>
 
-      {/* Durable connection cue: a dot in the rail; hovering or focusing it
-          expands the full human-readable state next to the rail. */}
+      {/* Health cue: the original shield/heartbeat glyph is colour-coded by
+          connection state and pending alerts. Clicking toggles the left-side
+          health subpane; hovering/focusing keeps the full status tooltip. */}
       <div className="group relative flex w-full justify-center">
+        {healthPanelOpen && (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-green)]"
+          />
+        )}
         <button
           type="button"
-          aria-label={`Connection: ${connection.label}. ${connection.detail}`}
-          title={connection.label}
-          className={`${ITEM_BASE} h-8 w-8`}
+          id={HEALTH_TOGGLE_ID}
+          aria-label={`Health and connection: ${connection.label}. ${connection.detail}. ${alertLine}. ${
+            healthPanelOpen ? "Close health panel" : "Open health panel"
+          }`}
+          title={`${connection.label} — ${alertLine}`}
+          aria-expanded={healthPanelOpen}
+          aria-controls="health-alerts-pane"
+          onClick={() => setHealthPanelOpen(!healthPanelOpen)}
+          className={`${ITEM_BASE} h-9 w-9 ${toneClass} ${
+            healthPanelOpen
+              ? "bg-black/5 dark:bg-white/10"
+              : "hover:bg-black/5 dark:hover:bg-white/10"
+          }`}
         >
-          <span className={`conn-status--${connection.tone}`}>
-            <span className="conn-status-dot block" aria-hidden="true" />
-          </span>
+          <HealthIcon />
         </button>
         <div
           role="status"
@@ -202,6 +261,7 @@ export function NavRail() {
           <span className="mt-0.5 block text-light-muted dark:text-dark-muted">
             {connection.detail}
           </span>
+          <span className="mt-0.5 block text-light-muted dark:text-dark-muted">{alertLine}</span>
         </div>
       </div>
 

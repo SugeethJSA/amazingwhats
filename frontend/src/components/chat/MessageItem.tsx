@@ -39,7 +39,13 @@ import { useChatStore, useMessageStore, useUIStore } from "../../store"
 import type { Message } from "../../store/types"
 import type { PollVotesResult } from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { isMe } from "../../lib/self"
-import { formatPhone, phoneFromJID, htmlToPlainText, sanitizeHtml } from "../../lib/utils"
+import {
+  formatPhone,
+  phoneFromJID,
+  htmlToPlainText,
+  sanitizeHtml,
+  highlightMentions,
+} from "../../lib/utils"
 import { LRUCache } from "../../lib/lruCache"
 import type { ContactActionTarget } from "../../hooks/useContactActions"
 
@@ -373,7 +379,12 @@ export function MessageItem({
   // Helper function to render caption with markdown
   const renderCaption = (caption: string | undefined) => {
     if (!caption) return null
-    return <div className="mt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(caption) }} />
+    return (
+      <div
+        className="mt-1"
+        dangerouslySetInnerHTML={{ __html: highlightMentions(sanitizeHtml(caption)) }}
+      />
+    )
   }
 
   const handleMediaDownload = async () => {
@@ -681,7 +692,9 @@ export function MessageItem({
             </div>
           ) : (
             <div className={clsx("[display:flow-root]", emojiOnly && "text-[32px] leading-10")}>
-              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlContent) }} />
+              <span
+                dangerouslySetInnerHTML={{ __html: highlightMentions(sanitizeHtml(htmlContent)) }}
+              />
               {timeMeta(true)}
             </div>
           )}

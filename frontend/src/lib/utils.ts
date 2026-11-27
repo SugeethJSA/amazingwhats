@@ -220,7 +220,17 @@ const SAFE_TAGS = new Set([
 ])
 
 /** Classes the backend renderers emit; anything else is stripped. */
-const SAFE_CLASSES = new Set(["msg-link", "inline-code", "msg-card", "msg-poll", "poll-opt"])
+const SAFE_CLASSES = new Set([
+  "msg-link",
+  "inline-code",
+  "msg-card",
+  "msg-poll",
+  "poll-opt",
+  // Backend mention spans (<span class="mention">@Name</span>) must survive
+  // sanitization so highlightMentions can keep them instead of re-wrapping.
+  "mention",
+  "mention-token",
+])
 
 /** Only http(s) links survive sanitization; javascript:/data:/vbscript: etc. are dropped. */
 export function isSafeHref(href: string): boolean {
@@ -281,6 +291,95 @@ export function sanitizeHtml(html: string): string {
 
   prune(doc.body)
   return doc.body.innerHTML
+}
+
+/**
+ * Tailwind-safe static classes for a highlighted @mention. `mention` is the
+ * app's existing token style (style.css: green ink + 600 weight in both
+ * themes); the utilities make the bold/green intent explicit and live in one
+ * place. `mention-token` is an idempotency marker, not a style hook.
+ */
+const MENTION_TOKEN_CLASSES = "mention mention-token font-semibold text-(--color-green-ink)"
+
+/**
+ * A plain-text @mention starts at the beginning of a text node or after
+ * whitespace/an opening bracket. That boundary is what keeps `foo@bar.com`
+ * (email — @ follows a word char) and `https://x.dev/@user` (@ follows `/`)
+ * from ever matching. Names stop at whitespace, another @, or markup/punct.
+ */
+const PLAIN_MENTION_RE = /(^|[\s([{])@([^\s@<>()[\]{},!?;:'"\/]+)/g
+
+/** A bare domain in plain text ("@example.com") is not a mention. */
+const DOMAIN_LIKE_RE =
+  /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|co|dev|app|ai|info|biz|edu|gov|me|us|uk|in|xyz|online|site)$/i
+
+function isMentionName(name: string): boolean {
+  return !!name && !DOMAIN_LIKE_RE.test(name)
+}
+
+/**
+ * Highlight real @mentions in ALREADY-SANITIZED message HTML. Never called on
+ * raw input: `sanitizeHtml` runs first, so every tag/attribute here is trusted.
+ *
+ * - Backend mentions arrive as `<span class="mention">@Name</span>`; they are
+ *   kept intact and only marked, so their exact resolved name is preserved.
+ * - Plain `@Name` tokens (e.g. optimistic locally-composed messages that the
+ *   backend never processed) get wrapped in a styled span.
+ * - Emails, URLs (rendered as <a>), and escaped entities are left untouched.
+ * - Uses DOM text nodes, so it never double-escapes and is idempotent.
+ */
+export function highlightMentions(html: string): string {
+  if (!html || !html.includes("@")) return html
+  // No DOM (SSR / non-jsdom tests): input is already sanitized/escaped, so
+  // returning it unchanged is always safe (styling is simply lost).
+  if (typeof DOMParser === "undefined") return html
+
+  const doc = new DOMParser().parseFromString(html, "text/html")
+  let changed = false
+
+  // Keep backend-emitted mention spans and flag them so the text pass below
+  // cannot wrap their contents a second time.
+  for (const el of Array.from(doc.body.querySelectorAll(".mention"))) {
+    if (!el.classList.contains("mention-token")) {
+      el.classList.add("mention-token")
+      changed = true
+    }
+  }
+
+  const textNodes: Text[] = []
+  const walker = doc.createTreeWalker(doc.body, 4 /* NodeFilter.SHOW_TEXT */)
+  let node: Node | null
+  while ((node = walker.nextNode())) textNodes.push(node as Text)
+
+  for (const textNode of textNodes) {
+    // Never touch link text or an already-highlighted mention.
+    if (textNode.parentElement?.closest("a, .mention, .mention-token")) continue
+    const value = textNode.nodeValue || ""
+    if (!value.includes("@")) continue
+
+    const fragment = doc.createDocumentFragment()
+    let last = 0
+    let match: RegExpExecArray | null
+    PLAIN_MENTION_RE.lastIndex = 0
+    while ((match = PLAIN_MENTION_RE.exec(value)) !== null) {
+      const prefix = match[1]
+      const name = match[2]
+      if (!isMentionName(name)) continue
+      const atIndex = match.index + prefix.length
+      if (atIndex > last) fragment.appendChild(doc.createTextNode(value.slice(last, atIndex)))
+      const mention = doc.createElement("span")
+      mention.className = MENTION_TOKEN_CLASSES
+      mention.textContent = "@" + name
+      fragment.appendChild(mention)
+      last = atIndex + 1 + name.length
+    }
+    if (last === 0) continue
+    if (last < value.length) fragment.appendChild(doc.createTextNode(value.slice(last)))
+    textNode.parentNode?.replaceChild(fragment, textNode)
+    changed = true
+  }
+
+  return changed ? doc.body.innerHTML : html
 }
 
 const ISODAY = /^(\d{4})-(\d{2})-(\d{2})$/

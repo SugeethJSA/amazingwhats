@@ -9,6 +9,7 @@ import { GoBackIcon } from "../../assets/svgs/header_icons"
 import { InfoIcon } from "../../assets/svgs/chat_info_icons"
 import { MenuIcon, SearchIcon } from "../../assets/svgs/chat_icons"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
+import { AnnouncementAvatar, type AnnouncementIdentity } from "./AnnouncementAvatar"
 import { runShortcut } from "../../lib/shortcuts"
 import { useChatStore, useChatMuted, useMessageStore, useUIStore } from "../../store"
 import { ClearChat } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
@@ -21,6 +22,8 @@ interface ChatHeaderProps {
   onInfoClick?: () => void
   onCallClick?: () => void
   isTyping?: boolean
+  /** Present only for a community announcement group (exact parent JID match). */
+  announcement?: AnnouncementIdentity | null
 }
 
 const typingDot = (delay: string) => (
@@ -51,6 +54,7 @@ export function ChatHeader({
   onInfoClick,
   onCallClick,
   isTyping,
+  announcement,
 }: ChatHeaderProps) {
   // ChatDetail is keyed by selectedChatId, so this is the conversation the
   // header belongs to. The store is the same source the existing header/call
@@ -151,18 +155,27 @@ export function ChatHeader({
           aria-label={`Open chat info for ${chatName}`}
           className="flex items-center gap-3 min-w-0 rounded-xl text-left"
         >
-          {/* Avatar with presence dot */}
+          {/* Avatar with presence dot. Announcement groups show the community
+              logo stacked with the group's broadcast icon/photo. */}
           <div className="relative shrink-0">
-            <div
-              className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #2a3942, #1f2c34)" }}
-            >
-              {chatAvatar ? (
-                <img src={chatAvatar} alt={chatName} className="w-full h-full object-cover" />
-              ) : (
-                <span style={{ fontSize: 16 }}>{chatName.charAt(0).toUpperCase()}</span>
-              )}
-            </div>
+            {announcement ? (
+              <AnnouncementAvatar
+                identity={announcement}
+                groupAvatar={chatAvatar}
+                size="sm"
+              />
+            ) : (
+              <div
+                className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #2a3942, #1f2c34)" }}
+              >
+                {chatAvatar ? (
+                  <img src={chatAvatar} alt={chatName} className="w-full h-full object-cover" />
+                ) : (
+                  <span style={{ fontSize: 16 }}>{chatName.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+            )}
             {isTyping && (
               <span
                 className="presence-dot absolute bottom-0 right-0"

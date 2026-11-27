@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useContactStore } from "../../store/useContactStore"
 import { isMe } from "../../lib/self"
-import { sanitizeHtml } from "../../lib/utils"
+import { highlightMentions, sanitizeHtml } from "../../lib/utils"
 
 export function QuotedMessage({
   contextInfo,
@@ -91,7 +91,7 @@ export function QuotedMessage({
 
       <div
         className="line-clamp-2 text-gray-600 dark:text-gray-300"
-        dangerouslySetInnerHTML={{ __html: sanitizeHtml(getText()) }}
+        dangerouslySetInnerHTML={{ __html: highlightMentions(sanitizeHtml(getText())) }}
       ></div>
     </div>
   )

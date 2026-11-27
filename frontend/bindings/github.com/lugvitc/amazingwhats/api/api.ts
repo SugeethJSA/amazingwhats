@@ -200,6 +200,19 @@ export function EndCall(callID: string): $CancellablePromise<void> {
     return $Call.ByID(1501532131, callID);
 }
 
+/**
+ * ExportChat exports the app's LOCAL chat history for chatJID as a plain-text
+ * transcript built exclusively from rows in this app's own message store.
+ * 
+ * This IS NOT WhatsApp's cloud "Export chat": no request is sent to WhatsApp,
+ * no media files are downloaded, and no messages are invented. The returned
+ * text says so in its header. Messages that were never synced to this device
+ * cannot appear in the result.
+ */
+export function ExportChat(chatJID: string): $CancellablePromise<string> {
+    return $Call.ByID(65795114, chatJID);
+}
+
 export function FetchContacts(): $CancellablePromise<$models.Contact[]> {
     return $Call.ByID(306052227).then(($result: any) => {
         return $$createType2($result);
@@ -829,6 +842,15 @@ export function RemoveEventHandlers(): $CancellablePromise<void> {
 
 export function RemoveGroupParticipants(groupJID: string, participantJIDs: string[]): $CancellablePromise<void> {
     return $Call.ByID(2416559623, groupJID, participantJIDs);
+}
+
+/**
+ * ReportChat is intentionally not wired to the network. chatJID and reason are
+ * accepted only to keep the agreed binding signature stable for the frontend;
+ * neither can be turned into a real request without a verified protocol.
+ */
+export function ReportChat(chatJID: string, reason: string): $CancellablePromise<void> {
+    return $Call.ByID(1926022962, chatJID, reason);
 }
 
 /**

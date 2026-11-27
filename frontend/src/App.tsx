@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react"
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react"
 import {
   Login,
   GetCustomCSS,
@@ -12,6 +19,13 @@ import { LoginScreen } from "./screens/LoginScreen"
 import { initSelf, resetSelf } from "./lib/self"
 import { Lightbox } from "./components/Lightbox"
 import { NavRail } from "./components/NavRail"
+import {
+  HealthPanel,
+  HEALTH_TOGGLE_ID,
+  TONE_CLASS,
+  TONE_GLYPH,
+  TONE_LABEL,
+} from "./components/HealthPanel"
 import { MediaHub } from "./components/chat/MediaHub"
 import { CallOverlay } from "./components/chat/CallOverlay"
 import { DownloadProgress } from "./components/chat/DownloadProgress"
@@ -173,6 +187,17 @@ function App() {
   const notifications = useUIStore(state => state.notifications)
   const addNotification = useUIStore(state => state.addNotification)
   const removeNotification = useUIStore(state => state.removeNotification)
+  const clearStatusNotifications = useUIStore(state => state.clearStatusNotifications)
+  const healthPanelOpen = useUIStore(state => state.healthPanelOpen)
+  const setHealthPanelOpen = useUIStore(state => state.setHealthPanelOpen)
+  const selectedAlertId = useUIStore(state => state.selectedAlertId)
+  const setSelectedAlertId = useUIStore(state => state.setSelectedAlertId)
+
+  // Only explicitly tagged connection-status alerts live in the health pane.
+  // Every other producer keeps the original transient toast behavior.
+  const transientNotifications = notifications.filter(n => n.kind === "transient")
+  const selectedAlert =
+    notifications.find(n => n.id === selectedAlertId && n.kind === "status") ?? null
 
   useEffect(() => {
     useAppSettingsStore.getState().loadSettings()
@@ -277,31 +302,32 @@ function App() {
 
     const unsubStatus = EventsOn("wa:status", (status: string) => {
       setStatus(status)
-      // The compact rail shows the durable dot; keep it in sync here.
+      // The rail's health icon and the panel's history read this; keep in sync.
       useUIStore.getState().setConnectionStatus(status)
       if (status === "logged_in" || status === "success") {
         useUIStore.getState().setScreen("chats")
         void initSelf()
-        const nid = (window as any).__reconnectNotifId
-        if (nid !== undefined) {
-          removeNotification(nid)
-          delete (window as any).__reconnectNotifId
-        }
+        delete (window as any).__reconnectNotifId
+        // Recovery resolves every pending connection-status alert at once.
+        clearStatusNotifications()
       } else if (status === "reconnecting") {
-        const nid = addNotification("Reconnecting to WhatsApp...", { tone: "warning" })
+        const nid = addNotification("Reconnecting to WhatsApp...", {
+          tone: "warning",
+          kind: "status",
+        })
         // The "logged_in" or "disconnected" events will remove this.
         ;(window as any).__reconnectNotifId = nid
       } else if (status === "disconnected") {
-        const nid = (window as any).__reconnectNotifId
-        if (nid !== undefined) removeNotification(nid)
         delete (window as any).__reconnectNotifId
-        addNotification("Disconnected from WhatsApp", { tone: "error", durationMs: 6000 })
+        clearStatusNotifications()
+        // Durable alert: it stays in the health pane until recovery or dismiss.
+        addNotification("Disconnected from WhatsApp", { tone: "error", kind: "status" })
       } else if (status === "logged_out") {
         // The backend confirmed logout (or another device logged us out):
-        // drop any reconnect toast and return to the login screen.
-        const nid = (window as any).__reconnectNotifId
-        if (nid !== undefined) removeNotification(nid)
+        // drop connection alerts and return to the login screen.
         delete (window as any).__reconnectNotifId
+        clearStatusNotifications()
+        setHealthPanelOpen(false)
         resetSelf()
         useUIStore.getState().setScreen("login")
       }
@@ -457,7 +483,7 @@ function App() {
       unsubUpdateError()
       unsubHistory()
     }
-  }, [addNotification, removeNotification])
+  }, [addNotification, clearStatusNotifications, setHealthPanelOpen])
 
   // Periodically evict stale entries from transient UI caches and cap message stores
   useEffect(() => {
@@ -473,6 +499,19 @@ function App() {
     // An empty chat JID lets the backend pick the most recently active chat.
     // Progress (or an explicit failure event) arrives through wa:history_progress.
     void RequestHistorySync("", 50).catch(() => setHistorySync({ phase: "failed" }))
+  }
+
+  // Closing from either pane returns focus to the exact rail toggle that
+  // opened it. setHealthPanelOpen(false) also clears selectedAlertId.
+  const closeHealthPane = () => {
+    setHealthPanelOpen(false)
+    document.getElementById(HEALTH_TOGGLE_ID)?.focus()
+  }
+  const onHealthKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.stopPropagation()
+      closeHealthPane()
+    }
   }
 
   return (
@@ -520,20 +559,19 @@ function App() {
       <Lightbox />
       <MediaHub />
       <GlobalDownloadsPanel />
-      {/* Global transient toast stack. Bottom-left keeps security/identity
-          warnings over the chat-list column, away from the chat header and the
-          composer (which live at the top and bottom of the conversation pane).
-          z-[45] sits above the persistent chrome (rail connection dot, chat-info
-          30/40) but below every modal (z-50 and up) and the call overlay
-          (z-[9999]). bottom-20 clears the connection pill and the single-pane
-          composer. This mounts outside the screen switch, so the stack also
-          works on Settings and login. slice(-3) is a defensive second cap on
-          top of the store's own trim. */}
+      {/* Transient toast stack only. Connection-status alerts are tagged
+          `kind: "status"` and now live in the health subpane instead; security/
+          identity warnings and all other ordinary confirmations/errors stay
+          here. Bottom-left keeps them away from the chat header and composer.
+          z-[45] is above persistent chrome but below modals (z-50+) and the
+          call overlay (z-[9999]). This mounts outside the screen switch so the
+          stack also works on Settings and login. slice(-3) is a defensive
+          second cap on top of the store's own trim. */}
       <div
         className="fixed bottom-20 left-4 z-[45] flex flex-col gap-2"
         style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
-        {notifications.slice(-3).map(notification => (
+        {transientNotifications.slice(-3).map(notification => (
           <NotificationToast
             key={notification.id}
             notification={notification}
@@ -548,6 +586,7 @@ function App() {
         className={screen !== "login" ? "relative flex h-screen" : "relative"}
       >
         {screen !== "login" && <NavRail />}
+        {healthPanelOpen && screen !== "login" && <HealthPanel />}
         <div className="min-w-0 flex-1">
           {screen === "login" && <LoginScreen canvasRef={canvasRef} status={status} />}
 
@@ -578,6 +617,89 @@ function App() {
           )}
         </div>
       </main>
+
+      {/* Right-side detail surface for the health subpane. Non-modal, so the
+          chat stays usable; z-[45] keeps it below modals (z-50+) and the call
+          overlay (z-[9999]). No fabricated content: an empty/stale selection
+          shows a neutral hint instead of sample data. */}
+      {healthPanelOpen && screen !== "login" && (
+        <aside
+          role="complementary"
+          aria-label="Alert details"
+          onKeyDown={onHealthKeyDown}
+          className="fixed inset-y-0 right-0 z-[45] flex w-[min(360px,90vw)] flex-col border-l border-light-border bg-light-bg shadow-xl dark:border-dark-border dark:bg-dark-secondary"
+          style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-light-border px-4 py-3 dark:border-dark-border">
+            <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+              Alert details
+            </h2>
+            <button
+              type="button"
+              className="rounded-full p-2 text-light-muted hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10"
+              aria-label="Close alert details"
+              title="Close details"
+              onClick={() => setSelectedAlertId(null)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 text-[13px] text-light-text dark:text-dark-text">
+            {selectedAlert === null ? (
+              <p className="text-light-muted dark:text-dark-muted">
+                {selectedAlertId === null
+                  ? "Select a status alert in the Health panel to see its details."
+                  : "This alert is no longer available — it may have been dismissed."}
+              </p>
+            ) : (
+              <>
+                <p className="flex items-center gap-2 font-semibold">
+                  <span className={TONE_CLASS[selectedAlert.tone]} aria-hidden="true">
+                    {TONE_GLYPH[selectedAlert.tone]}
+                  </span>
+                  {TONE_LABEL[selectedAlert.tone]}
+                </p>
+                <p className="mt-3 leading-relaxed">{selectedAlert.message}</p>
+                <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+                  <dt className="font-medium text-light-muted dark:text-dark-muted">Kind</dt>
+                  <dd>{TONE_LABEL[selectedAlert.tone]}</dd>
+                  <dt className="font-medium text-light-muted dark:text-dark-muted">Received</dt>
+                  <dd>{new Date(selectedAlert.createdAt).toLocaleString()}</dd>
+                </dl>
+                <div className="mt-5 flex flex-col gap-2">
+                  {selectedAlert.action && (
+                    <button
+                      type="button"
+                      className="rounded-lg bg-[var(--color-green)] px-3 py-2 text-[12px] font-semibold text-white"
+                      onClick={() => {
+                        selectedAlert.action?.onClick()
+                        removeNotification(selectedAlert.id)
+                      }}
+                    >
+                      {selectedAlert.action.label}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="rounded-lg border border-light-border px-3 py-2 text-[12px] font-medium hover:bg-black/5 dark:border-dark-border dark:hover:bg-white/10"
+                    onClick={() => removeNotification(selectedAlert.id)}
+                  >
+                    Dismiss alert
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg px-3 py-2 text-left text-[12px] text-light-muted hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10"
+                    onClick={() => setSelectedAlertId(null)}
+                  >
+                    ← Back to alerts
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </aside>
+      )}
+
       <CallOverlay />
     </div>
   )

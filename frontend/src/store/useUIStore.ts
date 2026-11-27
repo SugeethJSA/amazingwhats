@@ -1,7 +1,10 @@
 import { create } from "zustand"
+import { connectionView, type ConnectionTone } from "../lib/connection"
 
 const STALE_TYPING_MS = 60_000
 const STALE_ONLINE_MS = 600_000
+/** Bounded ring of real wa:status transitions (no synthetic samples). */
+const MAX_CONNECTION_HISTORY = 60
 
 interface TypingState {
   isTyping: boolean
@@ -24,6 +27,20 @@ export type SidebarView = "chats" | "calls" | "communities" | "channels" | "stat
 
 export type NotificationTone = "info" | "success" | "error" | "warning"
 
+/**
+ * Where a notification is surfaced. `status` alerts are durable and live in the
+ * health subpane; `transient` ones keep the old auto-dismissing toast behavior.
+ * Defaults to `transient`, so existing producers need no changes.
+ */
+export type NotificationKind = "status" | "transient"
+
+/** One real wa:status transition, recorded only when the status actually changes. */
+export interface ConnectionHistoryPoint {
+  tone: ConnectionTone
+  status: string
+  at: number
+}
+
 export interface NotificationAction {
   label: string
   onClick: () => void
@@ -34,6 +51,8 @@ export interface NotificationOptions {
   action?: NotificationAction
   /** When omitted the toast stays until dismissed explicitly. */
   durationMs?: number
+  /** Default `transient`. Only `status` alerts are listed in the health pane. */
+  kind?: NotificationKind
 }
 
 export interface Notification {
@@ -42,6 +61,9 @@ export interface Notification {
   tone: NotificationTone
   action?: NotificationAction
   durationMs?: number
+  kind: NotificationKind
+  /** Real creation time, used by the health pane's detail view. */
+  createdAt: number
 }
 
 /**
@@ -89,9 +111,17 @@ interface UIStore {
   setScreen: (screen: AppScreen) => void
   sidebarView: SidebarView
   setSidebarView: (view: SidebarView) => void
-  /** Raw wa:status string, shared with the compact rail's connection dot. */
+  /** Raw wa:status string, shared with the rail's health icon. */
   connectionStatus: string
   setConnectionStatus: (status: string) => void
+  /** Real wa:status transitions (bounded, newest last). No synthetic samples. */
+  connectionHistory: ConnectionHistoryPoint[]
+  /** Health subpane + its alert-detail surface, owned by App/NavRail. */
+  healthPanelOpen: boolean
+  selectedAlertId: number | null
+  /** Passing false also clears the current selection. */
+  setHealthPanelOpen: (open: boolean) => void
+  setSelectedAlertId: (id: number | null) => void
   /**
    * Category a settings navigation asked for before the lazy SettingsScreen
    * mounted. Consumers read it in their initial state, then clear it on mount.
@@ -121,6 +151,8 @@ interface UIStore {
   /** Backward compatible: `addNotification(message)` still works. */
   addNotification: (message: string, options?: NotificationOptions) => number
   removeNotification: (id: number) => void
+  /** Recovery/logout resolves any still-pending connection status alerts. */
+  clearStatusNotifications: () => void
   evictStale: () => void
   lightboxSrc: string | null
   lightboxKind: "image" | "video"
@@ -152,7 +184,25 @@ export const useUIStore = create<UIStore>(set => ({
   sidebarView: "chats",
   setSidebarView: sidebarView => set({ sidebarView }),
   connectionStatus: "waiting",
-  setConnectionStatus: connectionStatus => set({ connectionStatus }),
+  // Seed with the honest initial state; setConnectionStatus appends only on
+  // real transitions so the graph never contains fabricated samples.
+  connectionHistory: [{ tone: connectionView("waiting").tone, status: "waiting", at: Date.now() }],
+  setConnectionStatus: status =>
+    set(state => {
+      if (state.connectionStatus === status) return {}
+      return {
+        connectionStatus: status,
+        connectionHistory: [
+          ...state.connectionHistory,
+          { tone: connectionView(status).tone, status, at: Date.now() },
+        ].slice(-MAX_CONNECTION_HISTORY),
+      }
+    }),
+  healthPanelOpen: false,
+  selectedAlertId: null,
+  setHealthPanelOpen: healthPanelOpen =>
+    set(state => ({ healthPanelOpen, ...(healthPanelOpen ? {} : { selectedAlertId: null }) })),
+  setSelectedAlertId: selectedAlertId => set({ selectedAlertId }),
   settingsCategoryIntent: null,
   setSettingsCategoryIntent: settingsCategoryIntent => set({ settingsCategoryIntent }),
   sidebarOpen: true,
@@ -229,20 +279,35 @@ export const useUIStore = create<UIStore>(set => ({
       id,
       message,
       tone: options.tone ?? "info",
+      kind: options.kind ?? "transient",
+      createdAt: Date.now(),
       ...(options.action ? { action: options.action } : {}),
       ...(typeof options.durationMs === "number" ? { durationMs: options.durationMs } : {}),
     }
-    set(state => ({
-      // Only the newest 3 toasts can ever be visible. Trimming here (not just
-      // in the render) keeps the store authoritative: evicting the oldest also
-      // unmounts it, which clears its auto-dismiss timer and retires its action.
-      notifications: [...state.notifications, notification].slice(-3),
-    }))
+    set(state => {
+      // Keep the original 3-toast cap for transient notifications, but give
+      // durable status alerts their own bounded ring so an incoming toast can
+      // never silently evict an alert that still needs attention. Filtering the
+      // combined list preserves chronological order for both surfaces.
+      const all = [...state.notifications, notification]
+      const statusAlerts = all.filter(n => n.kind === "status").slice(-10)
+      const transientToasts = all.filter(n => n.kind === "transient").slice(-3)
+      return {
+        notifications: all.filter(n => statusAlerts.includes(n) || transientToasts.includes(n)),
+      }
+    })
     return id
   },
 
   removeNotification: id =>
     set(state => ({
       notifications: state.notifications.filter(n => n.id !== id),
+      ...(state.selectedAlertId === id ? { selectedAlertId: null } : {}),
+    })),
+
+  clearStatusNotifications: () =>
+    set(state => ({
+      notifications: state.notifications.filter(n => n.kind !== "status"),
+      selectedAlertId: null,
     })),
 }))

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback, useState, memo } from "react"
+import { useEffect, useLayoutEffect, useRef, useCallback, useState, memo } from "react"
+import { createPortal } from "react-dom"
 import clsx from "clsx"
 import {
   GetChatList,
@@ -19,6 +20,8 @@ import {
   UnblockContact,
   GetBlockList,
   GetContactQRLink,
+  GetCommunityList,
+  GetCommunityDetails,
 } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import * as api from "../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
@@ -1014,6 +1017,9 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const [isInviting, setIsInviting] = useState(false)
   const moreFiltersRef = useRef<HTMLDivElement | null>(null)
   const moreFiltersTriggerRef = useRef<HTMLButtonElement | null>(null)
+  // The menu is portaled to <body> so the scrollable chip row can't clip it.
+  const moreFiltersMenuRef = useRef<HTMLDivElement | null>(null)
+  const [moreFiltersPos, setMoreFiltersPos] = useState<{ top: number; left: number } | null>(null)
   // Three-dots menu in the list header. Position is computed from the trigger
   // so the popup stays next to the button and inside the WebView viewport.
   const [listMenu, setListMenu] = useState<{ x: number; y: number } | null>(null)
@@ -1257,11 +1263,76 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     }
   }, [selectChat, communityReturn])
 
+  // Group info's community row dispatches this event. Open the Communities
+  // pane and select the requested community using real community data.
+  useEffect(
+    () =>
+      EventsOn("wa:open-community", async (payload: any) => {
+        const jid = typeof payload === "string" ? payload : payload?.jid
+        if (!jid) return
+        try {
+          const list = await GetCommunityList()
+          let community = list.find(c => c.jid === jid)
+          if (!community) {
+            const details = await GetCommunityDetails(jid)
+            community = new api.CommunitySummary({
+              jid,
+              name: details.name,
+              avatar_url: details.avatar_url,
+              group_count: details.groups.length + (details.announcement ? 1 : 0),
+            })
+          }
+          setView("communities")
+          handleCommunitySelect(community)
+        } catch (err) {
+          console.error("[communities] Could not open community from group info:", err)
+          setView("communities")
+        }
+      }),
+    [handleCommunitySelect, setView],
+  )
+
   // --- Chat-list filter chips ------------------------------------------------
+  // The "More filters" menu lives in a portal at document.body. Anchor it to
+  // the chevron using viewport coordinates, clamp to the viewport, and flip
+  // above the trigger when there isn't enough room below.
+  const positionMoreFiltersMenu = useCallback(() => {
+    const trigger = moreFiltersTriggerRef.current
+    if (!trigger) return
+    const rect = trigger.getBoundingClientRect()
+    const menu = moreFiltersMenuRef.current
+    const menuWidth = menu?.offsetWidth ?? 160
+    const menuHeight = menu?.offsetHeight ?? 220
+    const gap = 6
+    const margin = 8
+
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - menuWidth - margin))
+    const roomBelow = window.innerHeight - rect.bottom - gap - margin
+    const roomAbove = rect.top - gap - margin
+    const openDown = roomBelow >= menuHeight || roomBelow >= roomAbove
+    const wantedTop = openDown ? rect.bottom + gap : rect.top - gap - menuHeight
+    const top = Math.max(margin, Math.min(wantedTop, window.innerHeight - menuHeight - margin))
+
+    setMoreFiltersPos(prev => (prev && prev.top === top && prev.left === left ? prev : { top, left }))
+  }, [])
+
+  // Layout effect runs after the portaled node mounts but before paint, so the
+  // menu is measured and positioned without a visible flash at the origin.
+  useLayoutEffect(() => {
+    if (!moreFiltersOpen) return
+    positionMoreFiltersMenu()
+  }, [moreFiltersOpen, positionMoreFiltersMenu])
+
   useEffect(() => {
     if (!moreFiltersOpen) return
     const onPointerDown = (e: MouseEvent) => {
-      if (!moreFiltersRef.current?.contains(e.target as Node)) setMoreFiltersOpen(false)
+      const target = e.target as Node
+      // The trigger lives in moreFiltersRef; the portaled menu has its own ref.
+      // Clicks in either must not be treated as outside clicks.
+      if (moreFiltersRef.current?.contains(target)) return
+      if (moreFiltersMenuRef.current?.contains(target)) return
+      setMoreFiltersOpen(false)
+      moreFiltersTriggerRef.current?.focus()
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -1269,17 +1340,24 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         moreFiltersTriggerRef.current?.focus()
       }
     }
+    // Capture phase also catches scrolling of the inner chip-row container,
+    // so the menu can never drift away from its trigger.
+    const onViewportChange = () => positionMoreFiltersMenu()
     document.addEventListener("mousedown", onPointerDown)
     window.addEventListener("keydown", onKey)
+    window.addEventListener("scroll", onViewportChange, true)
+    window.addEventListener("resize", onViewportChange)
     return () => {
       document.removeEventListener("mousedown", onPointerDown)
       window.removeEventListener("keydown", onKey)
+      window.removeEventListener("scroll", onViewportChange, true)
+      window.removeEventListener("resize", onViewportChange)
     }
-  }, [moreFiltersOpen])
+  }, [moreFiltersOpen, positionMoreFiltersMenu])
 
   useEffect(() => {
     if (!moreFiltersOpen) return
-    moreFiltersRef.current?.querySelector<HTMLElement>('[role="menuitemradio"]')?.focus()
+    moreFiltersMenuRef.current?.querySelector<HTMLElement>('[role="menuitemradio"]')?.focus()
   }, [moreFiltersOpen])
 
   const chooseMoreFilter = useCallback((filter: ChatListFilter) => {
@@ -2074,40 +2152,48 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                 >
                   <ChevronDownIcon />
                 </button>
-                {moreFiltersOpen && (
-                  <div
-                    role="menu"
-                    aria-label="More chat filters"
-                    className="absolute left-0 top-9 z-40 min-w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-dark-secondary"
-                  >
-                    {MORE_FILTERS.map(filter => (
-                      <button
-                        key={filter}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={chatFilter === filter}
-                        onClick={() => chooseMoreFilter(filter)}
-                        className={clsx(
-                          "flex w-full items-center justify-between gap-4 px-3 py-2 text-left text-sm transition-colors",
-                          "focus-visible:bg-gray-100 dark:focus-visible:bg-white/5",
-                          "text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5",
-                        )}
-                      >
-                        {FILTER_LABELS[filter]}
-                        {chatFilter === filter && <span aria-hidden="true">✓</span>}
-                      </button>
-                    ))}
-                    <div className="my-1 border-t border-gray-200 dark:border-white/10" />
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => chooseMoreFilter("all")}
-                      className="flex w-full px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                {moreFiltersOpen &&
+                  createPortal(
+                    <div
+                      ref={moreFiltersMenuRef}
+                      role="menu"
+                      aria-label="More chat filters"
+                      className="fixed z-50 min-w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-dark-secondary"
+                      style={{
+                        top: moreFiltersPos?.top ?? 0,
+                        left: moreFiltersPos?.left ?? 0,
+                        visibility: moreFiltersPos ? "visible" : "hidden",
+                      }}
                     >
-                      All chats
-                    </button>
-                  </div>
-                )}
+                      {MORE_FILTERS.map(filter => (
+                        <button
+                          key={filter}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={chatFilter === filter}
+                          onClick={() => chooseMoreFilter(filter)}
+                          className={clsx(
+                            "flex w-full items-center justify-between gap-4 px-3 py-2 text-left text-sm transition-colors",
+                            "focus-visible:bg-gray-100 dark:focus-visible:bg-white/5",
+                            "text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5",
+                          )}
+                        >
+                          {FILTER_LABELS[filter]}
+                          {chatFilter === filter && <span aria-hidden="true">✓</span>}
+                        </button>
+                      ))}
+                      <div role="separator" className="my-1 border-t border-gray-200 dark:border-white/10" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => chooseMoreFilter("all")}
+                        className="flex w-full px-3 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                      >
+                        All chats
+                      </button>
+                    </div>,
+                    document.body,
+                  )}
               </div>
             </div>
           )}

@@ -31,6 +31,7 @@ import { PinnedMessageBanner } from "../components/chat/PinnedMessageBanner"
 import { BackfillProgress, type BackfillIndicatorState } from "../components/chat/BackfillProgress"
 import { ChatInput } from "../components/chat/ChatInput"
 import { ChatInfo } from "../components/chat/ChatInfo"
+import { useAnnouncementIdentity } from "../components/chat/AnnouncementAvatar"
 import { ForwardDialog } from "../components/chat/ForwardDialog"
 import { ContactActionSheet } from "../components/chat/ContactActionSheet"
 import { useContactActions } from "../hooks/useContactActions"
@@ -284,6 +285,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const easeHideRef = useRef(getEase("DropDown", "close"))
 
   const chatType = currentChat?.type || "contact"
+  // Community announcement detection is shared by the header and info panel:
+  // parent_jid from GetGroupInfo, then announcement.jid === chatId.
+  const announcement = useAnnouncementIdentity(chatId, chatType)
   const isNewsletter = chatId.endsWith("@newsletter")
   const [chatSubtitle, setChatSubtitle] = useState("")
   const [pinnedMessages, setPinnedMessages] = useState<store.PinnedMessage[]>([])
@@ -1604,6 +1608,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           chatName={chatName}
           chatSubtitle={chatSubtitle}
           chatAvatar={chatAvatar}
+          announcement={announcement}
           onBack={onBack}
           onInfoClick={() => setChatInfoOpen(!chatInfoOpen)}
           onCallClick={() => {
@@ -1892,6 +1897,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         chatName={chatName}
         chatType={chatType}
         chatAvatar={chatAvatar}
+        announcement={announcement}
         isOpen={chatInfoOpen}
         onClose={() => setChatInfoOpen(false)}
         onContactAction={contactActions.openContactActions}

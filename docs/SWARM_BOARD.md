@@ -15,3 +15,7 @@ Gate results are appended by the mother after each worker report.
 **[5 | 2026-11-28] DISPATCHED → swarm (D-TIMERGET-001, D-NOTIFAV-001, D-CALLVID-001). D-TIMERGET-001 replaces the earlier UPSTREAM-BLOCKED timer finding after discovering exported DangerousInternals().Usync.**
 
 **[6 | 2026-11-28] DONE_VERIFIED -> mother - swarm (D-TIMERGET-001, D-NOTIFAV-001, D-CALLVID-001: gate_SWARM2 GREEN; D-TIMER-001 now FIXED via real usync getter). Live checks still needed: CVO-2 video orientation, self usync response on a real account, notification avatar appearance.**
+
+**[7 | 2026-11-28] DISPATCHED -> swarm (D-COMINFO-001 community announcement visuals/entry/icons, D-EXPORTREPORT-001 real export/report from HyperMeow evidence, D-SEARCHDROPDOWN-001 clipped filter dropdown).**
+
+**[8 | 2026-11-28] DONE_VERIFIED -> mother - swarm (D-COMINFO-001, D-EXPORTREPORT-001, D-SEARCHDROPDOWN-001, D-HEALTHPANEL-001, D-MENTION-001: gate_SWARM3). Live checks needed: community row navigation, health panel latency honesty, mention styling.**

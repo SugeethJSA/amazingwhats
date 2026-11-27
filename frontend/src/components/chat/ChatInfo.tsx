@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useRef, type ReactNode } from "react"
-import { UserAvatar, SearchIcon } from "../../assets/svgs/chat_icons"
+import { UserAvatar, SearchIcon, DownloadIcon } from "../../assets/svgs/chat_icons"
 import { EditIcon } from "../../assets/svgs/message_menu_icons"
+import { AnnouncementAvatar, type AnnouncementIdentity } from "./AnnouncementAvatar"
 import { useMediaHubStore } from "../../store/useMediaHubStore"
 import { useChatStore } from "../../store/useChatStore"
+import { useUIStore } from "../../store"
+import { getAvatarColor, AVATAR_ICON_COLOR } from "../../lib/utils"
 import { runShortcut } from "../../lib/shortcuts"
 import {
   Mediaicon,
@@ -42,6 +45,8 @@ import {
   LinkGroupToCommunity,
   UnlinkGroupFromCommunity,
   GetCommunityList,
+  GetCommunityDetails,
+  GetCachedAvatar,
   IsOnWhatsApp,
   AddGroupParticipants,
   FetchContacts,
@@ -52,6 +57,10 @@ import {
   ToggleChatPin,
   ToggleChatLabel,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+// ExportChat / ReportChat are being added by another worker. A namespace import
+// keeps this panel buildable before the bindings are regenerated; the rows keep
+// their honest read-only hints until the real functions exist.
+import * as apiBindings from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { EventsOn } from "../../lib/wailsRuntime"
 import { userPart } from "../../lib/self"
@@ -110,11 +119,117 @@ function UnsupportedHint({ children }: { children: ReactNode }) {
   )
 }
 
+type ExportChatFn = (chatJID: string) => Promise<string>
+type ReportChatFn = (chatJID: string, reason: string) => Promise<void>
+
+const REPORT_REASONS = ["Spam", "Harassment", "Fake/Scam", "Other"]
+
+const generatedBindings = apiBindings as unknown as Record<string, unknown>
+const exportChatBinding =
+  typeof generatedBindings.ExportChat === "function"
+    ? (generatedBindings.ExportChat as ExportChatFn)
+    : null
+const reportChatBinding =
+  typeof generatedBindings.ReportChat === "function"
+    ? (generatedBindings.ReportChat as ReportChatFn)
+    : null
+
+/** Small original row glyphs — local code, no bundled brand assets. */
+const StrokeGlyph = ({ children }: { children: ReactNode }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+)
+
+const PeopleGlyph = () => (
+  <StrokeGlyph>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M3 20c0-3 3-5 6-5s6 2 6 5" />
+    <circle cx="17" cy="9" r="2.5" />
+    <path d="M16 14c2.8 0 5 1.5 5 4v2" />
+  </StrokeGlyph>
+)
+
+const AddMemberGlyph = () => (
+  <StrokeGlyph>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M3 20c0-3 3-5 6-5s6 2 6 5" />
+    <path d="M18 8v6M15 11h6" />
+  </StrokeGlyph>
+)
+
+const JoinRequestsGlyph = () => (
+  <StrokeGlyph>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M3 20c0-3 3-5 6-5s6 2 6 5" />
+    <path d="m16 12 2 2 4-4" />
+  </StrokeGlyph>
+)
+
+const CommunityGlyph = () => (
+  <StrokeGlyph>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <circle cx="9" cy="10" r="2" />
+    <path d="M5.5 16.5c0-1.7 1.6-2.7 3.5-2.7s3.5 1 3.5 2.7" />
+    <path d="M16 9.5h3M16 13.5h3" />
+  </StrokeGlyph>
+)
+
+const PinGlyph = () => (
+  <StrokeGlyph>
+    <path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </StrokeGlyph>
+)
+
+const ListGlyph = () => (
+  <StrokeGlyph>
+    <path d="M4 6h2M10 6h10M4 12h2M10 12h10M4 18h2M10 18h10" />
+  </StrokeGlyph>
+)
+
+const TrashGlyph = () => (
+  <StrokeGlyph>
+    <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5" />
+  </StrokeGlyph>
+)
+
+const LinkGlyph = () => (
+  <StrokeGlyph>
+    <path d="M10 13a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7L11 6.3" />
+    <path d="M14 11a4 4 0 0 0-5.7 0L5.7 13.6a4 4 0 1 0 5.7 5.7L13 17.7" />
+  </StrokeGlyph>
+)
+
+const ChevronRightGlyph = () => (
+  <StrokeGlyph>
+    <path d="m9 5 7 7-7 7" />
+  </StrokeGlyph>
+)
+
+const CommunityAvatarGlyph = () => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill={AVATAR_ICON_COLOR} aria-hidden="true">
+    <path d="M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm0 2c-3 0-6 1.4-6 4v2h12v-2c0-2.6-3-4-6-4zm8-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-.5 0-1 .1-1.4.2 1.5.9 2.4 2.2 2.4 3.8V19h5v-2c0-2.6-3-4-6-4z" />
+  </svg>
+)
+
 interface ChatInfoProps {
   chatId: string
   chatName: string
   chatType: "group" | "contact"
   chatAvatar?: string
+  /** Present only for a community announcement group (exact parent JID match). */
+  announcement?: AnnouncementIdentity | null
   isOpen: boolean
   onClose: () => void
   onContactAction?: (target: ContactActionTarget, anchor?: HTMLElement | null) => void
@@ -125,6 +240,7 @@ export function ChatInfo({
   chatName,
   chatType,
   chatAvatar,
+  announcement,
   isOpen,
   onClose,
   onContactAction,
@@ -193,6 +309,17 @@ export function ChatInfo({
   } | null>(null)
   // Seeded from the server-provided ViewerMeta.Mute value, never fabricated.
   const [newsletterMuted, setNewsletterMuted] = useState(false)
+  // Parent-community summary for the fully clickable community row.
+  const [communityDetails, setCommunityDetails] = useState<api.CommunityDetails | null>(null)
+  const [communityAvatarUrl, setCommunityAvatarUrl] = useState("")
+  // Export / report status is always shown from real binding results.
+  const [exportBusy, setExportBusy] = useState(false)
+  const [exportStatus, setExportStatus] = useState("")
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportBusy, setReportBusy] = useState(false)
+  const [reportStatus, setReportStatus] = useState("")
+  const reportMenuRef = useRef<HTMLDivElement>(null)
+  const dark = useAppSettingsStore(s => s.theme) === "dark"
   const MAX_VISIBLE = 10
 
   const DISAPPEAR_OPTIONS = [
@@ -510,6 +637,124 @@ export function ChatInfo({
       .catch(() => {})
   }, [isOpen, chatType])
 
+  // Parent-community details for the community row: real name, avatar and the
+  // real group count (groups.length plus the announcement when present).
+  useEffect(() => {
+    if (!isOpen || chatType !== "group") return
+    const parentJid = groupInfo?.parent_jid
+    if (!parentJid) {
+      setCommunityDetails(null)
+      setCommunityAvatarUrl("")
+      return
+    }
+    let cancelled = false
+    setCommunityDetails(null)
+    setCommunityAvatarUrl("")
+    GetCommunityDetails(parentJid)
+      .then(details => {
+        if (cancelled) return
+        setCommunityDetails(details)
+        if (details?.avatar_url) {
+          setCommunityAvatarUrl(details.avatar_url)
+        } else {
+          GetCachedAvatar(parentJid, false)
+            .then(url => {
+              if (!cancelled && url) setCommunityAvatarUrl(url)
+            })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCommunityDetails(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, chatType, groupInfo?.parent_jid])
+
+  // Accessible dismissal of the report-reasons menu.
+  useEffect(() => {
+    if (!reportOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      event.stopPropagation()
+      setReportOpen(false)
+    }
+    const onDown = (event: MouseEvent) => {
+      if (reportMenuRef.current && !reportMenuRef.current.contains(event.target as Node)) {
+        setReportOpen(false)
+      }
+    }
+    document.addEventListener("keydown", onKey, true)
+    document.addEventListener("mousedown", onDown)
+    const frame = requestAnimationFrame(() => {
+      reportMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    })
+    return () => {
+      document.removeEventListener("keydown", onKey, true)
+      document.removeEventListener("mousedown", onDown)
+      cancelAnimationFrame(frame)
+    }
+  }, [reportOpen])
+
+  /** Switch to the communities view and ask its owner to select this parent. */
+  const handleOpenCommunity = () => {
+    const jid = groupInfo?.parent_jid
+    if (!jid) return
+    const ui = useUIStore.getState()
+    ui.setSidebarView("communities")
+    ui.setChatInfoOpen(false)
+    // ChatScreen owns selectedCommunity. Mother integrates this event there.
+    window.dispatchEvent(new CustomEvent("wa:open-community", { detail: { jid } }))
+  }
+
+  const handleExport = async () => {
+    if (!exportChatBinding || exportBusy) return
+    setExportBusy(true)
+    setExportStatus("")
+    try {
+      const transcript = await exportChatBinding(chatId)
+      if (typeof transcript !== "string" || !transcript) {
+        throw new Error("No transcript was returned for this chat.")
+      }
+      const blob = new Blob([transcript], { type: "text/plain;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      const safeName =
+        (chatName || chatId).replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "chat"
+      link.href = url
+      link.download = `${safeName}-transcript.txt`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+      setExportStatus("Transcript downloaded.")
+    } catch (err) {
+      // Surface the backend's exact honest message, including "not available".
+      const message = err instanceof Error ? err.message : String(err)
+      setExportStatus(message || "Couldn't export this chat.")
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
+  const handleReport = async (reason: string) => {
+    setReportOpen(false)
+    if (!reportChatBinding || reportBusy) return
+    setReportBusy(true)
+    setReportStatus("")
+    try {
+      await reportChatBinding(chatId, reason)
+      setReportStatus(`Report sent: ${reason}.`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setReportStatus(message || "Reporting isn't available right now.")
+    } finally {
+      setReportBusy(false)
+    }
+  }
+
   const handleSaveTopic = async () => {
     const text = topicDraft.trim()
     if (!text) return
@@ -633,6 +878,16 @@ export function ChatInfo({
       : filteredParticipants.slice(0, MAX_VISIBLE)
   const hasMore = filteredParticipants.length > MAX_VISIBLE && !showAllParticipants && !memberTerm
 
+  const parentJid = groupInfo?.parent_jid || ""
+  const communityName =
+    communityDetails?.name || (groupInfo as any)?.parent_name || "Community"
+  const communityAvatar = communityDetails?.avatar_url || communityAvatarUrl
+  // Only report a count when the backend actually returned a group list;
+  // otherwise show the neutral "Community" subtitle rather than a guessed 0.
+  const communityGroupCount = communityDetails?.groups
+    ? communityDetails.groups.length + (communityDetails.announcement ? 1 : 0)
+    : null
+
   if (!isOpen) return null
 
   return (
@@ -675,8 +930,20 @@ export function ChatInfo({
             <>
               {/* Profile / header block */}
               <div className="bg-light-secondary dark:bg-dark-secondary p-6 flex flex-col items-center">
-                <div className="relative w-36 h-36 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold text-4xl overflow-hidden mb-4 group">
-                  {chatAvatar ? (
+                <div
+                  className={
+                    announcement
+                      ? "relative w-36 h-36 mb-4 group"
+                      : "relative w-36 h-36 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold text-4xl overflow-hidden mb-4 group"
+                  }
+                >
+                  {announcement ? (
+                    <AnnouncementAvatar
+                      identity={announcement}
+                      groupAvatar={chatAvatar}
+                      size="lg"
+                    />
+                  ) : chatAvatar ? (
                     <img src={chatAvatar} alt={chatName} className="w-full h-full object-cover" />
                   ) : (
                     <UserAvatar />
@@ -706,7 +973,10 @@ export function ChatInfo({
                       />
                       <label
                         htmlFor="group-photo-upload"
-                        className="absolute inset-0 flex items-end justify-center pb-3 bg-black/0 hover:bg-black/30 cursor-pointer transition-colors rounded-full focus-within:outline focus-within:outline-2 focus-within:outline-green"
+                        style={announcement ? { width: 100, height: 100 } : undefined}
+                        className={`absolute flex items-end justify-center bg-black/0 hover:bg-black/30 cursor-pointer transition-colors rounded-full focus-within:outline focus-within:outline-2 focus-within:outline-green ${
+                          announcement ? "bottom-0 right-0 pb-2" : "inset-0 pb-3"
+                        }`}
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -821,6 +1091,42 @@ export function ChatInfo({
                   </p>
                 )}
               </div>
+
+              {/* Community row — a single button covers the entire row. */}
+              {chatType === "group" && parentJid && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                  <button
+                    type="button"
+                    onClick={handleOpenCommunity}
+                    aria-label={`Open community ${communityName}`}
+                    className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                  >
+                    <div
+                      className="w-10 h-10 rounded-[10px] shrink-0 overflow-hidden flex items-center justify-center"
+                      style={{ backgroundColor: getAvatarColor(parentJid, dark) }}
+                    >
+                      {communityAvatar ? (
+                        <img src={communityAvatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <CommunityAvatarGlyph />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {communityName}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-dark-muted truncate">
+                        {communityGroupCount !== null
+                          ? `${communityGroupCount} group${communityGroupCount === 1 ? "" : "s"}`
+                          : "Community"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-gray-500 dark:text-dark-muted">
+                      <ChevronRightGlyph />
+                    </span>
+                  </button>
+                </div>
+              )}
 
               {/* Group description */}
               {chatType === "group" && groupInfo && (
@@ -1141,10 +1447,11 @@ export function ChatInfo({
               {/* Participants — admin tag, self marker, search, add and view all */}
               {chatType === "group" && groupInfo && (
                 <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                  <div className="p-4 flex items-center justify-between">
-                    <span className="text-gray-900 dark:text-gray-100 font-medium">
-                      Participants ({groupInfo.participant_count})
-                    </span>
+                  <div className="p-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 text-gray-900 dark:text-gray-100 font-medium">
+                      <PeopleGlyph />
+                      <span>Participants ({groupInfo.participant_count})</span>
+                    </div>
                   </div>
 
                   {/* Add member (admin only, real AddGroupParticipants flow) */}
@@ -1162,8 +1469,12 @@ export function ChatInfo({
                             }
                           }
                         }}
+                        aria-label="Add member"
                         className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                       >
+                        <span className="text-blue-600 dark:text-green">
+                          <AddMemberGlyph />
+                        </span>
                         <span className="text-blue-600 dark:text-green">Add member</span>
                       </button>
                       {showAddParticipant && (
@@ -1387,9 +1698,11 @@ export function ChatInfo({
                     {hasMore && !showAllParticipants && (
                       <button
                         onClick={() => setShowAllParticipants(true)}
-                        className="w-full p-3 text-sm font-medium text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-dark-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                        aria-label={`View all members, ${groupInfo.participant_count - MAX_VISIBLE} more`}
+                        className="w-full p-3 flex items-center gap-3 text-sm font-medium text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-dark-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                       >
-                        View all members ({groupInfo.participant_count - MAX_VISIBLE} more)
+                        <PeopleGlyph />
+                        <span>View all members ({groupInfo.participant_count - MAX_VISIBLE} more)</span>
                       </button>
                     )}
                     {memberTerm && filteredParticipants.length === 0 && (
@@ -1645,8 +1958,10 @@ export function ChatInfo({
                     <button
                       onClick={handleLoadJoinRequests}
                       disabled={joinReqBusy}
+                      aria-label={`View join requests, ${joinRequests.length} pending`}
                       className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                     >
+                      <JoinRequestsGlyph />
                       <span className="text-gray-900 dark:text-gray-100">
                         {joinReqBusy ? "Loading…" : `Join Requests (${joinRequests.length})`}
                       </span>
@@ -1693,8 +2008,10 @@ export function ChatInfo({
                         <button
                           onClick={() => handleUnlinkCommunity(groupInfo!.parent_jid!)}
                           disabled={linkBusy}
+                          aria-label="Unlink group from community"
                           className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-orange-600 dark:text-orange-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                         >
+                          <CommunityGlyph />
                           <span>Unlink from community</span>
                         </button>
                         {linkError && (
@@ -1712,8 +2029,10 @@ export function ChatInfo({
                                 .catch(() => {})
                             }
                           }}
+                          aria-label="Link group to community"
                           className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                         >
+                          <CommunityGlyph />
                           <span className="text-gray-900 dark:text-gray-100">
                             Link to community
                           </span>
@@ -1756,8 +2075,9 @@ export function ChatInfo({
                     aria-label={pinned ? "Unpin group from favourites" : "Add group to favourites"}
                     className="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                   >
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {pinned ? "Remove from favourites" : "Add to favourites"}
+                    <span className="flex items-center gap-3 text-gray-900 dark:text-gray-100">
+                      <PinGlyph />
+                      <span>{pinned ? "Remove from favourites" : "Add to favourites"}</span>
                     </span>
                     <span className="text-xs text-gray-600 dark:text-dark-muted">
                       {pinned ? "Pinned" : "Pin to top"}
@@ -1768,8 +2088,10 @@ export function ChatInfo({
                   <button
                     onClick={() => setShowAddToList(!showAddToList)}
                     aria-expanded={showAddToList}
-                    className="w-full p-4 flex items-center hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                    aria-label="Add group to list"
+                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                   >
+                    <ListGlyph />
                     <span className="text-gray-900 dark:text-gray-100">Add to list</span>
                   </button>
                   {showAddToList && (
@@ -1796,17 +2118,99 @@ export function ChatInfo({
                     </div>
                   )}
 
-                  {/* Export chat — no export binding */}
-                  <div className="p-4 pb-0">
-                    <p className="text-sm text-gray-900 dark:text-gray-100">Export chat</p>
-                  </div>
-                  <UnsupportedHint>Chat export isn't available in this build.</UnsupportedHint>
+                  {/* Export chat — real ExportChat binding, honest .txt download */}
+                  {exportChatBinding ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleExport}
+                        disabled={exportBusy}
+                        aria-label="Export chat transcript"
+                        className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                      >
+                        <DownloadIcon />
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {exportBusy ? "Exporting…" : "Export chat"}
+                        </span>
+                      </button>
+                      {exportStatus && (
+                        <p
+                          role="status"
+                          className="px-4 pb-3 -mt-1 text-xs leading-relaxed text-gray-600 dark:text-dark-muted"
+                        >
+                          {exportStatus}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-4 pb-0 flex items-center gap-3 text-gray-900 dark:text-gray-100">
+                        <DownloadIcon />
+                        <p className="text-sm">Export chat</p>
+                      </div>
+                      <UnsupportedHint>Chat export isn't available in this build.</UnsupportedHint>
+                    </>
+                  )}
 
-                  {/* Report group — no report binding */}
-                  <div className="p-4 pb-0">
-                    <p className="text-sm text-gray-900 dark:text-gray-100">Report group</p>
+                  {/* Report group — real ReportChat binding with standard reasons */}
+                  <div className="relative" ref={reportMenuRef}>
+                    {reportChatBinding ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportStatus("")
+                          setReportOpen(open => !open)
+                        }}
+                        disabled={reportBusy}
+                        aria-label="Report group"
+                        aria-haspopup="menu"
+                        aria-expanded={reportOpen}
+                        className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                      >
+                        <span className="text-red-600 dark:text-red-400">
+                          <ReportIcon />
+                        </span>
+                        <span className="text-gray-900 dark:text-gray-100">
+                          {reportBusy ? "Reporting…" : "Report group"}
+                        </span>
+                      </button>
+                    ) : (
+                      <>
+                        <div className="p-4 pb-0 flex items-center gap-3 text-gray-900 dark:text-gray-100">
+                          <ReportIcon />
+                          <p className="text-sm">Report group</p>
+                        </div>
+                        <UnsupportedHint>Reporting a group isn't available in this build.</UnsupportedHint>
+                      </>
+                    )}
+                    {reportOpen && reportChatBinding && (
+                      <div
+                        role="menu"
+                        aria-label="Reason for reporting this group"
+                        className="mx-3 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white p-2 shadow-lg dark:bg-dark-secondary"
+                      >
+                        {REPORT_REASONS.map(reason => (
+                          <button
+                            key={reason}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => void handleReport(reason)}
+                            className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 focus-visible:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green dark:text-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                          >
+                            {reason}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {reportStatus && (
+                      <p
+                        role="status"
+                        className="px-4 pb-3 -mt-1 text-xs leading-relaxed text-gray-600 dark:text-dark-muted"
+                      >
+                        {reportStatus}
+                      </p>
+                    )}
                   </div>
-                  <UnsupportedHint>Reporting a group isn't available in this build.</UnsupportedHint>
                 </div>
               )}
 
@@ -1822,8 +2226,10 @@ export function ChatInfo({
                       console.error("Clear chat failed:", e)
                     }
                   }}
+                  aria-label="Clear chat"
                   className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                 >
+                  <TrashGlyph />
                   <span className="text-gray-900 dark:text-gray-100">Clear chat</span>
                 </button>
               </div>
@@ -1915,8 +2321,10 @@ export function ChatInfo({
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <button
                   onClick={() => setShowJoinDialog(true)}
+                  aria-label="Join group by link"
                   className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                 >
+                  <LinkGlyph />
                   <span className="text-gray-900 dark:text-gray-100">Join Group by Link</span>
                 </button>
               </div>

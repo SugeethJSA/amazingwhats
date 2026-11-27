@@ -7,6 +7,7 @@ import {
   getProfileColor,
   getAvatarColor,
   sanitizeHtml,
+  highlightMentions,
   isSafeHref,
   formatChatTimestamp,
   formatDateSeparator,
@@ -211,6 +212,57 @@ describe("sanitizeHtml", () => {
     } finally {
       ;(globalThis as Record<string, unknown>).DOMParser = original
     }
+  })
+})
+
+describe("highlightMentions", () => {
+  const STYLE = "mention mention-token font-semibold text-(--color-green-ink)"
+
+  it("leaves text without @ untouched", () => {
+    expect(highlightMentions("hello world")).toBe("hello world")
+    expect(highlightMentions("")).toBe("")
+  })
+
+  it("wraps a plain @Name token in the styled mention span", () => {
+    expect(highlightMentions("hi @John!")).toBe(`hi <span class="${STYLE}">@John</span>!`)
+  })
+
+  it("highlights several mentions in one text node", () => {
+    const out = highlightMentions("@Alice and @Bob")
+    expect(out).toContain(`<span class="${STYLE}">@Alice</span>`)
+    expect(out).toContain(`<span class="${STYLE}">@Bob</span>`)
+  })
+
+  it("preserves a backend mention span and adds only the marker class", () => {
+    expect(highlightMentions('<span class="mention">@Jane</span>')).toBe(
+      '<span class="mention mention-token">@Jane</span>',
+    )
+  })
+
+  it("does not re-wrap an already highlighted mention (idempotent)", () => {
+    const once = highlightMentions("hey @John")
+    expect(highlightMentions(once)).toBe(once)
+  })
+
+  it("does not turn emails or bare domains into mentions", () => {
+    expect(highlightMentions("mail foo@bar.com")).toBe("mail foo@bar.com")
+    expect(highlightMentions("mail @example.com")).toBe("mail @example.com")
+  })
+
+  it("does not highlight @ inside links", () => {
+    const html = '<a href="https://x.dev/@john" rel="noreferrer noopener">https://x.dev/@john</a>'
+    expect(highlightMentions(html)).toBe(html)
+  })
+
+  it("does not double-escape entities", () => {
+    const out = highlightMentions("@John &amp; <b>bold</b>")
+    expect(out).toContain(`<span class="${STYLE}">@John</span>`)
+    expect(out).toContain("&amp;")
+    expect(out).not.toContain("&amp;amp;")
+  })
+
+  it("matches @all", () => {
+    expect(highlightMentions("hey @all")).toContain(`<span class="${STYLE}">@all</span>`)
   })
 })
 
