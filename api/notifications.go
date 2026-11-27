@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/lugvitc/amazingwhats/internal/notify"
 	"github.com/lugvitc/amazingwhats/internal/store"
 	"github.com/polymorfa/hypermeow/appstate"
 	"github.com/polymorfa/hypermeow/types"
@@ -26,6 +27,17 @@ func (a *Api) SetNotificationsEnabled(enabled bool) error {
 		a.app.Event.Emit("wa:notifications_toggled", enabled)
 	}
 	return nil
+}
+
+// SendTestNotification raises a diagnostic notification. It deliberately
+// bypasses the in-app notification switch so it can verify the OS channel even
+// when notifications are currently disabled.
+func (a *Api) SendTestNotification() error {
+	return notify.Notify(notify.Options{
+		Title:   notify.AppName,
+		Body:    "This is a test notification from amazingwhats.",
+		Actions: false,
+	})
 }
 
 // ToggleChatMute mutes (forever) or unmutes a chat. The mutation is sent via

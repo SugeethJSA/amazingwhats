@@ -32,6 +32,7 @@ import type { ChatItem } from "../store/types"
 import { StatusList, StoryViewer, type StatusGroup } from "../components/chat/Status"
 import { CreateGroupDialog } from "../components/chat/CreateGroupDialog"
 import { CreateChannelDialog } from "../components/chat/CreateChannelDialog"
+import { ChatListMenu } from "../components/chat/ChatListMenu"
 import { CommunityList, CommunityHome, CommunitiesWelcome } from "../components/chat/Communities"
 import {
   getAvatarColor,
@@ -51,6 +52,7 @@ import {
 } from "../components/common/resizable"
 import { MessageSearchScreen } from "./MessageSearchScreen"
 import { CallsScreen } from "../components/chat/CallsScreen"
+import { SelfProfileDrawer } from "../components/SelfProfileDrawer"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import Wordmark from "@/components/common/Wordmark"
 
@@ -202,13 +204,15 @@ const chipClassName = (active: boolean) =>
   )
 
 interface HeaderProps {
-  onOpenSettings: () => void
+  /** The existing three-dots trigger now opens the chat-list menu. */
+  onOpenMenu: (event: React.MouseEvent<HTMLButtonElement>) => void
+  menuOpen: boolean
   onNewChat?: () => void
   onSearch?: () => void
   avatar?: string
 }
 
-const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) => (
+const Header = ({ onOpenMenu, menuOpen, onNewChat, onSearch, avatar }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
     <Wordmark compact textClassName="text-xl" markClassName="h-6 w-6" />
     <div className="flex items-center gap-1 text-gray-600 dark:text-dark-muted">
@@ -229,9 +233,13 @@ const Header = ({ onOpenSettings, onNewChat, onSearch, avatar }: HeaderProps) =>
         <NewChatIcon />
       </button>
       <button
+        type="button"
         title="Menu"
-        aria-label="Open settings menu"
-        onClick={onOpenSettings}
+        aria-label="Open chat list menu"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        data-chat-list-menu-trigger
+        onClick={onOpenMenu}
         className="hover:bg-gray-100 dark:hover:bg-white/10 p-2 rounded-full"
       >
         <MenuIcon />
@@ -956,6 +964,10 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const [isInviting, setIsInviting] = useState(false)
   const moreFiltersRef = useRef<HTMLDivElement | null>(null)
   const moreFiltersTriggerRef = useRef<HTMLButtonElement | null>(null)
+  // Three-dots menu in the list header. Position is computed from the trigger
+  // so the popup stays next to the button and inside the WebView viewport.
+  const [listMenu, setListMenu] = useState<{ x: number; y: number } | null>(null)
+  const listMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   // Sidebar view is store-backed so the persistent left rail can drive it.
   // Keep the local names `view` / `setView` so every existing check below stays
@@ -1000,6 +1012,35 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     },
     [selectChat, clearUnreadCount],
   )
+
+  // Reuse the existing header trigger; only the menu state is new.
+  const handleListMenuClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (listMenu) {
+        setListMenu(null)
+        return
+      }
+      listMenuTriggerRef.current = event.currentTarget
+      const rect = event.currentTarget.getBoundingClientRect()
+      const menuWidth = 256
+      setListMenu({
+        x: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+        y: rect.bottom + 6,
+      })
+    },
+    [listMenu],
+  )
+
+  const closeListMenu = useCallback(() => {
+    setListMenu(null)
+    const trigger = listMenuTriggerRef.current
+    listMenuTriggerRef.current = null
+    if (trigger?.isConnected) trigger.focus()
+  }, [])
+
+  const dismissListMenu = useCallback(() => setListMenu(null), [])
 
   const handleCommunitySelect = useCallback(
     (community: api.CommunitySummary) => {
@@ -1745,7 +1786,8 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       ) : (
         <>
           <Header
-            onOpenSettings={onOpenSettings}
+            onOpenMenu={handleListMenuClick}
+            menuOpen={listMenu !== null}
             onNewChat={() => setShowCreateGroup(true)}
             onSearch={() => setShowSearch(true)}
             avatar={selfAvatar}
@@ -2006,6 +2048,15 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
 
   return (
     <div className="flex h-screen bg-light-secondary dark:bg-dark-bg overflow-hidden">
+      {listMenu && (
+        <ChatListMenu
+          position={listMenu}
+          onDismiss={dismissListMenu}
+          onClose={closeListMenu}
+          onNewGroup={() => setShowCreateGroup(true)}
+          onOpenSettings={onOpenSettings}
+        />
+      )}
       {chatMenu && (
         <div
           ref={chatMenuRef}
@@ -2118,6 +2169,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           {selectedChatId || selectedCommunity ? detailPane : listPane}
         </div>
       )}
+      {screen === "chats" && <SelfProfileDrawer />}
       {storyGroup && <StoryViewer group={storyGroup} onClose={() => setStoryGroup(null)} />}
       {showCreateGroup && <CreateGroupDialog onClose={() => setShowCreateGroup(false)} />}
       {showSubscribeChannel && (

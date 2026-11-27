@@ -667,6 +667,12 @@ func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
 	if body == "" {
 		body = "Sent you a message"
 	}
+	// General > Notifications > Messages > Show previews controls whether the
+	// message text appears in the toast. Without it, only the chat name and a
+	// generic body are shown.
+	if value, ok := a.GetSettings()["showPreviews"].(bool); ok && !value {
+		body = "Sent you a message"
+	}
 	if chatJID.Server == types.GroupServer {
 		if name := a.contactNameForJID(sender); name != "" && name != title {
 			body = name + ": " + body
@@ -688,6 +694,12 @@ func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
 	}
 	if a.messageStore != nil {
 		opts.Image = a.messageStore.GetThumbnail(v.Info.ID)
+	}
+	// No cached avatar and no message thumbnail: use the same blank person/group
+	// silhouette the chat list shows, rather than leaving an unidentifiable
+	// toast or misusing the application icon.
+	if len(opts.Avatar) == 0 && len(opts.Image) == 0 {
+		opts.FallbackAvatar = notify.PlaceholderAvatar(chatJID.Server == types.GroupServer)
 	}
 
 	if err := notify.Notify(opts); err != nil {

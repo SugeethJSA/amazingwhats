@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useState } from "react"
-import { RowList, SwitchRow } from "../../components/settings/ui-kit"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
+import {
+  ActionButton,
+  ChevronIcon,
+  RowList,
+  SettingRow,
+  StatusBanner,
+  SwitchRow,
+} from "../../components/settings/ui-kit"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 import {
   GetNotificationsEnabled,
+  SendTestNotification,
   SetNotificationsEnabled,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn } from "../../lib/wailsRuntime"
-import type { ReactNode } from "react"
 
 const BellIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -26,6 +33,12 @@ const HeartIcon = () => (
   </svg>
 )
 
+const GroupIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M8 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zm8-.5a3 3 0 100-6 3 3 0 000 6zM8 13c-3.3 0-8 1.6-8 4.3V20h16v-2.7C16 14.6 11.3 13 8 13zm8 0c-.5 0-1 0-1.5.1 2.1 1.1 3.5 2.7 3.5 4.6V20h6v-2.9c0-2.7-4.4-4.1-8-4.1z" />
+  </svg>
+)
+
 const PhoneIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
     <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.32.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z" />
@@ -38,32 +51,49 @@ const SoundIcon = () => (
   </svg>
 )
 
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+function Category({
+  id,
+  title,
+  summary,
+  icon,
+  expanded,
+  onToggle,
+  children,
+}: {
+  id: string
+  title: string
+  summary: string
+  icon: ReactNode
+  expanded: string | null
+  onToggle: (id: string) => void
+  children: ReactNode
+}) {
+  const isOpen = expanded === id
   return (
     <div>
-      <div className="mb-1.5 px-1 text-[12px] font-semibold uppercase tracking-wide text-light-muted dark:text-dark-muted">
-        {title}
-      </div>
-      <RowList>{children}</RowList>
+      <SettingRow
+        title={title}
+        icon={icon}
+        onClick={() => onToggle(id)}
+        control={
+          <span className="flex items-center gap-2 text-sm text-light-muted dark:text-dark-muted">
+            {summary}
+            <ChevronIcon className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+          </span>
+        }
+      />
+      {isOpen && <div className="ml-6 border-l-2 border-green-muted pl-3">{children}</div>}
     </div>
   )
 }
 
 const NotificationsSettingsScreen = () => {
-  const {
-    showPreviews,
-    showReactionNotifications,
-    statusReactions,
-    callNotifications,
-    incomingCallSounds,
-    incomingSounds,
-    outgoingSounds,
-    updateSetting,
-  } = useAppSettingsStore()
+  const { showPreviews, updateSetting } = useAppSettingsStore()
 
-  // Backend-owned global switch (also flippable from the system tray).
   const [desktopNotifications, setDesktopNotifications] = useState(true)
   const [desktopBusy, setDesktopBusy] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>("messages")
+  const [testStatus, setTestStatus] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -89,8 +119,6 @@ const NotificationsSettingsScreen = () => {
   const handleToggleDesktopNotifications = useCallback(async () => {
     if (desktopBusy) return
     const next = !desktopNotifications
-
-    // Optimistic update, revert on failure.
     setDesktopBusy(true)
     setDesktopNotifications(next)
     try {
@@ -103,72 +131,128 @@ const NotificationsSettingsScreen = () => {
     }
   }, [desktopBusy, desktopNotifications])
 
+  const handleTest = async () => {
+    setTestStatus(null)
+    try {
+      await SendTestNotification()
+      setTestStatus("Test notification sent.")
+    } catch {
+      setTestStatus("Couldn't send a test notification. Check Windows notification permissions.")
+    }
+  }
+
+  const on = (value: boolean) => (value ? "On" : "Off")
+
   return (
     <div className="flex flex-col gap-6">
-      <SectionCard title="Messages & groups">
-        <SwitchRow
-          title="Message notifications"
-          description="Show desktop notifications for incoming messages"
+      <RowList>
+        <Category
+          id="messages"
+          title="Messages"
+          summary={on(desktopNotifications)}
           icon={<BellIcon />}
-          enabled={desktopNotifications}
-          onToggle={handleToggleDesktopNotifications}
-        />
-        <SwitchRow
-          title="Show previews"
-          description="Show a preview of the message text in notifications"
-          icon={<EyeIcon />}
-          enabled={showPreviews}
-          onToggle={() => updateSetting("showPreviews", !showPreviews)}
-        />
-        <SwitchRow
-          title="Show reaction notifications"
-          description="Get notified when a message you sent receives a reaction"
-          icon={<HeartIcon />}
-          enabled={showReactionNotifications}
-          onToggle={() => updateSetting("showReactionNotifications", !showReactionNotifications)}
-        />
-        <SwitchRow
-          title="Status reactions"
-          description="Show notifications when you get likes on a status"
-          icon={<HeartIcon />}
-          enabled={statusReactions}
-          onToggle={() => updateSetting("statusReactions", !statusReactions)}
-        />
-      </SectionCard>
+          expanded={expanded}
+          onToggle={id => setExpanded(expanded === id ? null : id)}
+        >
+          <SwitchRow
+            title="Message notifications"
+            description="Show desktop notifications for incoming messages"
+            icon={<BellIcon />}
+            enabled={desktopNotifications}
+            onToggle={() => void handleToggleDesktopNotifications()}
+          />
+          <SwitchRow
+            title="Show previews"
+            description="Preview message text inside notifications"
+            icon={<EyeIcon />}
+            enabled={showPreviews}
+            onToggle={() => updateSetting("showPreviews", !showPreviews)}
+          />
+          <SettingRow
+            title="Reaction notifications"
+            description="Get notified when a message you sent receives a reaction."
+            hint="Not available in this client yet."
+          />
+          <SettingRow
+            title="Notification sounds"
+            description="Sounds are controlled by your device notification settings."
+            hint="This client cannot change them yet."
+          />
+        </Category>
 
-      <SectionCard title="Calls">
-        <SwitchRow
-          title="Call notifications"
-          description="Show notifications for incoming calls"
+        <Category
+          id="groups"
+          title="Groups"
+          summary={on(desktopNotifications)}
+          icon={<GroupIcon />}
+          expanded={expanded}
+          onToggle={id => setExpanded(expanded === id ? null : id)}
+        >
+          <SettingRow
+            title="Group messages"
+            description="Group messages follow your message notification setting."
+            hint="There is no separate group notification channel."
+          />
+        </Category>
+
+        <Category
+          id="status"
+          title="Status"
+          summary="Unavailable"
+          icon={<HeartIcon />}
+          expanded={expanded}
+          onToggle={id => setExpanded(expanded === id ? null : id)}
+        >
+          <SettingRow
+            title="Status reactions"
+            description="Notifications for likes on your status."
+            hint="Not available in this client yet."
+          />
+        </Category>
+
+        <Category
+          id="calling"
+          title="Calling"
+          summary="Unavailable"
           icon={<PhoneIcon />}
-          enabled={callNotifications}
-          onToggle={() => updateSetting("callNotifications", !callNotifications)}
-        />
-        <SwitchRow
-          title="Incoming calls"
-          description="Play sounds for incoming calls"
-          icon={<SoundIcon />}
-          enabled={incomingCallSounds}
-          onToggle={() => updateSetting("incomingCallSounds", !incomingCallSounds)}
-        />
-      </SectionCard>
+          expanded={expanded}
+          onToggle={id => setExpanded(expanded === id ? null : id)}
+        >
+          <SettingRow
+            title="Call notifications"
+            description="Notifications and sounds for incoming calls."
+            hint="Not available in this client yet."
+          />
+        </Category>
+      </RowList>
 
-      <SectionCard title="Sounds">
-        <SwitchRow
-          title="Incoming sounds"
-          description="Play sounds for incoming messages"
-          icon={<SoundIcon />}
-          enabled={incomingSounds}
-          onToggle={() => updateSetting("incomingSounds", !incomingSounds)}
-        />
-        <SwitchRow
-          title="Outgoing sounds"
-          description="Play sounds for outgoing messages"
-          icon={<SoundIcon />}
-          enabled={outgoingSounds}
-          onToggle={() => updateSetting("outgoingSounds", !outgoingSounds)}
-        />
-      </SectionCard>
+      <div>
+        <div className="mb-1.5 px-1 text-[12px] font-semibold uppercase tracking-wide text-light-muted dark:text-dark-muted">
+          Diagnostics
+        </div>
+        <RowList>
+          <SettingRow
+            title="Send test notification"
+            description="Checks that this device can display a notification."
+            control={<ActionButton onClick={() => void handleTest()}>Send</ActionButton>}
+          />
+          <SettingRow
+            title="Run in background"
+            description="Keep the app in the tray so messages still arrive with no window open."
+            hint="Managed in General settings."
+          />
+        </RowList>
+        {testStatus && (
+          <div className="mt-3">
+            <StatusBanner tone={testStatus.startsWith("Couldn't") ? "error" : "success"}>
+              {testStatus}
+            </StatusBanner>
+          </div>
+        )}
+        <p className="mt-3 px-1 text-[13px] text-light-muted dark:text-dark-muted">
+          To get notifications, make sure they are allowed in your device settings.
+        </p>
+      </div>
     </div>
   )
 }

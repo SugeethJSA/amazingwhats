@@ -867,6 +867,15 @@ export function SendShareContact(chatJID: string, displayName: string, phone: st
 }
 
 /**
+ * SendTestNotification raises a diagnostic notification. It deliberately
+ * bypasses the in-app notification switch so it can verify the OS channel even
+ * when notifications are currently disabled.
+ */
+export function SendTestNotification(): $CancellablePromise<void> {
+    return $Call.ByID(2842876759);
+}
+
+/**
  * SendVideoFrame feeds one WebCodecs-encoded H.264 access unit (Annex-B,
  * standard base64) into the active call's outbound video track.
  */

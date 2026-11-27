@@ -145,6 +145,9 @@ func Notify(opts Options) error {
 	if len(inline) == 0 {
 		inline = opts.Image
 	}
+	if len(inline) == 0 {
+		inline = opts.FallbackAvatar
+	}
 	if rgba, err := decodeScaledRGBA(inline, inlineImageSize); err == nil {
 		note.AddHint(notify.HintImageDataRGBA(rgba))
 	}

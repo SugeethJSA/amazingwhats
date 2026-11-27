@@ -39,7 +39,11 @@ type Options struct {
 	IconPath  string // optional override; defaults to the embedded app icon
 	Image     []byte // optional message thumbnail (JPEG/PNG/...)
 	Avatar    []byte // optional chat avatar; preferred over Image when present
-	Actions   bool   // whether to expose Open/Reply actions
+	// FallbackAvatar is a person/group silhouette used only when neither a real
+	// avatar nor a message thumbnail exists. It keeps notifications identifiable
+	// without ever replacing the app icon.
+	FallbackAvatar []byte
+	Actions        bool // whether to expose Open/Reply actions
 }
 
 // ActionHandler is invoked when the user activates a notification action.

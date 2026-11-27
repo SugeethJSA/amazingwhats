@@ -99,6 +99,8 @@ interface UIStore {
   settingsCategoryIntent: string | null
   setSettingsCategoryIntent: (category: string | null) => void
   sidebarOpen: boolean
+  selfProfileOpen: boolean
+  setSelfProfileOpen: (open: boolean) => void
   showEmojiPicker: boolean
   chatInfoOpen: boolean
   typingIndicators: Record<string, TypingState>
@@ -154,6 +156,8 @@ export const useUIStore = create<UIStore>(set => ({
   settingsCategoryIntent: null,
   setSettingsCategoryIntent: settingsCategoryIntent => set({ settingsCategoryIntent }),
   sidebarOpen: true,
+  selfProfileOpen: false,
+  setSelfProfileOpen: selfProfileOpen => set({ selfProfileOpen }),
   showEmojiPicker: false,
   chatInfoOpen: false,
   typingIndicators: {},

@@ -74,7 +74,7 @@ export function NavRail() {
   const sidebarView = useUIStore(state => state.sidebarView)
   const setScreen = useUIStore(state => state.setScreen)
   const setSidebarView = useUIStore(state => state.setSidebarView)
-  const setSettingsCategoryIntent = useUIStore(state => state.setSettingsCategoryIntent)
+  const setSelfProfileOpen = useUIStore(state => state.setSelfProfileOpen)
   const selfAvatar = useSelfAvatarStore(state => state.selfAvatar)
   const connectionStatus = useUIStore(state => state.connectionStatus)
   const connection = connectionView(connectionStatus)
@@ -177,18 +177,19 @@ export function NavRail() {
         </div>
       </div>
 
-      {/* Profile opens Settings straight into Account - same event/shortcut
-          path App.tsx uses for Ctrl+Alt+P. */}
+      {/* Profile opens the self-profile drawer over the chat list. The
+          Ctrl+Alt+P shortcut still opens Settings > Account separately. */}
       <button
         type="button"
         aria-label="Profile and Account"
         title="Profile"
         onClick={() => {
-          // The intent survives until the lazy SettingsScreen reads it, so the
-          // Account category is selected even if that screen is not mounted yet.
-          setSettingsCategoryIntent("account")
-          setScreen("settings")
-          window.dispatchEvent(new CustomEvent("wa:open-settings-category", { detail: "account" }))
+          // Avatar opens the logged-in person's profile over the chat list.
+          // If we are in another screen, go back to chats first so the drawer
+          // has a visible host pane.
+          setScreen("chats")
+          setSidebarView("chats")
+          setSelfProfileOpen(true)
         }}
         className={`${ITEM_BASE} mb-1 mt-2`}
       >

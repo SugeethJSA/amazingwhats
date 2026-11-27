@@ -259,6 +259,9 @@ func Notify(opts Options) error {
 	if len(avatar) == 0 {
 		avatar = opts.Image
 	}
+	if len(avatar) == 0 {
+		avatar = opts.FallbackAvatar
+	}
 	if len(avatar) > 0 && iconPath != "" {
 		if err := pushWindowsToastWithAvatar(opts, iconPath, avatar); err != nil {
 			warnFailureOnce("toast with avatar", err)

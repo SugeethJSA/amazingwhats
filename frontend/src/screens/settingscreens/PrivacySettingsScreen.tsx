@@ -3,9 +3,10 @@ import {
   GetPrivacySettings,
   SetPrivacySetting,
   GetStatusPrivacy,
+  GetBlockList,
   SetStatusPrivacy,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
-import { RowList, SettingRow, SelectMenu } from "../../components/settings/ui-kit"
+import { RowList, SettingRow, SelectMenu, SettingsSection } from "../../components/settings/ui-kit"
 
 interface Setting {
   key: string
@@ -16,8 +17,11 @@ interface Setting {
 
 /** Render excluded contacts as phone numbers rather than raw JIDs. */
 function jidToPhone(jid: string): string {
-  const local = jid.split("@")[0].split(":")[0].replace(/\D/g, "")
-  return local ? `+${local}` : jid
+  const raw = jid.split("@")[0].split(":")[0]
+  const digits = raw.replace(/\D/g, "")
+  // Only phone-number JIDs get a "+"; LIDs and other identifiers are shown
+  // as-is rather than being falsely presented as phone numbers.
+  return digits && /^\d+$/.test(raw) ? `+${digits}` : raw || jid
 }
 
 const SETTINGS: Setting[] = [
@@ -102,6 +106,7 @@ const PrivacySettingsScreen = () => {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [statusBlacklist, setStatusBlacklist] = useState<string[]>([])
+  const [blockedCount, setBlockedCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -123,6 +128,12 @@ const PrivacySettingsScreen = () => {
         setError("Failed to load privacy settings")
       })
       .finally(() => !cancelled && setLoading(false))
+
+    GetBlockList()
+      .then(entries => {
+        if (!cancelled) setBlockedCount(entries.length)
+      })
+      .catch(() => {})
 
     GetStatusPrivacy()
       .then(entries => {
@@ -183,8 +194,9 @@ const PrivacySettingsScreen = () => {
       )}
 
       {!loading && (
-        <RowList>
-          {SETTINGS.map(s => (
+        <SettingsSection title="Who can see my personal info">
+          <RowList>
+            {SETTINGS.map(s => (
             <div key={s.key}>
               <SettingRow
                 title={s.label}
@@ -207,8 +219,38 @@ const PrivacySettingsScreen = () => {
                 )}
             </div>
           ))}
-        </RowList>
+          </RowList>
+        </SettingsSection>
       )}
+
+      <SettingsSection title="Messaging">
+        <RowList>
+          <SettingRow
+            title="Blocked contacts"
+            description="People whose messages and calls you do not receive."
+            control={<span className="text-sm text-light-text dark:text-dark-text">{blockedCount}</span>}
+            hint="Manage blocked contacts on your phone."
+          />
+          <SettingRow
+            title="Default message timer"
+            description="Set how long new messages stay before disappearing."
+            hint="This client cannot read the current account default; set timers per chat instead."
+          />
+        </RowList>
+      </SettingsSection>
+
+      <SettingsSection title="Advanced">
+        <RowList>
+          {[
+            ["Block unknown account messages", "Not available in this client yet."],
+            ["Protect IP address in calls", "Not available in this client yet."],
+            ["Turn off link previews", "Not available in this client yet."],
+            ["App lock", "Not available in this client yet."],
+          ].map(([title, hint]) => (
+            <SettingRow key={title} title={title} hint={hint} />
+          ))}
+        </RowList>
+      </SettingsSection>
     </div>
   )
 }
