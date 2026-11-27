@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	linuxActionOpen         = "open"
-	linuxActionReply        = "reply"
-	linuxActionAcceptCall   = ActionAcceptCall
-	linuxActionDeclineCall  = ActionDeclineCall
+	linuxActionOpen        = "open"
+	linuxActionReply       = "reply"
+	linuxActionAcceptCall  = ActionAcceptCall
+	linuxActionDeclineCall = ActionDeclineCall
 
 	// maxTrackedNotifications bounds the ID -> context table. Notification IDs
 	// are recycled by servers; old entries are evicted FIFO.

@@ -35,12 +35,12 @@ func TestChatFallbackAvatarBackgroundColor(t *testing.T) {
 		isGroup bool
 		want    color.RGBA
 	}{
-		{"1234567890@s.whatsapp.net", false, color.RGBA{R: 0xE8, G: 0xC8, B: 0xA0, A: 0xff}}, // #E8C8A0
-		{"120363012345678901@g.us", true, color.RGBA{R: 0xD8, G: 0xB8, B: 0xE0, A: 0xff}},    // #D8B8E0
-		{"hello@example.com", false, color.RGBA{R: 0xA8, G: 0xE0, B: 0xB8, A: 0xff}},          // #A8E0B8
+		{"1234567890@s.whatsapp.net", false, color.RGBA{R: 0xE8, G: 0xC8, B: 0xA0, A: 0xff}},    // #E8C8A0
+		{"120363012345678901@g.us", true, color.RGBA{R: 0xD8, G: 0xB8, B: 0xE0, A: 0xff}},       // #D8B8E0
+		{"hello@example.com", false, color.RGBA{R: 0xA8, G: 0xE0, B: 0xB8, A: 0xff}},            // #A8E0B8
 		{"5544999888888@s.whatsapp.net", false, color.RGBA{R: 0xF0, G: 0xB4, B: 0xB4, A: 0xff}}, // #F0B4B4
-		{"123@g.us", true, color.RGBA{R: 0xE8, G: 0xD0, B: 0xB8, A: 0xff}},                    // #E8D0B8
-		{"", false, color.RGBA{R: 0xE5, G: 0xCD, B: 0xB0, A: 0xff}},                           // #E5CDB0
+		{"123@g.us", true, color.RGBA{R: 0xE8, G: 0xD0, B: 0xB8, A: 0xff}},                      // #E8D0B8
+		{"", false, color.RGBA{R: 0xE5, G: 0xCD, B: 0xB0, A: 0xff}},                             // #E5CDB0
 	} {
 		img := decodeAvatar(t, ChatFallbackAvatar(tc.jid, tc.isGroup))
 		got := color.RGBAModel.Convert(img.At(2, 2)).(color.RGBA)

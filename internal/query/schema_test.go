@@ -176,38 +176,38 @@ var allCreateTableConstants = []struct {
 // constants ever emit CREATE TABLE for the same name, the uniqueness test
 // below fails immediately.
 var expectedTableOwner = map[string]string{
-	"messages":           "CreateMessagesTable",
-	"message_media":      "CreateMessageMediaTable",
-	"polls":              "CreatePollsTable",
-	"poll_votes":         "CreatePollVotesTable",
-	"archived_chats":     "CreateArchivedChatsTable",
-	"muted_chats":        "CreateMutedChatsTable",
-	"pinned_chats":       "CreatePinnedChatsTable",
-	"pinned_messages":    "CreatePinnedMessagesTable",
-	"reactions":          "CreateReactionsTable",
-	"read_receipts":      "CreateReadReceiptsTable",
-	"link_previews":      "CreateLinkPreviewsTable",
+	"messages":            "CreateMessagesTable",
+	"message_media":       "CreateMessageMediaTable",
+	"polls":               "CreatePollsTable",
+	"poll_votes":          "CreatePollVotesTable",
+	"archived_chats":      "CreateArchivedChatsTable",
+	"muted_chats":         "CreateMutedChatsTable",
+	"pinned_chats":        "CreatePinnedChatsTable",
+	"pinned_messages":     "CreatePinnedMessagesTable",
+	"reactions":           "CreateReactionsTable",
+	"read_receipts":       "CreateReadReceiptsTable",
+	"link_previews":       "CreateLinkPreviewsTable",
 	"amazingwhats_groups": "CreateGroupsTable",
-	"image_index":        "CreateImageIndexTable",
+	"image_index":         "CreateImageIndexTable",
 }
 
 // expectedTableColumns pins the shape of every table. It makes a
 // renamed/reused table name with different columns fail the schema test
 // rather than silently changing on-disk compatibility.
 var expectedTableColumns = map[string][]string{
-	"messages":           {"message_id", "chat_jid", "sender_jid", "timestamp", "is_from_me", "text", "has_media", "reply_to_message_id", "edited", "forwarded", "type"},
-	"message_media":      {"message_id", "type", "url", "mimetype", "direct_path", "media_key", "file_sha256", "file_enc_sha256", "width", "height", "file_name", "gif_playback", "thumbnail", "ptt", "seconds", "waveform", "file_length"},
-	"polls":              {"chat_jid", "message_id", "question", "options_json"},
-	"poll_votes":         {"chat_jid", "poll_message_id", "voter_jid", "option_indices_json"},
-	"archived_chats":     {"chat_jid", "archived_at"},
-	"muted_chats":        {"chat_jid", "muted_until"},
-	"pinned_chats":       {"chat_jid", "pinned_at"},
-	"pinned_messages":    {"message_id", "chat_jid", "sender_jid", "pinned_at", "expiry"},
-	"reactions":          {"id", "message_id", "sender_id", "emoji"},
-	"read_receipts":      {"chat_jid", "read_after_timestamp"},
-	"link_previews":      {"message_id", "url", "title", "description", "thumbnail", "direct_path", "media_key", "file_sha256", "file_enc_sha256"},
+	"messages":            {"message_id", "chat_jid", "sender_jid", "timestamp", "is_from_me", "text", "has_media", "reply_to_message_id", "edited", "forwarded", "type"},
+	"message_media":       {"message_id", "type", "url", "mimetype", "direct_path", "media_key", "file_sha256", "file_enc_sha256", "width", "height", "file_name", "gif_playback", "thumbnail", "ptt", "seconds", "waveform", "file_length"},
+	"polls":               {"chat_jid", "message_id", "question", "options_json"},
+	"poll_votes":          {"chat_jid", "poll_message_id", "voter_jid", "option_indices_json"},
+	"archived_chats":      {"chat_jid", "archived_at"},
+	"muted_chats":         {"chat_jid", "muted_until"},
+	"pinned_chats":        {"chat_jid", "pinned_at"},
+	"pinned_messages":     {"message_id", "chat_jid", "sender_jid", "pinned_at", "expiry"},
+	"reactions":           {"id", "message_id", "sender_id", "emoji"},
+	"read_receipts":       {"chat_jid", "read_after_timestamp"},
+	"link_previews":       {"message_id", "url", "title", "description", "thumbnail", "direct_path", "media_key", "file_sha256", "file_enc_sha256"},
 	"amazingwhats_groups": {"jid", "name", "topic", "owner_jid", "participant_count", "parent_jid", "parent_name", "is_parent", "is_default_sub"},
-	"image_index":        {"message_id", "sha256", "mime", "width", "height", "created_at"},
+	"image_index":         {"message_id", "sha256", "mime", "width", "height", "created_at"},
 }
 
 var expectedIndexNames = []string{

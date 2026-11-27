@@ -36,7 +36,7 @@ type QuickReply struct {
 const (
 	// Honest, local limits. They keep malformed input out of app state and are
 	// intentionally generous enough for normal canned replies.
-	quickReplyMaxShortcut = 128 // runes
+	quickReplyMaxShortcut = 128  // runes
 	quickReplyMaxMessage  = 4096 // runes
 
 	quickReplyCreateTable = `CREATE TABLE IF NOT EXISTS quick_replies (

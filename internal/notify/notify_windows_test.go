@@ -316,7 +316,9 @@ type callToastDoc struct {
 		Silent string `xml:"silent,attr"`
 	} `xml:"audio"`
 	Actions struct {
-		Input  []struct{ ID string `xml:"id,attr"` } `xml:"input"`
+		Input []struct {
+			ID string `xml:"id,attr"`
+		} `xml:"input"`
 		Action []struct {
 			Content   string `xml:"content,attr"`
 			Arguments string `xml:"arguments,attr"`

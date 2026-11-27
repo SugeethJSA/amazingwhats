@@ -55,8 +55,8 @@ CREATE INDEX IF NOT EXISTS idx_starred_messages_starred_at ON starred_messages(s
 `
 
 var (
-	starredInits      sync.Map // map[*Api]*sync.Once — Star event handler registration
-	starredBootstrap  sync.Map // map[*Api]*sync.Once — first full-sync enumeration
+	starredInits     sync.Map // map[*Api]*sync.Once — Star event handler registration
+	starredBootstrap sync.Map // map[*Api]*sync.Once — first full-sync enumeration
 )
 
 func (a *Api) starredContext() context.Context {

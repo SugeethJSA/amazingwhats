@@ -28,35 +28,35 @@ import (
 
 // WireOrderDetailsResult is the bindable subset of types.OrderDetails.
 type WireOrderDetailsResult struct {
-	ID          string                  `json:"id"`
-	CreatedAt   int64                   `json:"createdAt"` // Unix seconds
-	CatalogID   string                  `json:"catalogId,omitempty"`
-	Subtotal    int64                   `json:"subtotal"`
-	Total       int64                   `json:"total"`
-	Currency    string                  `json:"currency,omitempty"`
-	PriceStatus string                  `json:"priceStatus,omitempty"`
+	ID          string                   `json:"id"`
+	CreatedAt   int64                    `json:"createdAt"` // Unix seconds
+	CatalogID   string                   `json:"catalogId,omitempty"`
+	Subtotal    int64                    `json:"subtotal"`
+	Total       int64                    `json:"total"`
+	Currency    string                   `json:"currency,omitempty"`
+	PriceStatus string                   `json:"priceStatus,omitempty"`
 	Products    []WireOrderProductResult `json:"products"`
 }
 
 // WireOrderProductResult is one line item of WireOrderDetailsResult.
 type WireOrderProductResult struct {
-	ID               string `json:"id"`
-	Name             string `json:"name,omitempty"`
-	ImageID          string `json:"imageId,omitempty"`
-	ImageURL         string `json:"imageUrl,omitempty"`
-	Price            int64  `json:"price"`
-	Currency         string `json:"currency,omitempty"`
-	Quantity         int    `json:"quantity"`
+	ID                string `json:"id"`
+	Name              string `json:"name,omitempty"`
+	ImageID           string `json:"imageId,omitempty"`
+	ImageURL          string `json:"imageUrl,omitempty"`
+	Price             int64  `json:"price"`
+	Currency          string `json:"currency,omitempty"`
+	Quantity          int    `json:"quantity"`
 	VariantProperties string `json:"variantProperties,omitempty"`
 }
 
 // WireBusinessLinkedAccountsResult mirrors types.BusinessLinkedAccounts. Absent
 // accounts stay nil so the UI can distinguish "not linked" from empty strings.
 type WireBusinessLinkedAccountsResult struct {
-	FacebookPage          *WireBusinessFacebookPageResult `json:"facebookPage,omitempty"`
+	FacebookPage          *WireBusinessFacebookPageResult     `json:"facebookPage,omitempty"`
 	FacebookBusiness      *WireBusinessFacebookBusinessResult `json:"facebookBusiness,omitempty"`
-	InstagramProfessional *WireBusinessInstagramResult    `json:"instagramProfessional,omitempty"`
-	WhatsAppAdIdentity    *WireBusinessAdIdentityResult   `json:"whatsappAdIdentity,omitempty"`
+	InstagramProfessional *WireBusinessInstagramResult        `json:"instagramProfessional,omitempty"`
+	WhatsAppAdIdentity    *WireBusinessAdIdentityResult       `json:"whatsappAdIdentity,omitempty"`
 }
 
 type WireBusinessFacebookPageResult struct {
@@ -106,8 +106,8 @@ type WireBusinessFeatureEligibilityResult struct {
 
 // WireBusinessCatalogPageResult is a page of products with cursor tokens.
 type WireBusinessCatalogPageResult struct {
-	Next     string                    `json:"next,omitempty"`
-	Previous string                    `json:"previous,omitempty"`
+	Next     string                      `json:"next,omitempty"`
+	Previous string                      `json:"previous,omitempty"`
 	Products []WireBusinessProductResult `json:"products"`
 }
 
@@ -150,20 +150,20 @@ type WireBusinessMediaItem struct {
 
 // WireBusinessCollectionPageResult is a page of collections with a cursor.
 type WireBusinessCollectionPageResult struct {
-	Next        string                       `json:"next,omitempty"`
+	Next        string                         `json:"next,omitempty"`
 	Collections []WireBusinessCollectionResult `json:"collections"`
 }
 
 // WireBusinessCollectionResult is a collection plus its products and review info.
 type WireBusinessCollectionResult struct {
-	ID           string                    `json:"id"`
-	Name         string                    `json:"name,omitempty"`
-	Next         string                    `json:"next,omitempty"`
-	Previous     string                    `json:"previous,omitempty"`
-	Status       string                    `json:"status,omitempty"`
-	CanAppeal    bool                      `json:"canAppeal"`
-	CommerceURL  string                    `json:"commerceUrl,omitempty"`
-	RejectReason string                    `json:"rejectReason,omitempty"`
+	ID           string                      `json:"id"`
+	Name         string                      `json:"name,omitempty"`
+	Next         string                      `json:"next,omitempty"`
+	Previous     string                      `json:"previous,omitempty"`
+	Status       string                      `json:"status,omitempty"`
+	CanAppeal    bool                        `json:"canAppeal"`
+	CommerceURL  string                      `json:"commerceUrl,omitempty"`
+	RejectReason string                      `json:"rejectReason,omitempty"`
 	Products     []WireBusinessProductResult `json:"products"`
 }
 
@@ -176,10 +176,10 @@ type WireBusinessCollectionMutationResult struct {
 // WireBusinessMerchantComplianceResult is the bindable subset of
 // types.BusinessMerchantCompliance (contact details are flattened scalars).
 type WireBusinessMerchantComplianceResult struct {
-	EntityName       string                           `json:"entityName,omitempty"`
-	EntityType       string                           `json:"entityType,omitempty"`
-	IsRegistered     bool                             `json:"isRegistered"`
-	EntityTypeCustom string                           `json:"entityTypeCustom,omitempty"`
+	EntityName       string                            `json:"entityName,omitempty"`
+	EntityType       string                            `json:"entityType,omitempty"`
+	IsRegistered     bool                              `json:"isRegistered"`
+	EntityTypeCustom string                            `json:"entityTypeCustom,omitempty"`
 	CustomerCare     WireBusinessMerchantContactResult `json:"customerCare"`
 	GrievanceOfficer WireBusinessMerchantOfficerResult `json:"grievanceOfficer"`
 }
@@ -221,25 +221,25 @@ type WireBusinessCoverPhotoResult struct {
 // types.BusinessProductInput. Empty optional strings are treated as unset by
 // the library, so no sentinel pointers are needed at the IPC boundary.
 type WireBusinessProductInput struct {
-	Name               string                      `json:"name"`
-	Description        string                      `json:"description,omitempty"`
-	Currency           string                      `json:"currency,omitempty"`
-	Price              string                      `json:"price,omitempty"`
-	SalePrice          string                      `json:"salePrice,omitempty"`
-	URL                string                      `json:"url,omitempty"`
-	RetailerID         string                      `json:"retailerId,omitempty"`
-	Hidden             bool                        `json:"hidden,omitempty"`
-	ImageURLs          []string                    `json:"imageUrls"`
-	VideoURLs          []string                    `json:"videoUrls,omitempty"`
-	ComplianceCategory string                      `json:"complianceCategory,omitempty"`
+	Name               string                       `json:"name"`
+	Description        string                       `json:"description,omitempty"`
+	Currency           string                       `json:"currency,omitempty"`
+	Price              string                       `json:"price,omitempty"`
+	SalePrice          string                       `json:"salePrice,omitempty"`
+	URL                string                       `json:"url,omitempty"`
+	RetailerID         string                       `json:"retailerId,omitempty"`
+	Hidden             bool                         `json:"hidden,omitempty"`
+	ImageURLs          []string                     `json:"imageUrls"`
+	VideoURLs          []string                     `json:"videoUrls,omitempty"`
+	ComplianceCategory string                       `json:"complianceCategory,omitempty"`
 	Compliance         *WireBusinessComplianceInput `json:"compliance,omitempty"`
 }
 
 // WireBusinessComplianceInput is the bindable subset of
 // types.BusinessComplianceInfo.
 type WireBusinessComplianceInput struct {
-	CountryCodeOrigin string                   `json:"countryCodeOrigin,omitempty"`
-	ImporterName      string                   `json:"importerName,omitempty"`
+	CountryCodeOrigin string                    `json:"countryCodeOrigin,omitempty"`
+	ImporterName      string                    `json:"importerName,omitempty"`
 	ImporterAddress   *WireBusinessAddressInput `json:"importerAddress,omitempty"`
 }
 
