@@ -407,9 +407,9 @@ const AdvancedScreen = () => {
           placeholder="Paste your GIPHY beta API key"
         />
         <p className="text-[12px] leading-relaxed text-light-muted dark:text-dark-muted">
-          GIPHY beta keys are free (100 calls/hour). GIFs you send are attributed to GIPHY. Your
-          key is stored locally in this app and is masked above; requests are made directly from
-          the app to GIPHY.
+          GIPHY beta keys are free (100 calls/hour). GIFs you send are attributed to GIPHY. Your key
+          is stored locally in this app and is masked above; requests are made directly from the app
+          to GIPHY.
         </p>
       </SectionCard>
 

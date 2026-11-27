@@ -77,22 +77,18 @@ export const useDownloadProgressStore = create<DownloadProgressState>(set => ({
       // A terminal download is immutable: a late/reordered progress chunk must
       // not resurrect a finished bar. Only `start()` may begin a new download.
       if (current && current.phase !== "downloading") return state
-      const base: DownloadProgressEntry =
-        current ?? {
-          phase: "downloading",
-          downloaded: UNKNOWN,
-          total: UNKNOWN,
-          percent: UNKNOWN,
-        }
+      const base: DownloadProgressEntry = current ?? {
+        phase: "downloading",
+        downloaded: UNKNOWN,
+        total: UNKNOWN,
+        percent: UNKNOWN,
+      }
       const next: DownloadProgressEntry = {
         phase: "downloading",
         downloaded:
-          payload.downloaded === undefined
-            ? base.downloaded
-            : numberOrUnknown(payload.downloaded),
+          payload.downloaded === undefined ? base.downloaded : numberOrUnknown(payload.downloaded),
         total: payload.total === undefined ? base.total : numberOrUnknown(payload.total),
-        percent:
-          payload.percent === undefined ? base.percent : sanitizePercent(payload.percent),
+        percent: payload.percent === undefined ? base.percent : sanitizePercent(payload.percent),
       }
       return { entries: { ...state.entries, [messageId]: next } }
     }),

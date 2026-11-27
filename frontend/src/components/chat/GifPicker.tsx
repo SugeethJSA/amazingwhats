@@ -194,9 +194,7 @@ export function GifPicker({ apiKey, onSelect, onClose, onPickFromFile }: GifPick
       cancelAnimationFrame(frame)
       document.removeEventListener("keydown", onKey, true)
       controllerRef.current?.abort()
-      const target = returnFocusRef.current?.isConnected
-        ? returnFocusRef.current
-        : null
+      const target = returnFocusRef.current?.isConnected ? returnFocusRef.current : null
       target?.focus()
     }
   }, [hasKey])
@@ -277,7 +275,10 @@ export function GifPicker({ apiKey, onSelect, onClose, onPickFromFile }: GifPick
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
               {loading && (
-                <p role="status" className="mb-3 flex items-center gap-2 text-sm text-light-muted dark:text-dark-muted">
+                <p
+                  role="status"
+                  className="mb-3 flex items-center gap-2 text-sm text-light-muted dark:text-dark-muted"
+                >
                   <span
                     aria-hidden="true"
                     className="h-3 w-3 rounded-full border-2 border-green border-t-transparent animate-spin motion-reduce:animate-none"

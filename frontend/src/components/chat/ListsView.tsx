@@ -70,7 +70,10 @@ const SECONDARY_BTN = clsx(
   BTN,
   "border border-gray-300 text-light-text hover:bg-gray-100 dark:border-dark-border dark:text-dark-text dark:hover:bg-white/5",
 )
-const DANGER_BTN = clsx(BTN, "text-[var(--color-danger-ink)] hover:bg-gray-100 dark:hover:bg-white/5")
+const DANGER_BTN = clsx(
+  BTN,
+  "text-[var(--color-danger-ink)] hover:bg-gray-100 dark:hover:bg-white/5",
+)
 
 const CheckBox = ({ checked }: { checked: boolean }) => (
   <span
@@ -157,13 +160,7 @@ export interface ListsViewProps {
   onApplied?: (listName: string, addedCount: number) => void
 }
 
-export function ListsView({
-  mode,
-  presetChatIds,
-  onClose,
-  onOpenChat,
-  onApplied,
-}: ListsViewProps) {
+export function ListsView({ mode, presetChatIds, onClose, onOpenChat, onApplied }: ListsViewProps) {
   const { lists, update } = useSavedLists()
   const isAddMode = mode === "add-to-list"
 
@@ -181,10 +178,7 @@ export function ListsView({
   const closeRef = useRef<HTMLButtonElement | null>(null)
 
   const allChats = useMemo(
-    () =>
-      chatIds
-        .map(id => chatsById.get(id))
-        .filter((chat): chat is ChatItem => Boolean(chat)),
+    () => chatIds.map(id => chatsById.get(id)).filter((chat): chat is ChatItem => Boolean(chat)),
     [chatIds, chatsById],
   )
 
@@ -208,9 +202,7 @@ export function ListsView({
 
   const membersFor = useCallback(
     (list: SavedChatList) =>
-      list.chatIds
-        .map(id => chatsById.get(id))
-        .filter((chat): chat is ChatItem => Boolean(chat)),
+      list.chatIds.map(id => chatsById.get(id)).filter((chat): chat is ChatItem => Boolean(chat)),
     [chatsById],
   )
 
@@ -593,7 +585,8 @@ export function ListsView({
                     type="button"
                     onClick={createList}
                     disabled={
-                      !draftName.trim() || (isAddMode ? presetIds.length === 0 : draftSelection.size === 0)
+                      !draftName.trim() ||
+                      (isAddMode ? presetIds.length === 0 : draftSelection.size === 0)
                     }
                     className={PRIMARY_BTN}
                   >

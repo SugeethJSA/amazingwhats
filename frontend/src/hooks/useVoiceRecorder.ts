@@ -192,7 +192,9 @@ export function useVoiceRecorder(): UseVoiceRecorder {
 
       let recorder: MediaRecorder
       try {
-        recorder = chosen ? new MediaRecorder(stream, { mimeType: chosen }) : new MediaRecorder(stream)
+        recorder = chosen
+          ? new MediaRecorder(stream, { mimeType: chosen })
+          : new MediaRecorder(stream)
       } catch {
         stream.getTracks().forEach(track => {
           try {

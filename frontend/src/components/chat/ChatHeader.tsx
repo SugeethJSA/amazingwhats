@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { GoBackIcon } from "../../assets/svgs/header_icons"
 import { InfoIcon } from "../../assets/svgs/chat_info_icons"
 import { MenuIcon, SearchIcon } from "../../assets/svgs/chat_icons"
@@ -159,11 +153,7 @@ export function ChatHeader({
               logo stacked with the group's broadcast icon/photo. */}
           <div className="relative shrink-0">
             {announcement ? (
-              <AnnouncementAvatar
-                identity={announcement}
-                groupAvatar={chatAvatar}
-                size="sm"
-              />
+              <AnnouncementAvatar identity={announcement} groupAvatar={chatAvatar} size="sm" />
             ) : (
               <div
                 className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center font-semibold text-white"
@@ -281,13 +271,28 @@ export function ChatHeader({
               aria-label="More chat options"
               className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-gray-100 bg-white p-2 shadow-xl dark:border-dark-border dark:bg-dark-elevated"
             >
-              <button type="button" role="menuitem" onClick={() => runAction("mark-unread")} className={MENU_ITEM}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => runAction("mark-unread")}
+                className={MENU_ITEM}
+              >
                 Mark as unread
               </button>
-              <button type="button" role="menuitem" onClick={() => runAction("chat-info")} className={MENU_ITEM}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => runAction("chat-info")}
+                className={MENU_ITEM}
+              >
                 Chat info
               </button>
-              <button type="button" role="menuitem" onClick={() => runAction("mute-chat")} className={MENU_ITEM}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => runAction("mute-chat")}
+                className={MENU_ITEM}
+              >
                 {isMuted ? "Unmute chat" : "Mute chat"}
               </button>
               {chatId && (

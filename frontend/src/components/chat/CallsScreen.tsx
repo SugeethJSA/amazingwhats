@@ -43,7 +43,10 @@ function safeJid(value: unknown): string {
 
 function safeText(value: unknown): string {
   if (typeof value !== "string") return ""
-  return value.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 120)
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, 120)
 }
 
 const RESULT_LABELS: Record<string, string> = {
@@ -73,17 +76,17 @@ const RESULT_LABELS: Record<string, string> = {
 }
 
 function resultLabel(raw: string): string {
-  const key = raw.trim().toLowerCase().replace(/[\s-]+/g, "_")
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
   return RESULT_LABELS[key] ?? (raw || "Call")
 }
 
 function isMissed(raw: string): boolean {
   const key = raw.trim().toLowerCase()
   return (
-    key.includes("miss") ||
-    key.includes("no_answer") ||
-    key === "timeout" ||
-    key === "timeouted"
+    key.includes("miss") || key.includes("no_answer") || key === "timeout" || key === "timeouted"
   )
 }
 
@@ -136,9 +139,7 @@ function DirectionGlyph({ incoming, missed }: { incoming: boolean; missed: boole
     <span
       aria-hidden="true"
       className={
-        missed
-          ? "text-red-500 dark:text-red-400"
-          : "text-light-muted dark:text-dark-muted"
+        missed ? "text-red-500 dark:text-red-400" : "text-light-muted dark:text-dark-muted"
       }
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
@@ -172,7 +173,8 @@ function CallRow({
   const peerJid = safeJid(entry.peer_jid)
   const jid = groupJid || peerJid
   const isGroup = !!groupJid
-  const localPart = safeText(entry.group_jid).split("@")[0] || safeText(entry.peer_jid).split("@")[0]
+  const localPart =
+    safeText(entry.group_jid).split("@")[0] || safeText(entry.peer_jid).split("@")[0]
   const fallbackName = localPart || "Unknown"
 
   const [name, setName] = useState(fallbackName)
@@ -184,7 +186,10 @@ function CallRow({
     let live = true
     setName(fallbackName)
     setAvatar(null)
-    if (!jid) return () => { live = false }
+    if (!jid)
+      return () => {
+        live = false
+      }
 
     void useContactStore
       .getState()
@@ -382,9 +387,7 @@ export function CallsScreen({ onOpenChat }: { onOpenChat: (jid: string) => void 
       .map(([key, items]) => ({
         key,
         label: key ? formatDateSeparator(key) || "Unknown date" : "Unknown date",
-        items: [...items].sort(
-          (a, b) => Number(b.started_at || 0) - Number(a.started_at || 0),
-        ),
+        items: [...items].sort((a, b) => Number(b.started_at || 0) - Number(a.started_at || 0)),
       }))
       .sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : 0))
   }, [filtered])
@@ -401,7 +404,12 @@ export function CallsScreen({ onOpenChat }: { onOpenChat: (jid: string) => void 
           </h1>
         </div>
         <div className="flex items-center gap-2 rounded-xl bg-light-tertiary px-3 py-2 dark:bg-dark-secondary">
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-light-muted dark:text-dark-muted" fill="currentColor" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4 shrink-0 text-light-muted dark:text-dark-muted"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <path d="M9.5 3a6.5 6.5 0 1 0 4.03 11.6l4.44 4.43 1.41-1.41-4.42-4.44A6.5 6.5 0 0 0 9.5 3zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z" />
           </svg>
           <input
@@ -420,7 +428,12 @@ export function CallsScreen({ onOpenChat }: { onOpenChat: (jid: string) => void 
               onClick={() => setQuery("")}
               className={`shrink-0 rounded-md p-0.5 text-light-muted transition-colors hover:text-light-text dark:text-dark-muted dark:hover:text-dark-text ${FOCUS_RING}`}
             >
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-3.5 w-3.5"
+                fill="currentColor"
+                aria-hidden="true"
+              >
                 <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
               </svg>
             </button>
@@ -430,7 +443,11 @@ export function CallsScreen({ onOpenChat }: { onOpenChat: (jid: string) => void 
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {loading ? (
-          <div className="px-4 py-10 text-center text-sm text-light-muted dark:text-dark-muted" role="status" aria-live="polite">
+          <div
+            className="px-4 py-10 text-center text-sm text-light-muted dark:text-dark-muted"
+            role="status"
+            aria-live="polite"
+          >
             Loading calls…
           </div>
         ) : groups.length === 0 ? (

@@ -85,9 +85,7 @@ export function BackfillProgress({ state }: { state: BackfillIndicatorState }) {
           role="progressbar"
           aria-label="Loading older messages from your phone"
           aria-valuetext={
-            state.stored === null
-              ? "Waiting for your phone"
-              : `${state.stored} messages received`
+            state.stored === null ? "Waiting for your phone" : `${state.stored} messages received`
           }
           className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/15"
         >

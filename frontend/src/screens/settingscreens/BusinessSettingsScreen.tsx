@@ -154,7 +154,8 @@ function businessHourLine(hour: BusinessHour): string | null {
   const open = typeof hour.open_time === "string" ? hour.open_time.trim() : ""
   const close = typeof hour.close_time === "string" ? hour.close_time.trim() : ""
 
-  if (mode === "appointment_only") return day ? `${day}: By appointment only` : "By appointment only"
+  if (mode === "appointment_only")
+    return day ? `${day}: By appointment only` : "By appointment only"
   if (mode === "open_24h" || (open === "0" && close === "0")) {
     return day ? `${day}: Open 24 hours` : "Open 24 hours"
   }
@@ -208,9 +209,7 @@ function InfoWebsites({ websites }: { websites: string[] }) {
 }
 
 function InfoHours({ hours, timezone }: { hours: BusinessHour[]; timezone: string | null }) {
-  const lines = hours
-    .map(businessHourLine)
-    .filter((line): line is string => Boolean(line))
+  const lines = hours.map(businessHourLine).filter((line): line is string => Boolean(line))
   if (lines.length === 0 && !timezone) return null
   return (
     <div className="px-5 py-3.5">
@@ -311,7 +310,9 @@ const BusinessSettingsScreen = () => {
   }
 
   if (status === "loading") {
-    return <p className="text-sm text-light-muted dark:text-dark-muted">Loading business profile…</p>
+    return (
+      <p className="text-sm text-light-muted dark:text-dark-muted">Loading business profile…</p>
+    )
   }
 
   if (status === "error") {

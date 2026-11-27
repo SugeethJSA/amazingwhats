@@ -100,8 +100,8 @@ const HelpAndFeedback = () => {
               <strong className="font-semibold text-light-text dark:text-dark-text">
                 Local by default.
               </strong>{" "}
-              Your messages and media stay on this device. amazingwhats has no telemetry and sends no
-              analytics anywhere.
+              Your messages and media stay on this device. amazingwhats has no telemetry and sends
+              no analytics anywhere.
             </p>
             <p>
               <strong className="font-semibold text-light-text dark:text-dark-text">

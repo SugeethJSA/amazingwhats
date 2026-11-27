@@ -54,7 +54,8 @@ type BusinessForm = {
   websites: string
 }
 
-const LABEL = "text-[11px] font-semibold uppercase tracking-wide text-light-muted dark:text-dark-muted"
+const LABEL =
+  "text-[11px] font-semibold uppercase tracking-wide text-light-muted dark:text-dark-muted"
 const ROW = "border-b border-light-tertiary px-5 py-3 dark:border-dark-border"
 
 function text(value: unknown): string {
@@ -67,7 +68,9 @@ function list(value: unknown): string[] {
     : []
 }
 
-function hourLine(hour: BusinessProfile["business_hours"] extends Array<infer T> ? T : never): string | null {
+function hourLine(
+  hour: BusinessProfile["business_hours"] extends Array<infer T> ? T : never,
+): string | null {
   const day = text(hour.day_of_week)
   const mode = text(hour.mode).toLowerCase()
   const open = text(hour.open_time)
@@ -91,7 +94,12 @@ export function SelfProfileDrawer() {
   const [about, setAbout] = useState("")
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
   const [cover, setCover] = useState<BusinessCoverPhoto | null>(null)
-  const [form, setForm] = useState<BusinessForm>({ description: "", address: "", email: "", websites: "" })
+  const [form, setForm] = useState<BusinessForm>({
+    description: "",
+    address: "",
+    email: "",
+    websites: "",
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -114,7 +122,8 @@ export function SelfProfileDrawer() {
       setAvatar(selfAvatar || cachedAvatar || "")
       setName(text(self?.push_name) || text(self?.full_name))
       setAbout(text(users?.[0]?.status))
-      const parsed: BusinessProfile | null = biz && biz.is_business === true ? (biz as BusinessProfile) : null
+      const parsed: BusinessProfile | null =
+        biz && biz.is_business === true ? (biz as BusinessProfile) : null
       setBusiness(parsed)
       setForm({
         description: text(parsed?.description),
@@ -169,7 +178,7 @@ export function SelfProfileDrawer() {
     setMessage(null)
     try {
       await SetPushName(name.trim())
-      setProfile(previous => previous ? { ...previous, push_name: name.trim() } : previous)
+      setProfile(previous => (previous ? { ...previous, push_name: name.trim() } : previous))
       setMessage("Name saved")
     } catch {
       setMessage("Couldn't save the name. Try again.")
@@ -254,7 +263,9 @@ export function SelfProfileDrawer() {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="px-5 py-8 text-sm text-light-muted dark:text-dark-muted">Loading profile.</p>
+            <p className="px-5 py-8 text-sm text-light-muted dark:text-dark-muted">
+              Loading profile.
+            </p>
           ) : (
             <>
               {/* Show the real cover only when the binding verified a downloadable
@@ -262,7 +273,11 @@ export function SelfProfileDrawer() {
                   that the cover lives on the phone; never fabricate one. */}
               {coverURL ? (
                 <div className="h-28 bg-light-tertiary dark:bg-dark-tertiary">
-                  <img src={coverURL} alt="Business cover photo" className="h-full w-full object-cover" />
+                  <img
+                    src={coverURL}
+                    alt="Business cover photo"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               ) : (
                 <div
@@ -286,8 +301,12 @@ export function SelfProfileDrawer() {
                     </div>
                   )}
                 </div>
-                <h3 className="mt-3 text-xl font-semibold text-light-text dark:text-dark-text">{displayName}</h3>
-                {phone && <p className="mt-0.5 text-sm text-light-muted dark:text-dark-muted">{phone}</p>}
+                <h3 className="mt-3 text-xl font-semibold text-light-text dark:text-dark-text">
+                  {displayName}
+                </h3>
+                {phone && (
+                  <p className="mt-0.5 text-sm text-light-muted dark:text-dark-muted">{phone}</p>
+                )}
                 {profile?.is_business && (
                   <span className="mt-2 inline-block rounded-full bg-green-muted px-2 py-0.5 text-xs text-green-ink">
                     Business account
@@ -301,7 +320,10 @@ export function SelfProfileDrawer() {
               </div>
 
               {message && (
-                <p role="status" className="mx-5 mt-4 rounded-lg bg-green-muted px-3 py-2 text-sm text-green-ink">
+                <p
+                  role="status"
+                  className="mx-5 mt-4 rounded-lg bg-green-muted px-3 py-2 text-sm text-green-ink"
+                >
                   {message}
                 </p>
               )}
@@ -351,7 +373,9 @@ export function SelfProfileDrawer() {
                 </div>
                 <div className={ROW}>
                   <div className={LABEL}>Phone number</div>
-                  <p className="mt-1 text-sm text-light-text dark:text-dark-text">{phone || "Not available"}</p>
+                  <p className="mt-1 text-sm text-light-text dark:text-dark-text">
+                    {phone || "Not available"}
+                  </p>
                 </div>
                 <div className={ROW}>
                   <div className={LABEL}>Username</div>
@@ -389,19 +413,25 @@ export function SelfProfileDrawer() {
                       </div>
                     </div>
                   )}
-                  {([
-                    ["Description", "description", 3],
-                    ["Address", "address", 2],
-                    ["Email", "email", 1],
-                    ["Websites (one per line)", "websites", 2],
-                  ] as const).map(([label, key, rows]) => (
+                  {(
+                    [
+                      ["Description", "description", 3],
+                      ["Address", "address", 2],
+                      ["Email", "email", 1],
+                      ["Websites (one per line)", "websites", 2],
+                    ] as const
+                  ).map(([label, key, rows]) => (
                     <div className={ROW} key={key}>
-                      <label className={LABEL} htmlFor={`profile-business-${key}`}>{label}</label>
+                      <label className={LABEL} htmlFor={`profile-business-${key}`}>
+                        {label}
+                      </label>
                       <textarea
                         id={`profile-business-${key}`}
                         rows={rows}
                         value={form[key]}
-                        onChange={event => setForm(previous => ({ ...previous, [key]: event.target.value }))}
+                        onChange={event =>
+                          setForm(previous => ({ ...previous, [key]: event.target.value }))
+                        }
                         className="mt-1 w-full resize-none rounded-lg border border-light-border bg-light-bg px-3 py-2 text-sm text-light-text outline-none dark:border-dark-border dark:bg-dark-secondary dark:text-dark-text"
                       />
                     </div>

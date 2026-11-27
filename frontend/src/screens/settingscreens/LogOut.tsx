@@ -1,7 +1,13 @@
 import { useState } from "react"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import { Logout } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
-import { ActionButton, RowList, SettingsCard, StatusBanner, SwitchRow } from "../../components/settings/ui-kit"
+import {
+  ActionButton,
+  RowList,
+  SettingsCard,
+  StatusBanner,
+  SwitchRow,
+} from "../../components/settings/ui-kit"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
 const LogOut = () => {
@@ -33,10 +39,10 @@ const LogOut = () => {
           Recover older messages
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-light-muted dark:text-dark-muted">
-          Full history is sent by your phone only when a device is linked. To recover messages
-          that are missing, turn this on, log out, remove this device from WhatsApp on your phone
-          (Settings → Linked Devices), then scan the QR code again. Keep the phone nearby and
-          online until the sync finishes. Your phone decides how much history it sends.
+          Full history is sent by your phone only when a device is linked. To recover messages that
+          are missing, turn this on, log out, remove this device from WhatsApp on your phone
+          (Settings → Linked Devices), then scan the QR code again. Keep the phone nearby and online
+          until the sync finishes. Your phone decides how much history it sends.
         </p>
         <RowList className="mt-3">
           <SwitchRow

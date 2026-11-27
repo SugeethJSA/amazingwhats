@@ -91,8 +91,7 @@ interface RailItem {
   icon: ReactNode
 }
 
-const ITEM_BASE =
-  "flex h-11 w-11 items-center justify-center rounded-full transition-colors"
+const ITEM_BASE = "flex h-11 w-11 items-center justify-center rounded-full transition-colors"
 
 /**
  * Persistent WhatsApp-style left rail. Every entry maps to a real destination

@@ -97,23 +97,26 @@ export function StarredMessagesView({ onClose }: StarredMessagesViewProps) {
   const [query, setQuery] = useState("")
   const mountedRef = useRef(true)
 
-  const load = useCallback(async (append: boolean) => {
-    if (append) setLoadingMore(true)
-    else setLoading(true)
-    setError("")
-    try {
-      const res = await ListStarredMessages(PAGE_SIZE, append ? items.length : 0)
-      const rows: StarredMessage[] = Array.isArray(res) ? res : []
-      setItems(prev => (append ? [...prev, ...rows] : rows))
-      setHasMore(rows.length === PAGE_SIZE)
-    } catch (err: unknown) {
-      setError(friendlyError(err))
-      if (!append) setItems([])
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-    }
-  }, [items.length])
+  const load = useCallback(
+    async (append: boolean) => {
+      if (append) setLoadingMore(true)
+      else setLoading(true)
+      setError("")
+      try {
+        const res = await ListStarredMessages(PAGE_SIZE, append ? items.length : 0)
+        const rows: StarredMessage[] = Array.isArray(res) ? res : []
+        setItems(prev => (append ? [...prev, ...rows] : rows))
+        setHasMore(rows.length === PAGE_SIZE)
+      } catch (err: unknown) {
+        setError(friendlyError(err))
+        if (!append) setItems([])
+      } finally {
+        setLoading(false)
+        setLoadingMore(false)
+      }
+    },
+    [items.length],
+  )
 
   useEffect(() => {
     mountedRef.current = true
@@ -147,29 +150,33 @@ export function StarredMessagesView({ onClose }: StarredMessagesViewProps) {
     const term = query.trim().toLocaleLowerCase()
     if (!term) return items
     return items.filter(item =>
-      [item.chat_name, item.chat_jid, item.text, item.sender_jid]
-        .some(value => (value || "").toLocaleLowerCase().includes(term)),
+      [item.chat_name, item.chat_jid, item.text, item.sender_jid].some(value =>
+        (value || "").toLocaleLowerCase().includes(term),
+      ),
     )
   }, [items, query])
 
-  const openMessage = useCallback((item: StarredMessage) => {
-    const chatStore = useChatStore.getState()
-    const existing = chatStore.getChat(item.chat_jid)
-    const fallback: ChatItem = {
-      id: item.chat_jid,
-      name: item.chat_name || item.chat_jid.split("@")[0] || item.chat_jid,
-      subtitle: "",
-      type: item.chat_jid.endsWith("@g.us") ? "group" : "contact",
-    }
-    chatStore.selectChat(existing ?? fallback)
-    chatStore.clearUnreadCount(item.chat_jid)
-    // Compatibility with the message-search flow: ChatDetail reads the active
-    // chat id from this store as well.
-    useMessageStore.getState().setActiveChatId(item.chat_jid)
-    useUIStore.getState().setFocusMessageId(item.message_id)
-    useUIStore.getState().setSidebarView("chats")
-    onClose?.()
-  }, [onClose])
+  const openMessage = useCallback(
+    (item: StarredMessage) => {
+      const chatStore = useChatStore.getState()
+      const existing = chatStore.getChat(item.chat_jid)
+      const fallback: ChatItem = {
+        id: item.chat_jid,
+        name: item.chat_name || item.chat_jid.split("@")[0] || item.chat_jid,
+        subtitle: "",
+        type: item.chat_jid.endsWith("@g.us") ? "group" : "contact",
+      }
+      chatStore.selectChat(existing ?? fallback)
+      chatStore.clearUnreadCount(item.chat_jid)
+      // Compatibility with the message-search flow: ChatDetail reads the active
+      // chat id from this store as well.
+      useMessageStore.getState().setActiveChatId(item.chat_jid)
+      useUIStore.getState().setFocusMessageId(item.message_id)
+      useUIStore.getState().setSidebarView("chats")
+      onClose?.()
+    },
+    [onClose],
+  )
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") onClose?.()
@@ -287,7 +294,9 @@ export function StarredMessagesView({ onClose }: StarredMessagesViewProps) {
             </div>
             {(item.edited || item.forwarded) && (
               <span className="text-xs italic text-muted-subtle dark:text-dark-muted">
-                {[item.edited && "Edited", item.forwarded && "Forwarded"].filter(Boolean).join(" · ")}
+                {[item.edited && "Edited", item.forwarded && "Forwarded"]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             )}
           </button>

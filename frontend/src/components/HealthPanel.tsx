@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
-import {
-  useUIStore,
-  type ConnectionHistoryPoint,
-  type Notification,
-} from "../store/useUIStore"
+import { useUIStore, type ConnectionHistoryPoint, type Notification } from "../store/useUIStore"
 import { connectionView } from "../lib/connection"
 
 /** Shared with NavRail so focus can be returned to the exact toggle button. */
@@ -31,7 +27,11 @@ export const TONE_CLASS: Record<Notification["tone"], string> = {
 }
 
 export function formatTime(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  return new Date(at).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
 }
 
 /**
@@ -77,7 +77,9 @@ function ConnectionHistoryWidget({
   const summary = `Connection history: ${history.length} recorded state change${
     history.length === 1 ? "" : "s"
   }. Current state: ${connection.label}. ${
-    secondsSinceChange === null ? "No changes recorded yet." : `Last change ${secondsSinceChange} seconds ago.`
+    secondsSinceChange === null
+      ? "No changes recorded yet."
+      : `Last change ${secondsSinceChange} seconds ago.`
   } No server latency measurement is available.`
 
   return (
@@ -117,7 +119,13 @@ function ConnectionHistoryWidget({
           <polyline
             points={points}
             fill="none"
-            stroke={connection.tone === "offline" ? "var(--color-danger)" : connection.tone === "connecting" ? "var(--color-warning)" : "var(--color-green)"}
+            stroke={
+              connection.tone === "offline"
+                ? "var(--color-danger)"
+                : connection.tone === "connecting"
+                  ? "var(--color-warning)"
+                  : "var(--color-green)"
+            }
             strokeWidth={2}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -128,7 +136,13 @@ function ConnectionHistoryWidget({
             cx={xFor(last)}
             cy={yFor(last.tone)}
             r={3}
-            fill={connection.tone === "offline" ? "var(--color-danger)" : connection.tone === "connecting" ? "var(--color-warning)" : "var(--color-green)"}
+            fill={
+              connection.tone === "offline"
+                ? "var(--color-danger)"
+                : connection.tone === "connecting"
+                  ? "var(--color-warning)"
+                  : "var(--color-green)"
+            }
           />
         )}
       </svg>
@@ -169,7 +183,10 @@ function AlertRow({ notification }: { notification: Notification }) {
           aria-current={selected ? "true" : undefined}
           onClick={() => setSelectedAlertId(notification.id)}
         >
-          <span className={`mr-1.5 text-sm font-bold ${TONE_CLASS[notification.tone]}`} aria-hidden="true">
+          <span
+            className={`mr-1.5 text-sm font-bold ${TONE_CLASS[notification.tone]}`}
+            aria-hidden="true"
+          >
             {TONE_GLYPH[notification.tone]}
           </span>
           <span className="text-[13px] font-medium text-light-text dark:text-dark-text">

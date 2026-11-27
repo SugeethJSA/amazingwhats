@@ -126,7 +126,6 @@ function NotificationToast({
   )
 }
 
-
 /**
  * Background history sync is driven by the backend, which emits
  * `wa:history_progress` batches including an explicit failure flag. Retry
@@ -346,12 +345,7 @@ function App() {
     // (e.g. a second download of the same message), never on every chunk.
     const unsubDownloadProgress = EventsOn(
       "download:progress",
-      (data: {
-        messageId?: string
-        downloaded?: number
-        total?: number
-        percent?: number
-      }) => {
+      (data: { messageId?: string; downloaded?: number; total?: number; percent?: number }) => {
         const messageId = typeof data?.messageId === "string" ? data.messageId : ""
         if (!messageId) return
         // `download:start` is authoritative. A progress chunk for an unknown
@@ -362,13 +356,10 @@ function App() {
         store.update(messageId, data)
       },
     )
-    const unsubDownloadStart = EventsOn(
-      "download:start",
-      (data: { messageId?: string }) => {
-        const messageId = typeof data?.messageId === "string" ? data.messageId : ""
-        if (messageId) useDownloadProgressStore.getState().start(messageId)
-      },
-    )
+    const unsubDownloadStart = EventsOn("download:start", (data: { messageId?: string }) => {
+      const messageId = typeof data?.messageId === "string" ? data.messageId : ""
+      if (messageId) useDownloadProgressStore.getState().start(messageId)
+    })
     const unsubDownloadDone = EventsOn(
       "download:done",
       (data: { messageId?: string; cancelled?: boolean }) => {

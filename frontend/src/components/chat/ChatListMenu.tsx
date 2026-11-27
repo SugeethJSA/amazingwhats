@@ -216,10 +216,12 @@ export function ChatListMenu({
         failed++
       }
     })
-    useUIStore.getState().addNotification(
-      failed > 0 ? `Couldn't mark ${failed} chat(s) as read` : "All chats marked as read",
-      { tone: failed > 0 ? "error" : "success" },
-    )
+    useUIStore
+      .getState()
+      .addNotification(
+        failed > 0 ? `Couldn't mark ${failed} chat(s) as read` : "All chats marked as read",
+        { tone: failed > 0 ? "error" : "success" },
+      )
   }, [])
 
   useEffect(() => {
@@ -249,9 +251,7 @@ export function ChatListMenu({
 
   // Focus the first usable item as soon as the menu opens.
   useEffect(() => {
-    menuRef.current
-      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not([disabled])')
-      ?.focus()
+    menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not([disabled])')?.focus()
   }, [])
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -262,9 +262,8 @@ export function ChatListMenu({
       return
     }
     const items = Array.from(
-      menuRef.current?.querySelectorAll<HTMLButtonElement>(
-        '[role="menuitem"]:not([disabled])',
-      ) ?? [],
+      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ??
+        [],
     )
     if (items.length === 0) return
     const current = items.indexOf(document.activeElement as HTMLButtonElement)

@@ -132,7 +132,9 @@ export function ContactShareDialog({ chatId, onClose }: { chatId: string; onClos
                   <div className="truncate text-sm text-light-text dark:text-dark-text">
                     {c.full_name || c.push_name || c.phno}
                   </div>
-                  <div className="truncate text-xs text-gray-500 dark:text-dark-muted">{c.phno}</div>
+                  <div className="truncate text-xs text-gray-500 dark:text-dark-muted">
+                    {c.phno}
+                  </div>
                 </div>
                 {sendingJid === c.jid && (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-green border-t-transparent" />

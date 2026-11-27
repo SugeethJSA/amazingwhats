@@ -722,8 +722,7 @@ export function ChatInfo({
       const blob = new Blob([transcript], { type: "text/plain;charset=utf-8" })
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
-      const safeName =
-        (chatName || chatId).replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "chat"
+      const safeName = (chatName || chatId).replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "chat"
       link.href = url
       link.download = `${safeName}-transcript.txt`
       document.body.appendChild(link)
@@ -880,8 +879,7 @@ export function ChatInfo({
   const hasMore = filteredParticipants.length > MAX_VISIBLE && !showAllParticipants && !memberTerm
 
   const parentJid = groupInfo?.parent_jid || ""
-  const communityName =
-    communityDetails?.name || (groupInfo as any)?.parent_name || "Community"
+  const communityName = communityDetails?.name || (groupInfo as any)?.parent_name || "Community"
   const communityAvatar = communityDetails?.avatar_url || communityAvatarUrl
   // Only report a count when the backend actually returned a group list;
   // otherwise show the neutral "Community" subtitle rather than a guessed 0.
@@ -1033,9 +1031,7 @@ export function ChatInfo({
                       setSubjectDraft(groupInfo?.group_name || chatName)
                       setSubjectEdit(true)
                     }}
-                    aria-label={
-                      chatType === "group" ? "Edit group subject" : undefined
-                    }
+                    aria-label={chatType === "group" ? "Edit group subject" : undefined}
                     className="group/subject max-w-full flex items-center gap-2 rounded-md px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green disabled:cursor-default"
                   >
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -1070,7 +1066,13 @@ export function ChatInfo({
                       aria-label="Share group invite link"
                       className="flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                     >
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="22"
+                        height="22"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
                         <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
                       </svg>
                       {inviteBusy ? "Sharing…" : "Share"}
@@ -1087,7 +1089,10 @@ export function ChatInfo({
                   </div>
                 )}
                 {(shareStatus || searchNote) && (
-                  <p role="status" className="mt-2 text-center text-xs text-gray-600 dark:text-dark-muted">
+                  <p
+                    role="status"
+                    className="mt-2 text-center text-xs text-gray-600 dark:text-dark-muted"
+                  >
                     {shareStatus || searchNote}
                   </p>
                 )}
@@ -1326,7 +1331,11 @@ export function ChatInfo({
                     typeof businessInfo.category === "string" && businessInfo.category.trim()
                       ? businessInfo.category.trim()
                       : null
-                  const categories = rawCategories.length ? rawCategories : singleCategory ? [singleCategory] : []
+                  const categories = rawCategories.length
+                    ? rawCategories
+                    : singleCategory
+                      ? [singleCategory]
+                      : []
                   const address =
                     typeof businessInfo.address === "string" && businessInfo.address.trim()
                       ? businessInfo.address.trim()
@@ -1336,7 +1345,9 @@ export function ChatInfo({
                     mode?: unknown
                     open_time?: unknown
                     close_time?: unknown
-                  }[] = Array.isArray(businessInfo.business_hours) ? businessInfo.business_hours : []
+                  }[] = Array.isArray(businessInfo.business_hours)
+                    ? businessInfo.business_hours
+                    : []
                   // One human-readable line per day. 24-hour and
                   // appointment-only modes never fabricate clock times.
                   const hourLine = (hour: (typeof hours)[number]): string | null => {
@@ -1358,7 +1369,9 @@ export function ChatInfo({
                     }
                     return day || null
                   }
-                  const hourLines = hours.map(hourLine).filter((line): line is string => Boolean(line))
+                  const hourLines = hours
+                    .map(hourLine)
+                    .filter((line): line is string => Boolean(line))
                   const timezone =
                     typeof businessInfo.business_hours_timezone === "string" &&
                     businessInfo.business_hours_timezone.trim()
@@ -1703,7 +1716,9 @@ export function ChatInfo({
                         className="w-full p-3 flex items-center gap-3 text-sm font-medium text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-dark-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                       >
                         <PeopleGlyph />
-                        <span>View all members ({groupInfo.participant_count - MAX_VISIBLE} more)</span>
+                        <span>
+                          View all members ({groupInfo.participant_count - MAX_VISIBLE} more)
+                        </span>
                       </button>
                     )}
                     {memberTerm && filteredParticipants.length === 0 && (
@@ -2015,9 +2030,7 @@ export function ChatInfo({
                           <CommunityGlyph />
                           <span>Unlink from community</span>
                         </button>
-                        {linkError && (
-                          <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
-                        )}
+                        {linkError && <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>}
                       </div>
                     ) : (
                       <div>
@@ -2057,9 +2070,7 @@ export function ChatInfo({
                             ))}
                           </div>
                         )}
-                        {linkError && (
-                          <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
-                        )}
+                        {linkError && <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>}
                       </div>
                     )}
                   </div>
@@ -2113,9 +2124,7 @@ export function ChatInfo({
                           </button>
                         ))
                       )}
-                      {labelError && (
-                        <p className="px-3 pb-2 text-xs text-red-500">{labelError}</p>
-                      )}
+                      {labelError && <p className="px-3 pb-2 text-xs text-red-500">{labelError}</p>}
                     </div>
                   )}
 
@@ -2181,7 +2190,9 @@ export function ChatInfo({
                           <ReportIcon />
                           <p className="text-sm">Report group</p>
                         </div>
-                        <UnsupportedHint>Reporting a group isn't available in this build.</UnsupportedHint>
+                        <UnsupportedHint>
+                          Reporting a group isn't available in this build.
+                        </UnsupportedHint>
                       </>
                     )}
                     {reportOpen && reportChatBinding && (

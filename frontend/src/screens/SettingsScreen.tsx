@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback } from "react"
 import type { ReactNode } from "react"
 import clsx from "clsx"
-import { GetProfile, GetSelfAvatar } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import {
+  GetProfile,
+  GetSelfAvatar,
+} from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import * as api from "../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import GeneralSettingsScreen from "./settingscreens/GeneralSettingsScreen"
 import AccountSettingsScreen from "./settingscreens/AccountSettingsScreen"

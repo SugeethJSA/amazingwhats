@@ -123,9 +123,18 @@ const ListFooter: Components<Message, ListContext>["Footer"] = ({ context }) => 
       <TypingAvatar jid={typing.jid} name={displayName} />
       <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-white px-3 py-2 shadow-sm dark:bg-dark-secondary">
         <div className="flex items-center gap-1" aria-hidden="true">
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "0ms" }} />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "160ms" }} />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300" style={{ animationDelay: "320ms" }} />
+          <span
+            className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300"
+            style={{ animationDelay: "0ms" }}
+          />
+          <span
+            className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300"
+            style={{ animationDelay: "160ms" }}
+          />
+          <span
+            className="typing-dot h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-300"
+            style={{ animationDelay: "320ms" }}
+          />
         </div>
         <span className="text-[11px] text-gray-500 dark:text-gray-400">
           {displayName} {label}
@@ -170,7 +179,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
     hasMore,
     highlightedMessageId,
     isAnnounceGroup = false,
-  typing = null,
+    typing = null,
   },
   ref,
 ) {

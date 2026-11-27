@@ -164,7 +164,13 @@ function MediaThumbnailCell({ item, selected, onToggle, onOpen }: MediaThumbnail
         className={`absolute inset-0 flex h-full w-full items-center justify-center`}
       >
         {src ? (
-          <img src={src} alt="" decoding="async" loading="lazy" className="h-full w-full object-cover" />
+          <img
+            src={src}
+            alt=""
+            decoding="async"
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
         ) : failed ? (
           <ThumbnailFallback item={item} />
         ) : (
@@ -261,8 +267,9 @@ export function MediaHub() {
     const q = search.trim().toLowerCase()
     let result = q
       ? items.filter(item =>
-          [item.file_name, item.caption, item.title, item.description, item.url]
-            .some(value => (value || "").toLowerCase().includes(q)),
+          [item.file_name, item.caption, item.title, item.description, item.url].some(value =>
+            (value || "").toLowerCase().includes(q),
+          ),
         )
       : items.slice()
     result.sort((a, b) => {
@@ -302,10 +309,7 @@ export function MediaHub() {
 
   const selectedItems = items.filter(item => selected.has(item.message_id))
 
-  const runAction = async (
-    label: string,
-    action: (item: HubItem) => Promise<unknown>,
-  ) => {
+  const runAction = async (label: string, action: (item: HubItem) => Promise<unknown>) => {
     if (!selectedItems.length || busy) return
     setBusy(true)
     let failed = 0
@@ -551,10 +555,14 @@ export function MediaHub() {
                           </span>
                         </div>
                         <div className="min-w-0 flex-[2] truncate text-xs text-gray-400">
-                          {item.caption || item.description || sizeLabel(item.file_size) || "No caption"}
+                          {item.caption ||
+                            item.description ||
+                            sizeLabel(item.file_size) ||
+                            "No caption"}
                         </div>
                         <div className="min-w-0 flex-[2] truncate text-xs text-gray-400">
-                          {item.is_from_me ? "You" : item.sender_jid.split("@")[0]} · {timeLabel(item.timestamp)}
+                          {item.is_from_me ? "You" : item.sender_jid.split("@")[0]} ·{" "}
+                          {timeLabel(item.timestamp)}
                         </div>
                       </div>
                     ))}

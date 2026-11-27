@@ -145,7 +145,10 @@ const PrivacySettingsScreen = () => {
   const [timerReadLoading, setTimerReadLoading] = useState(true)
   const [timerReadError, setTimerReadError] = useState("")
   const [timerBusy, setTimerBusy] = useState(false)
-  const [timerStatus, setTimerStatus] = useState<{ tone: "success" | "error"; text: string } | null>(null)
+  const [timerStatus, setTimerStatus] = useState<{
+    tone: "success" | "error"
+    text: string
+  } | null>(null)
 
   /** Read the real account default. A null result means "no trustworthy value". */
   const loadTimerDefault = useCallback(async (isCancelled?: () => boolean) => {
@@ -258,7 +261,10 @@ const PrivacySettingsScreen = () => {
               tone: "error",
               text: "Saved, but the server value could not be re-read. Use Refresh to confirm.",
             }
-          : { tone: "success", text: `Saved. Server now reports: ${formatTimerSeconds(confirmed)}` },
+          : {
+              tone: "success",
+              text: `Saved. Server now reports: ${formatTimerSeconds(confirmed)}`,
+            },
       )
     } catch (err) {
       console.error("Failed to set the default message timer:", err)
@@ -312,28 +318,28 @@ const PrivacySettingsScreen = () => {
         <SettingsSection title="Who can see my personal info">
           <RowList>
             {SETTINGS.map(s => (
-            <div key={s.key}>
-              <SettingRow
-                title={s.label}
-                description={s.description}
-                control={
-                  <SelectMenu
-                    value={values[s.key] || ""}
-                    options={s.options}
-                    onChange={v => handleChange(s.key, v)}
-                    disabled={busy === s.key}
-                  />
-                }
-              />
-              {s.key === "status" &&
-                values[s.key] === "contact_blacklist" &&
-                statusBlacklist.length > 0 && (
-                  <div className="px-4 pb-2.5 text-[12px] text-light-muted dark:text-dark-muted">
-                    Excluded: {statusBlacklist.map(jidToPhone).join(", ")}
-                  </div>
-                )}
-            </div>
-          ))}
+              <div key={s.key}>
+                <SettingRow
+                  title={s.label}
+                  description={s.description}
+                  control={
+                    <SelectMenu
+                      value={values[s.key] || ""}
+                      options={s.options}
+                      onChange={v => handleChange(s.key, v)}
+                      disabled={busy === s.key}
+                    />
+                  }
+                />
+                {s.key === "status" &&
+                  values[s.key] === "contact_blacklist" &&
+                  statusBlacklist.length > 0 && (
+                    <div className="px-4 pb-2.5 text-[12px] text-light-muted dark:text-dark-muted">
+                      Excluded: {statusBlacklist.map(jidToPhone).join(", ")}
+                    </div>
+                  )}
+              </div>
+            ))}
           </RowList>
         </SettingsSection>
       )}
@@ -343,7 +349,9 @@ const PrivacySettingsScreen = () => {
           <SettingRow
             title="Blocked contacts"
             description="People whose messages and calls you do not receive."
-            control={<span className="text-sm text-light-text dark:text-dark-text">{blockedCount}</span>}
+            control={
+              <span className="text-sm text-light-text dark:text-dark-text">{blockedCount}</span>
+            }
             hint="Manage blocked contacts on your phone."
           />
           <div>

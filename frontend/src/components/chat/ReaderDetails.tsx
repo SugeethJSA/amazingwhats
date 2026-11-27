@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import { createPortal } from "react-dom"
-import { GetCachedAvatar, GetMessageReceipts } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
+import {
+  GetCachedAvatar,
+  GetMessageReceipts,
+} from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { useContactStore } from "../../store/useContactStore"
 import { useMessageStore } from "../../store/useMessageStore"
 import { isMe } from "../../lib/self"
@@ -134,7 +137,11 @@ function ReaderRow({ row }: { row: MessageReceiptRow }) {
   return (
     <div className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-dark-tertiary">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-gray-500 dark:bg-gray-600 dark:text-gray-400 [&_svg]:h-5 [&_svg]:w-5">
-        {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : <UserAvatar />}
+        {avatar ? (
+          <img src={avatar} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <UserAvatar />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm text-gray-900 dark:text-gray-100">{displayName}</div>
@@ -259,9 +266,7 @@ export function ReaderDetails({ chatId, messageId, anchorRef, onClose }: ReaderD
     >
       <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 pt-3 pb-2 dark:border-dark-tertiary dark:bg-dark-secondary">
         <p className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Message info</p>
-        {!!list.length && (
-          <p className="text-xs text-gray-600 dark:text-gray-400">{header}</p>
-        )}
+        {!!list.length && <p className="text-xs text-gray-600 dark:text-gray-400">{header}</p>}
       </div>
       <div className="p-2">
         {failed ? (

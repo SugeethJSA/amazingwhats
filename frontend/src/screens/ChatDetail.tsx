@@ -14,10 +14,7 @@ import {
   StarMessage,
   RequestHistorySync,
 } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
-import {
-  addScheduledMessage,
-  startScheduledSender,
-} from "../lib/scheduledMessages"
+import { addScheduledMessage, startScheduledSender } from "../lib/scheduledMessages"
 import * as store from "../../bindings/github.com/lugvitc/amazingwhats/internal/store/models.js"
 import { EventsOn } from "../lib/wailsRuntime"
 import { useMessageStore, useUIStore, useChatStore } from "../store"
@@ -884,9 +881,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
         if (isDone) {
           // Terminal phase: stop the live indicator first, then show exactly
           // one honest status for a moment. Never leave "Asking..." on screen.
-          showBackfillResult(
-            data.failed ? "failed" : data.exhausted ? "exhausted" : "loaded",
-          )
+          showBackfillResult(data.failed ? "failed" : data.exhausted ? "exhausted" : "loaded")
 
           if (data.exhausted) {
             hasMoreRef.current = false
@@ -1540,14 +1535,11 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   // Durable in-chat info lines (e.g. a contact's security-code change) arrive
   // on their own event so they never increment unread counts or raise a toast.
   useEffect(() => {
-    const unsub = EventsOn(
-      "wa:info_message",
-      (data: { chatId: string; message: Message }) => {
-        if (data?.chatId === chatId && data.message?.Info?.ID) {
-          updateMessage(data.chatId, data.message)
-        }
-      },
-    )
+    const unsub = EventsOn("wa:info_message", (data: { chatId: string; message: Message }) => {
+      if (data?.chatId === chatId && data.message?.Info?.ID) {
+        updateMessage(data.chatId, data.message)
+      }
+    })
     return () => unsub()
   }, [chatId, updateMessage])
 

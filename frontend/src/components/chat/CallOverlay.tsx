@@ -1393,7 +1393,9 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">{activeCall.contactName}</h2>
             {activeCall.isGroup && activeCall.participants > 0 && (
-              <p className="mt-1 text-xs text-dark-subtle">{activeCall.participants} participants</p>
+              <p className="mt-1 text-xs text-dark-subtle">
+                {activeCall.participants} participants
+              </p>
             )}
             {activeCall.remoteMuted && (
               <p className="mt-1 text-xs text-dark-subtle">Microphone off</p>
@@ -1412,7 +1414,10 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
           </div>
         )}
         {mediaError && (
-          <p role="alert" className="absolute bottom-24 left-1/2 max-w-sm -translate-x-1/2 px-3 text-center text-xs text-warning">
+          <p
+            role="alert"
+            className="absolute bottom-24 left-1/2 max-w-sm -translate-x-1/2 px-3 text-center text-xs text-warning"
+          >
             {mediaError}
           </p>
         )}
@@ -1446,7 +1451,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       {(reaction || remoteHandRaised || screenShareActive || participantKeys.length > 0) && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 text-xs text-gray-200">
           {reaction && (
-            <span key={reaction.id} className="animate-bounce text-xl motion-reduce:animate-none" role="status">
+            <span
+              key={reaction.id}
+              className="animate-bounce text-xl motion-reduce:animate-none"
+              role="status"
+            >
               {reaction.emoji}
             </span>
           )}
@@ -1458,13 +1467,30 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
       {showStats && stats && (
         <div className="absolute bottom-24 left-1/2 z-30 w-full max-w-xs -translate-x-1/2 rounded-xl border border-white/10 bg-call-surface/95 p-3 text-xs text-dark-subtle">
-          <div className="flex justify-between"><span>Phase</span><span className="capitalize text-gray-100">{String(stats.state).replace(/_/g, " ")}</span></div>
-          <div className="flex justify-between"><span>Duration</span><span className="text-gray-100">{formatTimer(callDuration)}</span></div>
-          <div className="flex justify-between"><span>Peer</span><span className="text-gray-100">{stats.peer_jid.split("@")[0]}</span></div>
+          <div className="flex justify-between">
+            <span>Phase</span>
+            <span className="capitalize text-gray-100">
+              {String(stats.state).replace(/_/g, " ")}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Duration</span>
+            <span className="text-gray-100">{formatTimer(callDuration)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Peer</span>
+            <span className="text-gray-100">{stats.peer_jid.split("@")[0]}</span>
+          </div>
           {stats.is_group && (
             <>
-              <div className="flex justify-between"><span>Group</span><span className="text-gray-100">{stats.group_jid.split("@")[0]}</span></div>
-              <div className="flex justify-between"><span>Participants</span><span className="text-gray-100">{stats.participants}</span></div>
+              <div className="flex justify-between">
+                <span>Group</span>
+                <span className="text-gray-100">{stats.group_jid.split("@")[0]}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Participants</span>
+                <span className="text-gray-100">{stats.participants}</span>
+              </div>
             </>
           )}
         </div>
@@ -1492,33 +1518,78 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 title={activeCall.muted ? "Unmute microphone" : "Mute microphone"}
               >
                 {activeCall.muted ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c.98-.14 1.88-.48 2.65-.97l3.08 3.08 1.27-1.27L4.27 3z" />
                   </svg>
                 ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
                   </svg>
                 )}
               </button>
 
               {videoSupported && !videoStarted && !pendingUpgrade && (
-                <button onClick={handleStartVideo} className={roundBtn} aria-label="Start video" title="Start video">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <button
+                  onClick={handleStartVideo}
+                  className={roundBtn}
+                  aria-label="Start video"
+                  title="Start video"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
                   </svg>
                 </button>
               )}
               {videoSupported && pendingUpgrade && !screenSharing && (
-                <button onClick={handleAcceptVideo} className={`${roundBtn} bg-green-muted text-green-light`} aria-label="Accept video" title="Accept video">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <button
+                  onClick={handleAcceptVideo}
+                  className={`${roundBtn} bg-green-muted text-green-light`}
+                  aria-label="Accept video"
+                  title="Accept video"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
                   </svg>
                 </button>
               )}
               {videoSupported && videoStarted && (
-                <button onClick={handleStopVideo} className={`${roundBtn} bg-danger-tint text-danger-soft`} aria-label="Stop video" title="Stop video">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <button
+                  onClick={handleStopVideo}
+                  className={`${roundBtn} bg-danger-tint text-danger-soft`}
+                  aria-label="Stop video"
+                  title="Stop video"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M3 3L21 21M17 10.5V7a2 2 0 00-2-2H9l10 10m-2 2v.5a2 2 0 01-2 2H4a2 2 0 01-2-2V7c0-.7.36-1.31.9-1.66L17 19.5V10.5l4 4v-11l-4 4z" />
                   </svg>
                 </button>
@@ -1531,7 +1602,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                   aria-pressed={cameraOn}
                   title={cameraOn ? "Turn camera off" : "Turn camera on"}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M17 10.5V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2v-3.5l4 4v-11l-4 4z" />
                   </svg>
                 </button>
@@ -1544,19 +1621,34 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                   aria-pressed={screenSharing}
                   title={screenSharing ? "Stop sharing screen" : "Share screen"}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
                     <path d="M20 3H4a2 2 0 00-2 2v11a2 2 0 002 2h6v2h4v-2h6a2 2 0 002-2V5a2 2 0 00-2-2zm0 13H4V5h16v11zM11 7h2v4h3l-4 4-4-4h3V7z" />
                   </svg>
                 </button>
               )}
 
               <button
-                onClick={() => { setAddSearch(""); setShowAddParticipant(true) }}
+                onClick={() => {
+                  setAddSearch("")
+                  setShowAddParticipant(true)
+                }}
                 className={roundBtn}
                 aria-label="Add participant to call"
                 title="Add participant to call"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M9 12a3 3 0 100-6 3 3 0 000 6zm0-8a5 5 0 110 10 5 5 0 010-10zm0 11c-2.67 0-8 1.34-8 4v2h11v-2H3v-1c0-1.22 3.5-3 6-3 .9 0 1.74.12 2.48.32-.66-.5-1.25-1.1-1.7-1.78A10.9 10.9 0 009 15zm11 1v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z" />
                 </svg>
               </button>
@@ -1567,7 +1659,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-expanded={showReactions}
                 title="Send a reaction"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zM8.5 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm7 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12 17.5c2.3 0 4.3-1.4 5-3.5H7c.7 2.1 2.7 3.5 5 3.5z" />
                 </svg>
               </button>
@@ -1578,7 +1676,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-pressed={handRaised}
                 title={handRaised ? "Lower hand" : "Raise hand"}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M11 2a1.5 1.5 0 013 0v8l1.5-1.5a1.5 1.5 0 012.1 2.1L16 12.2V5.5a1.5 1.5 0 013 0v7.8l1.6-1.6a1.5 1.5 0 012.1 2.1l-5.2 5.2A4 4 0 0115 20h-2.4a4 4 0 01-3.1-1.5L5.2 13a1.5 1.5 0 012.2-2l1.6 1.8V2z" />
                 </svg>
               </button>
@@ -1590,7 +1694,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-label="End call"
                 title="End call"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
                 </svg>
               </button>
@@ -1598,7 +1708,8 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
           ) : activeCall.status === "ringing" ? (
             <>
               <span className="mr-2 text-sm text-gray-200">
-                Incoming {activeCall.isGroup ? "group " : ""}{activeCall.isVideo ? "video" : "voice"} call
+                Incoming {activeCall.isGroup ? "group " : ""}
+                {activeCall.isVideo ? "video" : "voice"} call
               </span>
               <button
                 onClick={handleReject}
@@ -1606,7 +1717,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-label="Decline call"
                 title="Decline call"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
                 </svg>
               </button>
@@ -1616,7 +1733,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-label="Accept call"
                 title="Accept call"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" />
                 </svg>
               </button>
@@ -1630,7 +1753,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 aria-label="Cancel call"
                 title="Cancel call"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
                 </svg>
               </button>

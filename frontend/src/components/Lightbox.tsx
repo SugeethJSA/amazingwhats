@@ -1,12 +1,9 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
 } from "react"
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react"
 import clsx from "clsx"
 import { useMessageStore, useUIStore } from "../store"
 import type { Message } from "../store/types"
@@ -25,7 +22,13 @@ import {
 } from "../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { ForwardDialog } from "./chat/ForwardDialog"
 import { CloseIcon, DownloadIcon, PhotosIcon } from "../assets/svgs/chat_icons"
-import { DeleteIcon, ForwardIcon, ReactIcon, ReplyIcon, StarIcon } from "../assets/svgs/message_menu_icons"
+import {
+  DeleteIcon,
+  ForwardIcon,
+  ReactIcon,
+  ReplyIcon,
+  StarIcon,
+} from "../assets/svgs/message_menu_icons"
 import { DotsIcon } from "../assets/svgs/settings_icons"
 
 const ZOOM_LEVELS = [1, 1.5, 2, 3] as const
@@ -41,37 +44,86 @@ type ConfirmAction = "delete" | "revoke" | null
 type GlyphProps = { className?: string }
 
 const ZoomInIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l5.25 5.24 1.41-1.41-5.24-5.25A7.5 7.5 0 0 0 10.5 3zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2.2v2.3H12.8v1.5h-2.3v2.3H9v-2.3H6.7v-1.5H9V7.2h1.5z" />
   </svg>
 )
 const ZoomOutIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l5.25 5.24 1.41-1.41-5.24-5.25A7.5 7.5 0 0 0 10.5 3zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM6.7 9.7h7.6v1.5H6.7V9.7z" />
   </svg>
 )
 const PrevIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="26"
+    height="26"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M15.6 4.4 8 12l7.6 7.6 1.4-1.4L10.8 12l6.2-6.2-1.4-1.4z" />
   </svg>
 )
 const NextIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="26"
+    height="26"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M8.4 4.4 7 5.8 13.2 12 7 18.2l1.4 1.4L16 12 8.4 4.4z" />
   </svg>
 )
 const PinIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M16 2.5v2l-1 1v4.2l3.1 3.1V16H5.9v-3.2L9 9.7V5.5L8 4.5v-2h8zm-5 13.5h2v5.5l-1-1.4-1 1.4V16z" />
   </svg>
 )
 const GoToMessageIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm8 4v3H9v2h3v3h2v-3h3v-2h-3V7h-2z" />
   </svg>
 )
 const RevokeIcon = ({ className }: GlyphProps) => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" className={className} aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="18"
+    height="18"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
     <path d="M12 5V2L7 7l5 5V9a5 5 0 1 1-5 5H5a7 7 0 1 0 7-9z" />
   </svg>
 )
@@ -81,7 +133,10 @@ const RevokeIcon = ({ className }: GlyphProps) => (
 // with a CSS filter so the action bar stays visually consistent.
 function ViewerIcon({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex shrink-0 items-center justify-center" style={{ filter: "brightness(0) invert(1)" }}>
+    <span
+      className="inline-flex shrink-0 items-center justify-center"
+      style={{ filter: "brightness(0) invert(1)" }}
+    >
       {children}
     </span>
   )
@@ -198,7 +253,12 @@ export function Lightbox() {
   const closeRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const wasOpenRef = useRef(false)
-  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
+  const dragRef = useRef<{
+    startX: number
+    startY: number
+    originX: number
+    originY: number
+  } | null>(null)
   const movedRef = useRef(false)
 
   const [displaySrc, setDisplaySrc] = useState<string | null>(src)
@@ -217,16 +277,16 @@ export function Lightbox() {
   const mediaList = useMemo<Message[]>(() => {
     if (!ctx.chatJid) return []
     const list = allMessages[ctx.chatJid] ?? []
-    return list.filter(message => Boolean(message.Content?.imageMessage || message.Content?.videoMessage))
+    return list.filter(message =>
+      Boolean(message.Content?.imageMessage || message.Content?.videoMessage),
+    )
   }, [allMessages, ctx.chatJid])
 
   const currentIndex = ctx.messageId ? mediaList.findIndex(m => m.Info?.ID === ctx.messageId) : -1
   const canPrev = hasMessage && currentIndex > 0
   const canNext = hasMessage && currentIndex >= 0 && currentIndex < mediaList.length - 1
 
-  const viewerName = ctx.isFromMe
-    ? "You"
-    : ctx.pushName || ctx.senderJid?.split("@")[0] || ""
+  const viewerName = ctx.isFromMe ? "You" : ctx.pushName || ctx.senderJid?.split("@")[0] || ""
 
   const resetView = useCallback(() => {
     setZoomIndex(0)
@@ -290,7 +350,11 @@ export function Lightbox() {
   )
 
   const runAction = useCallback(
-    async (fn: () => Promise<void>, success?: string, failure = "Could not complete that action") => {
+    async (
+      fn: () => Promise<void>,
+      success?: string,
+      failure = "Could not complete that action",
+    ) => {
       setBusy(true)
       setPopover(null)
       try {
@@ -542,13 +606,21 @@ export function Lightbox() {
             aria-hidden="true"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-semibold text-white"
           >
-            {viewerName ? viewerName.charAt(0).toUpperCase() : <ViewerIcon><PhotosIcon /></ViewerIcon>}
+            {viewerName ? (
+              viewerName.charAt(0).toUpperCase()
+            ) : (
+              <ViewerIcon>
+                <PhotosIcon />
+              </ViewerIcon>
+            )}
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-2">
               <span className="truncate text-sm font-semibold text-white">{viewerName}</span>
               {ctx.timestamp && (
-                <span className="shrink-0 text-xs text-white/60">{formatViewerTime(ctx.timestamp)}</span>
+                <span className="shrink-0 text-xs text-white/60">
+                  {formatViewerTime(ctx.timestamp)}
+                </span>
               )}
             </div>
             {ctx.caption && (
@@ -572,7 +644,9 @@ export function Lightbox() {
             title="Close (Esc)"
             className={`flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition-colors hover:bg-white/15 hover:text-white`}
           >
-            <ViewerIcon><CloseIcon /></ViewerIcon>
+            <ViewerIcon>
+              <CloseIcon />
+            </ViewerIcon>
           </button>
         </div>
       </header>
@@ -674,7 +748,12 @@ export function Lightbox() {
               <ActionButton label="Reply" title="Reply from the chat view" onClick={handleReply}>
                 <ReplyIcon />
               </ActionButton>
-              <ActionButton label="Download" title="Download" onClick={handleDownload} disabled={busy}>
+              <ActionButton
+                label="Download"
+                title="Download"
+                onClick={handleDownload}
+                disabled={busy}
+              >
                 <DownloadIcon />
               </ActionButton>
               <ActionButton
@@ -703,7 +782,12 @@ export function Lightbox() {
               >
                 <ReactIcon />
               </ActionButton>
-              <ActionButton label="Forward" title="Forward" onClick={() => setForwardOpen(true)} disabled={busy}>
+              <ActionButton
+                label="Forward"
+                title="Forward"
+                onClick={() => setForwardOpen(true)}
+                disabled={busy}
+              >
                 <ForwardIcon />
               </ActionButton>
               <ActionButton
@@ -770,7 +854,9 @@ export function Lightbox() {
             }}
             className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10`}
           >
-            <ViewerIcon><DeleteIcon /></ViewerIcon>
+            <ViewerIcon>
+              <DeleteIcon />
+            </ViewerIcon>
             Delete for me
           </button>
           {ctx.isFromMe && (
@@ -785,7 +871,9 @@ export function Lightbox() {
               }}
               className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10`}
             >
-              <ViewerIcon><RevokeIcon /></ViewerIcon>
+              <ViewerIcon>
+                <RevokeIcon />
+              </ViewerIcon>
               Revoke for everyone
             </button>
           )}

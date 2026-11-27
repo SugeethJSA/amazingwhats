@@ -101,7 +101,8 @@ function deriveWaveform(buffer: AudioBuffer, count: number): number[] {
 
 function quotedPreviewText(quoted: DecodedMessageContent | null | undefined): string | null {
   if (!quoted) return null
-  if (quoted.extendedTextMessage?.text) return quoted.extendedTextMessage.text.replace(/<[^>]*>/g, "")
+  if (quoted.extendedTextMessage?.text)
+    return quoted.extendedTextMessage.text.replace(/<[^>]*>/g, "")
   if (quoted.conversation) return quoted.conversation.replace(/<[^>]*>/g, "")
   if (quoted.imageMessage) return quoted.imageMessage.caption || "📷 Photo"
   if (quoted.videoMessage) return quoted.videoMessage.caption || "🎥 Video"
@@ -154,7 +155,8 @@ export function VoiceNotePlayer({ src, message }: { src: string; message: Messag
     }
     if (typeof window === "undefined") return
     const Ctor: typeof AudioContext | undefined =
-      window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctor) return
 
     let live = true
@@ -199,7 +201,11 @@ export function VoiceNotePlayer({ src, message }: { src: string; message: Messag
   // Resolve the author line from the contact store, falling back to PushName.
   const [senderName, setSenderName] = useState(() => {
     if (isFromMe) return "You"
-    return useContactStore.getState().contacts[jid]?.name || message.Info.PushName?.trim() || "Voice message"
+    return (
+      useContactStore.getState().contacts[jid]?.name ||
+      message.Info.PushName?.trim() ||
+      "Voice message"
+    )
   })
   useEffect(() => {
     if (isFromMe || !jid) return
@@ -305,7 +311,8 @@ export function VoiceNotePlayer({ src, message }: { src: string; message: Messag
       const styles = window.getComputedStyle(canvas)
       const accent = styles.getPropertyValue("--color-green").trim() || "#21c063"
       const muted = styles.color || "#888888"
-      const playedBars = duration > 0 ? Math.min(BAR_COUNT, (currentTime / duration) * BAR_COUNT) : 0
+      const playedBars =
+        duration > 0 ? Math.min(BAR_COUNT, (currentTime / duration) * BAR_COUNT) : 0
       const gap = 2
       const barWidth = Math.max(1, (width - gap * (BAR_COUNT - 1)) / BAR_COUNT)
       const mid = height / 2
@@ -414,7 +421,9 @@ export function VoiceNotePlayer({ src, message }: { src: string; message: Messag
           {senderName}
         </span>
         {timestamp && (
-          <span className="shrink-0 text-[10px] text-light-muted dark:text-dark-muted">{timestamp}</span>
+          <span className="shrink-0 text-[10px] text-light-muted dark:text-dark-muted">
+            {timestamp}
+          </span>
         )}
       </div>
 

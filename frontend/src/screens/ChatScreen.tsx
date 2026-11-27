@@ -106,14 +106,7 @@ function readSavedLabelNames(): Record<string, string> {
  * the muted JID set in useMuteStore. There is no favourite flag in the data
  * model, so "Pinned" is the honest (starred) equivalent — never a dead chip.
  */
-type ChatListFilter =
-  | "all"
-  | "unread"
-  | "pinned"
-  | "groups"
-  | "muted"
-  | "communities"
-  | "contacts"
+type ChatListFilter = "all" | "unread" | "pinned" | "groups" | "muted" | "communities" | "contacts"
 
 const FILTER_LABELS: Record<ChatListFilter, string> = {
   all: "All",
@@ -128,11 +121,7 @@ const FILTER_LABELS: Record<ChatListFilter, string> = {
 const MORE_FILTERS: readonly ChatListFilter[] = ["muted", "communities", "contacts"]
 
 /** Search + archived view + the active chip filter, in one shallow selector. */
-const useVisibleChatIds = (
-  showArchived: boolean,
-  filter: ChatListFilter,
-  mutedJids: Set<string>,
-) =>
+const useVisibleChatIds = (showArchived: boolean, filter: ChatListFilter, mutedJids: Set<string>) =>
   useChatStore(
     useShallow(state => {
       const term = state.searchTerm.toLowerCase()
@@ -859,12 +848,40 @@ function SubscribeChannelDialog({ onClose }: { onClose: () => void }) {
 const CallingIllustration = () => (
   <svg viewBox="0 0 220 150" className="h-32 w-48" fill="none" aria-hidden="true">
     <rect x="24" y="16" width="148" height="100" rx="14" className="fill-green" />
-    <rect x="34" y="26" width="128" height="78" rx="7" className="fill-white dark:fill-dark-panel" />
+    <rect
+      x="34"
+      y="26"
+      width="128"
+      height="78"
+      rx="7"
+      className="fill-white dark:fill-dark-panel"
+    />
     <rect x="44" y="38" width="62" height="9" rx="4.5" className="fill-green-muted" />
-    <rect x="44" y="54" width="86" height="7" rx="3.5" className="fill-gray-200 dark:fill-white/10" />
-    <rect x="44" y="67" width="72" height="7" rx="3.5" className="fill-gray-200 dark:fill-white/10" />
+    <rect
+      x="44"
+      y="54"
+      width="86"
+      height="7"
+      rx="3.5"
+      className="fill-gray-200 dark:fill-white/10"
+    />
+    <rect
+      x="44"
+      y="67"
+      width="72"
+      height="7"
+      rx="3.5"
+      className="fill-gray-200 dark:fill-white/10"
+    />
     <rect x="86" y="82" width="58" height="14" rx="7" className="fill-green" />
-    <rect x="16" y="118" width="164" height="8" rx="4" className="fill-gray-200 dark:fill-white/10" />
+    <rect
+      x="16"
+      y="118"
+      width="164"
+      height="8"
+      rx="4"
+      className="fill-gray-200 dark:fill-white/10"
+    />
     <circle cx="178" cy="104" r="25" className="fill-green-muted dark:fill-teal-deep" />
     <path
       d="M178 91a6 6 0 0 0-6 6v4a6 6 0 0 0 6 6 22 22 0 0 0 11-3l4 4a3 3 0 0 0 4-4l-4-4a22 22 0 0 0 0-6l4-4a3 3 0 0 0-4-4l-4 4a22 22 0 0 0-11-3z"
@@ -1008,10 +1025,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const [showSearch, setShowSearch] = useState(false)
   const [starredOpen, setStarredOpen] = useState(false)
 
-  useEffect(
-    () => EventsOn("wa:open-starred-messages", () => setStarredOpen(true)),
-    [],
-  )
+  useEffect(() => EventsOn("wa:open-starred-messages", () => setStarredOpen(true)), [])
   const [chatFilter, setChatFilter] = useState<ChatListFilter>("all")
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [isInviting, setIsInviting] = useState(false)
@@ -1313,7 +1327,9 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     const wantedTop = openDown ? rect.bottom + gap : rect.top - gap - menuHeight
     const top = Math.max(margin, Math.min(wantedTop, window.innerHeight - menuHeight - margin))
 
-    setMoreFiltersPos(prev => (prev && prev.top === top && prev.left === left ? prev : { top, left }))
+    setMoreFiltersPos(prev =>
+      prev && prev.top === top && prev.left === left ? prev : { top, left },
+    )
   }, [])
 
   // Layout effect runs after the portaled node mounts but before paint, so the
@@ -2182,7 +2198,10 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                           {chatFilter === filter && <span aria-hidden="true">✓</span>}
                         </button>
                       ))}
-                      <div role="separator" className="my-1 border-t border-gray-200 dark:border-white/10" />
+                      <div
+                        role="separator"
+                        className="my-1 border-t border-gray-200 dark:border-white/10"
+                      />
                       <button
                         type="button"
                         role="menuitem"
@@ -2379,7 +2398,9 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     <div
       className={clsx(
         "relative flex h-full flex-col",
-        selectedCommunity ? "bg-light-secondary dark:bg-dark-bg" : "bg-chat-wallpaper dark:bg-dark-bg",
+        selectedCommunity
+          ? "bg-light-secondary dark:bg-dark-bg"
+          : "bg-chat-wallpaper dark:bg-dark-bg",
       )}
     >
       {showConversation ? (
