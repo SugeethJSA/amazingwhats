@@ -13,6 +13,14 @@ export function EventsOn(name: string, cb: EventCallback): Unsubscribe {
   return Events.On(name, event => cb(event.data))
 }
 
+export function EventsEmit(name: string, data?: unknown): void {
+  try {
+    void (Events.Emit as (n: string, d?: unknown) => Promise<boolean>)(name, data)
+  } catch {
+    // No host runtime (tests/browser preview): console still has the error.
+  }
+}
+
 export function BrowserOpenURL(url: string): Promise<void> {
   return Browser.OpenURL(url)
 }

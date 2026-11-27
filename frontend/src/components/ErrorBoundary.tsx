@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react"
+import { EventsEmit } from "../lib/wailsRuntime"
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -22,6 +23,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Uncaught render error:", error, info.componentStack)
+    // Forward the real error to the backend log so it survives a reload, and
+    // show it on screen below (the old fallback hid the message entirely).
+    EventsEmit("wa:frontend_error", {
+      message: String(error?.message || error),
+      stack: String(error?.stack || "").slice(0, 4000),
+      component: String(info?.componentStack || "").slice(0, 4000),
+    })
   }
 
   handleReload = () => {
@@ -44,7 +52,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           The app hit an unexpected error and could not continue rendering.
         </p>
         <pre className="max-w-full overflow-auto rounded bg-gray-100 dark:bg-dark-tertiary px-4 py-2 text-xs text-red-600 dark:text-red-400">
-          An unexpected error occurred. Details have been logged.
+          {error.message || "An unexpected error occurred."}
+          {error.stack ? `\n\n${error.stack}` : ""}
         </pre>
         <div className="flex gap-3">
           <button

@@ -329,6 +329,16 @@ function isMentionName(name: string): boolean {
  * - Uses DOM text nodes, so it never double-escapes and is idempotent.
  */
 export function highlightMentions(html: string): string {
+  // A malformed/unexpected payload must never take down the whole chat pane.
+  // Styling is optional; the original sanitized text is always safe to return.
+  try {
+    return highlightMentionsUnsafe(html)
+  } catch {
+    return html
+  }
+}
+
+function highlightMentionsUnsafe(html: string): string {
   if (!html || !html.includes("@")) return html
   // No DOM (SSR / non-jsdom tests): input is already sanitized/escaped, so
   // returning it unchanged is always safe (styling is simply lost).

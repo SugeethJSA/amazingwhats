@@ -1095,6 +1095,12 @@ func (a *Api) failStartup(err error) {
 func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
 
+	// The React ErrorBoundary forwards uncaught render errors here so the real
+	// message and component stack land in the app log (and survive a reload).
+	a.app.Event.On("wa:frontend_error", func(event *application.CustomEvent) {
+		slog.Error("frontend render error", "source", "frontend", "detail", fmt.Sprintf("%v", event.Data))
+	})
+
 	// Keep the settings file handle open for the whole app lifetime; the
 	// matching CloseSettings lives in ServiceShutdown.
 	store.LoadSettings()
@@ -1288,9 +1294,20 @@ func (a *Api) Login() (err error) {
 			}
 		}
 	} else {
-		// Already logged in, connect before announcing readiness.
+		// Already logged in. HyperMeow's auto-reconnect can win the race while
+		// the UI is reloading: connecting an already-live socket only returns
+		// "websocket is already connected" and makes the sign-in look failed.
+		// Yield to the live connection instead (same rule as reconnectLoop).
+		if client.IsConnected() {
+			a.app.Event.Emit("wa:status", "logged_in")
+			return nil
+		}
 		err := client.Connect()
 		if err != nil {
+			if errors.Is(err, whatsmeow.ErrAlreadyConnected) || client.IsConnected() {
+				a.app.Event.Emit("wa:status", "logged_in")
+				return nil
+			}
 			return err
 		}
 		if a.isShuttingDown() {
