@@ -699,7 +699,7 @@ func (a *Api) notifyIncoming(v *events.Message, parsedHTML string) {
 	// silhouette the chat list shows, rather than leaving an unidentifiable
 	// toast or misusing the application icon.
 	if len(opts.Avatar) == 0 && len(opts.Image) == 0 {
-		opts.FallbackAvatar = notify.PlaceholderAvatar(chatJID.Server == types.GroupServer)
+		opts.FallbackAvatar = notify.ChatFallbackAvatar(chatJID.String(), chatJID.Server == types.GroupServer)
 	}
 
 	if err := notify.Notify(opts); err != nil {

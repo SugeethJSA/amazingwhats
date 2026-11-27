@@ -1,12 +1,20 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   GetPrivacySettings,
   SetPrivacySetting,
   GetStatusPrivacy,
   GetBlockList,
   SetStatusPrivacy,
+  GetDisappearingTimerDefault,
+  SetDisappearingTimerDefault,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
-import { RowList, SettingRow, SelectMenu, SettingsSection } from "../../components/settings/ui-kit"
+import {
+  RowList,
+  SettingRow,
+  SelectMenu,
+  SettingsSection,
+  ActionButton,
+} from "../../components/settings/ui-kit"
 
 interface Setting {
   key: string
@@ -22,6 +30,29 @@ function jidToPhone(jid: string): string {
   // Only phone-number JIDs get a "+"; LIDs and other identifiers are shown
   // as-is rather than being falsely presented as phone numbers.
   return digits && /^\d+$/.test(raw) ? `+${digits}` : raw || jid
+}
+
+// D-TIMER-001: the four standard account-default values, kept as strings so
+// they can feed SelectMenu<string> directly.
+const TIMER_OPTIONS = [
+  { value: "0", label: "Off" },
+  { value: "86400", label: "24 hours" },
+  { value: "604800", label: "7 days" },
+  { value: "7776000", label: "90 days" },
+]
+const STANDARD_TIMER_SECONDS = new Set(TIMER_OPTIONS.map(o => Number(o.value)))
+
+/** Humanize a REAL server value; never substitute a guessed one. */
+function formatTimerSeconds(seconds: number): string {
+  const standard = TIMER_OPTIONS.find(o => Number(o.value) === seconds)
+  if (standard) return standard.label
+  if (!Number.isFinite(seconds)) return `Unknown value (${seconds})`
+  if (seconds <= 0) return `Unknown value (${seconds})`
+  const unit = (n: number, name: string) => `${n} ${name}${n === 1 ? "" : "s"}`
+  if (seconds % 86400 === 0) return unit(seconds / 86400, "day")
+  if (seconds % 3600 === 0) return unit(seconds / 3600, "hour")
+  if (seconds % 60 === 0) return unit(seconds / 60, "minute")
+  return unit(seconds, "second")
 }
 
 const SETTINGS: Setting[] = [
@@ -108,6 +139,36 @@ const PrivacySettingsScreen = () => {
   const [statusBlacklist, setStatusBlacklist] = useState<string[]>([])
   const [blockedCount, setBlockedCount] = useState(0)
 
+  // D-TIMER-001: the timer's state is independent of the other privacy rows so
+  // an unreadable account default is never reported as a privacy-settings error.
+  const [timerSeconds, setTimerSeconds] = useState<number | null>(null)
+  const [timerReadLoading, setTimerReadLoading] = useState(true)
+  const [timerReadError, setTimerReadError] = useState("")
+  const [timerBusy, setTimerBusy] = useState(false)
+  const [timerStatus, setTimerStatus] = useState<{ tone: "success" | "error"; text: string } | null>(null)
+
+  /** Read the real account default. A null result means "no trustworthy value". */
+  const loadTimerDefault = useCallback(async (isCancelled?: () => boolean) => {
+    setTimerReadLoading(true)
+    setTimerReadError("")
+    try {
+      const seconds = await GetDisappearingTimerDefault()
+      if (!isCancelled?.()) {
+        setTimerSeconds(seconds)
+        return seconds
+      }
+    } catch (err) {
+      if (!isCancelled?.()) {
+        console.error("Failed to read the default message timer:", err)
+        setTimerSeconds(null)
+        setTimerReadError("Couldn't read the current default from the server")
+      }
+    } finally {
+      if (!isCancelled?.()) setTimerReadLoading(false)
+    }
+    return null
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     GetPrivacySettings()
@@ -148,10 +209,13 @@ const PrivacySettingsScreen = () => {
       })
       .catch(() => {})
 
+    // The account default is read from the server on mount, not assumed.
+    loadTimerDefault(() => cancelled)
+
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadTimerDefault])
 
   const handleChange = async (key: string, value: string) => {
     setBusy(key)
@@ -171,11 +235,60 @@ const PrivacySettingsScreen = () => {
     }
   }
 
-  // D-TIMER-001: HyperMeow exposes SetDefaultDisappearingTimer but no getter
-  // for the account-level default (no client method, no appstate/global setting,
-  // no handled notification). A picker seeded with 0 would falsely claim
-  // "Off", so the row below states the limitation honestly instead. Revisit
-  // when the fork adds a real GetDefaultDisappearingTimer binding.
+  const handleTimerRefresh = () => {
+    setTimerStatus(null)
+    void loadTimerDefault()
+  }
+
+  const handleTimerChange = async (value: string) => {
+    if (!value) return // the "Choose…" placeholder is not a real selection
+    const seconds = Number(value)
+    if (!Number.isFinite(seconds)) return
+    setTimerStatus(null)
+    setTimerBusy(true)
+    try {
+      await SetDisappearingTimerDefault(seconds)
+      // Read-after-write: a local choice is never shown as the current value.
+      // Only a fresh server read may update what the row displays, so a failed
+      // save or a failed confirmation cannot leave a guessed number on screen.
+      const confirmed = await loadTimerDefault()
+      setTimerStatus(
+        confirmed === null
+          ? {
+              tone: "error",
+              text: "Saved, but the server value could not be re-read. Use Refresh to confirm.",
+            }
+          : { tone: "success", text: `Saved. Server now reports: ${formatTimerSeconds(confirmed)}` },
+      )
+    } catch (err) {
+      console.error("Failed to set the default message timer:", err)
+      setTimerStatus({
+        tone: "error",
+        text: "Couldn't save the default timer. The value shown is the last server reading.",
+      })
+    } finally {
+      setTimerBusy(false)
+    }
+  }
+
+  // D-TIMER-001: GetDisappearingTimerDefault() reads the account-level default
+  // through the usync-backed getter in the generated bindings (unlike
+  // GetDisappearingTimer, which only reads per-chat group metadata). Every value
+  // shown below comes from that getter — on mount, on Refresh/Retry, and again
+  // after each SetDisappearingTimerDefault() write. The locally picked option is
+  // never treated as evidence; the post-write re-read is the only thing that
+  // updates the displayed value, so a failed save or a failed confirmation can
+  // never leave a guessed default on screen.
+
+  const timerSelectValue =
+    timerSeconds !== null && STANDARD_TIMER_SECONDS.has(timerSeconds) ? String(timerSeconds) : ""
+  const timerSelectOptions =
+    timerSelectValue === "" ? [{ value: "", label: "Choose…" }, ...TIMER_OPTIONS] : TIMER_OPTIONS
+  const timerHint = timerReadError
+    ? timerReadError
+    : timerSeconds === null
+      ? "Reading the current default from your account…"
+      : `Current default from your account: ${formatTimerSeconds(timerSeconds)}`
 
   return (
     <div className="flex flex-col gap-6">
@@ -233,11 +346,55 @@ const PrivacySettingsScreen = () => {
             control={<span className="text-sm text-light-text dark:text-dark-text">{blockedCount}</span>}
             hint="Manage blocked contacts on your phone."
           />
-          <SettingRow
-            title="Default message timer"
-            description="How long new messages stay before disappearing. This is an account-level setting stored on your WhatsApp account."
-            hint="Value not shown: this client cannot read the account default back — HyperMeow only exposes a setter, so any value displayed here would be a guess. The in-app per-chat timer control is group-only (1:1 chats read back as 0); set the account default or a 1:1 chat timer on the phone."
-          />
+          <div>
+            <SettingRow
+              title="Default message timer"
+              description="How long new messages stay before disappearing. This is an account-level setting stored on your WhatsApp account."
+              hint={timerHint}
+              control={
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <SelectMenu
+                    value={timerSelectValue}
+                    options={timerSelectOptions}
+                    onChange={handleTimerChange}
+                    disabled={timerReadLoading || timerBusy}
+                    ariaLabel="Default message timer"
+                  />
+                  <ActionButton
+                    variant="ghost"
+                    onClick={handleTimerRefresh}
+                    disabled={timerReadLoading || timerBusy}
+                    className="min-h-8 px-2.5 text-[12px]"
+                  >
+                    Refresh
+                  </ActionButton>
+                </div>
+              }
+            />
+            {timerReadError && !timerReadLoading && (
+              <div className="px-4 pb-2.5">
+                <ActionButton
+                  variant="ghost"
+                  onClick={handleTimerRefresh}
+                  disabled={timerBusy}
+                  className="min-h-8 px-2.5 text-[12px]"
+                >
+                  Retry
+                </ActionButton>
+              </div>
+            )}
+            {timerStatus && (
+              <div
+                className={`px-4 pb-2.5 text-[12px] font-medium ${
+                  timerStatus.tone === "error"
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-deep dark:text-green-light"
+                }`}
+              >
+                {timerStatus.text}
+              </div>
+            )}
+          </div>
         </RowList>
       </SettingsSection>
 

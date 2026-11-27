@@ -297,15 +297,12 @@ func (a *Api) UnlinkGroupFromCommunity(parentJID, childJID string) error {
 }
 
 // SetDisappearingTimerDefault changes the account-level default disappearing
-// timer. Investigation for D-TIMER-001: HyperMeow (both the pinned version and
-// the v0.0.0 snapshot) exposes only this setter. There is no
-// GetDefaultDisappearingTimer client method, no appstate/global-settings field
-// carrying the account default, and no handled "disappearing_mode"
-// notification. DangerousInternals cannot be used for a clean read either:
-// SendIQ takes the unexported infoQuery type. The current value therefore
-// cannot be read back, so it is deliberately not surfaced in the privacy UI.
-// Do not substitute a local cache of the last value written here: that is not
-// evidence of the server's current default.
+// timer. HyperMeow exposes only this setter as a high-level API; the current
+// value is read by GetDisappearingTimerDefault, which sends our own usync
+// query through the exported DangerousInternals().Usync and parses the raw
+// <list> node (see disappearing_timer.go). This setter stays write-only and
+// deliberately caches nothing: callers re-read from the server after a write
+// instead of trusting a local last-written value as the current default.
 func (a *Api) SetDisappearingTimerDefault(timerSeconds int64) error {
 	if a.waClient.Store.ID == nil {
 		return fmt.Errorf("not logged in")

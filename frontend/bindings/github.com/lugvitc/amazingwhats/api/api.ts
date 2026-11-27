@@ -379,6 +379,20 @@ export function GetDisappearingTimer(chatJID: string): $CancellablePromise<numbe
     return $Call.ByID(821150362, chatJID);
 }
 
+/**
+ * GetDisappearingTimerDefault reads the account-level default disappearing
+ * timer, in seconds (0 = off), fresh from the server on every call.
+ * 
+ * HyperMeow has no high-level getter and IsOnWhatsApp discards the
+ * disappearing_mode child, but DangerousInternals().Usync returns the raw
+ * <list> node, so the same query HyperMeow uses can be sent for our own JID
+ * and the duration read directly. Nothing is cached: a write is only ever
+ * confirmed by a later read from the server.
+ */
+export function GetDisappearingTimerDefault(): $CancellablePromise<number> {
+    return $Call.ByID(1820508167);
+}
+
 export function GetGroupInfo(jidStr: string): $CancellablePromise<$models.Group> {
     return $Call.ByID(2443938213, jidStr).then(($result: any) => {
         return $$createType27($result);
@@ -1001,15 +1015,12 @@ export function SetDisappearingTimer(chatJID: string, timerSeconds: number): $Ca
 
 /**
  * SetDisappearingTimerDefault changes the account-level default disappearing
- * timer. Investigation for D-TIMER-001: HyperMeow (both the pinned version and
- * the v0.0.0 snapshot) exposes only this setter. There is no
- * GetDefaultDisappearingTimer client method, no appstate/global-settings field
- * carrying the account default, and no handled "disappearing_mode"
- * notification. DangerousInternals cannot be used for a clean read either:
- * SendIQ takes the unexported infoQuery type. The current value therefore
- * cannot be read back, so it is deliberately not surfaced in the privacy UI.
- * Do not substitute a local cache of the last value written here: that is not
- * evidence of the server's current default.
+ * timer. HyperMeow exposes only this setter as a high-level API; the current
+ * value is read by GetDisappearingTimerDefault, which sends our own usync
+ * query through the exported DangerousInternals().Usync and parses the raw
+ * <list> node (see disappearing_timer.go). This setter stays write-only and
+ * deliberately caches nothing: callers re-read from the server after a write
+ * instead of trusting a local last-written value as the current default.
  */
 export function SetDisappearingTimerDefault(timerSeconds: number): $CancellablePromise<void> {
     return $Call.ByID(236875899, timerSeconds);

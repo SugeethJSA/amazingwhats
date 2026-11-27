@@ -105,6 +105,16 @@ function frameTimestamp(): number {
   return Math.floor(performance.now() * 1000)
 }
 
+// Decoded REMOTE frames only (main preview + group participants). meowcaller's
+// CVO value is the sender's clockwise device rotation, so 0/1/3 keep the
+// documented `orientation * 90°` clockwise transform (the sender's real
+// orientation is honoured). For CVO 2 this app applies a top-to-bottom flip
+// instead of a 180° rotation: the user reports received frames arriving
+// upside down, so a further 180° rotation leaves them inverted. This is a
+// hypothesis pending a captured-frame check on real Android/iPhone senders;
+// if the inversion turns out to be a true 180° rotation rather than a mirror,
+// use `ctx.rotate(Math.PI)` here instead. The canvas is never hidden, and
+// local camera capture never goes through this helper. (D-CALLVID-001)
 function drawFrame(canvas: HTMLCanvasElement | null, frame: any, orientation: number): boolean {
   if (!canvas) return false
   const ctx = canvas.getContext("2d")
@@ -123,7 +133,13 @@ function drawFrame(canvas: HTMLCanvasElement | null, frame: any, orientation: nu
   ctx.save()
   ctx.clearRect(0, 0, w, h)
   ctx.translate(w / 2, h / 2)
-  ctx.rotate((rot * Math.PI) / 2)
+  if (rot === 2) {
+    // Vertical flip (top <-> bottom), not a 180° rotation: restores the known
+    // inverted remote frame to an upright image.
+    ctx.scale(1, -1)
+  } else {
+    ctx.rotate((rot * Math.PI) / 2)
+  }
   ctx.drawImage(frame, -iw / 2, -ih / 2, iw, ih)
   ctx.restore()
   return true
@@ -186,6 +202,9 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   >(new Map())
   const encoderRef = useRef<any>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  // Declared with the other media handles so stopCapture() can release the
+  // native capture surface synchronously on every teardown path. (D-CALLVID-001)
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
   const trackReaderRef = useRef<any>(null)
   const captureTokenRef = useRef(0)
   const forceKeyRef = useRef(false)
@@ -219,6 +238,16 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
     try {
       stream?.getTracks().forEach(t => t.stop())
     } catch {}
+    // Release the native surface here as well as in the preview effect so no
+    // teardown path can leave the OS camera indicator lit via a stale srcObject.
+    // (D-CALLVID-001)
+    const el = localVideoRef.current
+    if (el) {
+      try {
+        el.pause()
+      } catch {}
+      el.srcObject = null
+    }
     const encoder = encoderRef.current
     encoderRef.current = null
     try {
@@ -228,6 +257,10 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   }
 
   function teardownVideo() {
+    // Any teardown (including the unmount effect, which clearCall does not
+    // precede) invalidates the call id so a pending getUserMedia/upgrade
+    // promise cannot install a fresh capture afterwards. (D-CALLVID-001)
+    activeCallIDRef.current = null
     stopCapture()
     try {
       decoderRef.current?.close?.()
@@ -261,6 +294,7 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
     setShowReactions(false)
     setReaction(null)
     setParticipantKeys([])
+    setMediaError(null)
   }
   teardownRef.current = teardownVideo
 
@@ -354,6 +388,12 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   async function startCapture(callID: string, mode: "camera" | "screen"): Promise<boolean> {
     if (!videoIsSupported() || activeCallIDRef.current !== callID) return false
     stopCapture()
+    // Capture session token. stopCapture() bumps it on every end/cut path, so
+    // any getUserMedia/StartCallScreenShare result that resolves after teardown
+    // is discarded instead of reacquiring a camera on a dead call. (D-CALLVID-001)
+    const token = captureTokenRef.current
+    const sessionValid = () =>
+      captureTokenRef.current === token && activeCallIDRef.current === callID
     const w = window as any
     const md = w.navigator?.mediaDevices
     if (!md) return false
@@ -379,7 +419,9 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       )
       return false
     }
-    if (activeCallIDRef.current !== callID) {
+    // Late getUserMedia result: teardown happened while the permission prompt
+    // was open. Stop the freshly granted tracks, never report success.
+    if (!sessionValid()) {
       stream.getTracks().forEach(t => t.stop())
       return false
     }
@@ -416,7 +458,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         error: (err: any) => {
           console.error("[VoIP] VideoEncoder error:", err)
           if (activeCallIDRef.current === callID) {
-            setMediaError("Video encoding failed for this screen. Try a smaller window.")
+            // A failed encoder must not leave the OS camera indicator lit:
+            // release every local capture resource, then report honestly.
+            stopCapture()
+            setVideoStarted(false)
+            setCameraOn(false)
+            setVideoReady(false)
+            setMediaError("Video encoding failed. Camera released; try restarting video.")
           }
         },
       })
@@ -433,6 +481,13 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       console.error("VideoEncoder configure failed:", err)
       try {
         encoder?.close?.()
+      } catch {}
+      stream.getTracks().forEach(t => t.stop())
+      return false
+    }
+    if (!sessionValid()) {
+      try {
+        encoder.close?.()
       } catch {}
       stream.getTracks().forEach(t => t.stop())
       return false
@@ -455,6 +510,11 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
         stopCapture()
         return false
       }
+      // The upgrade await can also outlive a call cut.
+      if (!sessionValid()) {
+        stopCapture()
+        return false
+      }
     }
     let reader: any
     try {
@@ -465,9 +525,15 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
       stopCapture()
       return false
     }
+    if (!sessionValid()) {
+      try {
+        reader?.cancel?.()
+      } catch {}
+      stopCapture()
+      return false
+    }
     trackReaderRef.current = reader
     setMediaError(null)
-    const token = captureTokenRef.current
     const pump = async () => {
       try {
         while (captureTokenRef.current === token && encoderRef.current === encoder) {
@@ -874,9 +940,16 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
   }, [clearCall])
 
   // Release cameras/displays and decoders if the overlay is unmounted while a
-  // call is still visible (D-ID CALL-002b).
+  // call is still visible (D-ID CALL-002b). The standalone call window can be
+  // closed/hidden without a React unmount, so pagehide tears down as well;
+  // teardown is idempotent and also invalidates the call id. (D-CALLVID-001)
   useEffect(() => {
-    return () => teardownRef.current()
+    const onPageHide = () => teardownRef.current()
+    window.addEventListener("pagehide", onPageHide)
+    return () => {
+      window.removeEventListener("pagehide", onPageHide)
+      teardownRef.current()
+    }
   }, [])
 
   // Call duration timer
@@ -1126,7 +1199,6 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
 
   const displaySupported = videoSupported && displayCaptureIsSupported()
 
-  const localVideoRef = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
     const el = localVideoRef.current
     const stream = localStreamRef.current
@@ -1240,27 +1312,62 @@ export function CallOverlayContent({ standalone = false }: { standalone?: boolea
                 className="h-full w-full object-contain"
                 aria-label="Remote call video"
               />
-              {cameraOn && !screenSharing && (
+              {/* Small preview: always MY locally captured stream (camera or
+                  screen share), never the remote canvas. Top-left so it does
+                  not cover the peer. Mirrored only for the selfie camera;
+                  a screen share is shown exactly as it is sent.
+                  (D-CALLVID-001) */}
+              {(cameraOn || screenSharing) && (
                 <video
                   ref={localVideoRef}
                   muted
                   playsInline
                   autoPlay
-                  className="absolute bottom-3 right-3 h-24 w-36 rounded-lg border border-white/20 bg-black object-cover"
-                  aria-label="Your camera preview"
+                  className={`absolute left-3 top-3 z-10 h-24 w-36 rounded-lg border border-white/20 bg-black object-cover ${cameraOn && !screenSharing ? "-scale-x-100" : ""}`}
+                  aria-label={screenSharing ? "Your screen preview" : "Your camera preview"}
                 />
               )}
               {!videoReady && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-dark-muted">
-                  {pendingUpgrade
-                    ? "Video incoming - accept to join"
-                    : videoStarted || screenSharing
-                      ? "Waiting for peer video."
-                      : "Start video to see your peer"}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-xs text-dark-muted">
+                  {/* Stage is active but I am not sending video: keep the peer
+                      identity and running duration visible above the honest
+                      waiting hint, matching the voice-call pane. */}
+                  <div className="flex flex-col items-center">
+                    {activeCall.avatarUrl ? (
+                      <img
+                        src={activeCall.avatarUrl}
+                        alt=""
+                        className="h-24 w-24 rounded-full object-cover shadow-xl ring-2 ring-green/40"
+                      />
+                    ) : (
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-call-surface text-3xl font-semibold shadow-xl ring-2 ring-green/40">
+                        {activeCall.contactName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <h2 className="mt-2 text-lg font-semibold tracking-tight text-gray-100">
+                      {activeCall.contactName}
+                    </h2>
+                    {activeCall.isGroup && activeCall.participants > 0 && (
+                      <p className="mt-0.5 text-xs text-dark-subtle">
+                        {activeCall.participants} participants
+                      </p>
+                    )}
+                    {activeCall.remoteMuted && (
+                      <p className="mt-0.5 text-xs text-dark-subtle">Microphone off</p>
+                    )}
+                    <p className="mt-1 text-sm text-green-light">{formatTimer(callDuration)}</p>
+                  </div>
+                  <p>
+                    {pendingUpgrade
+                      ? "Video incoming - accept to join"
+                      : videoStarted || screenSharing
+                        ? "Waiting for peer video."
+                        : "Start video to see your peer"}
+                  </p>
                 </div>
               )}
               {screenShareActive && (
-                <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-green-light">
+                <span className="absolute right-2 top-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-green-light">
                   Screen sharing
                 </span>
               )}

@@ -133,7 +133,7 @@ func (a *Api) notifyStatusReaction(v *events.Message, emoji string) {
 		}
 	}
 	if len(opts.Avatar) == 0 {
-		opts.FallbackAvatar = notify.PlaceholderAvatar(false)
+		opts.FallbackAvatar = notify.ChatFallbackAvatar(sender.String(), false)
 	}
 	if err := notify.Notify(opts); err != nil {
 		// Log the error only; never log notification payload/JIDs.

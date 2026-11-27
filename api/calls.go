@@ -181,7 +181,7 @@ func (a *Api) notifyIncomingCallOnce(callID string) {
 		}
 	}
 	if len(opts.Avatar) == 0 {
-		opts.FallbackAvatar = notify.PlaceholderAvatar(isGroup)
+		opts.FallbackAvatar = notify.ChatFallbackAvatar(chatJID, isGroup)
 	}
 	if err := notify.Notify(opts); err != nil {
 		// Log the error only; notification payloads carry private JIDs/names.
