@@ -175,6 +175,9 @@ func (a *Api) SetDisappearingTimer(chatJID string, timerSeconds int64) error {
 	return nil
 }
 
+// GetDisappearingTimer reads the timer from group metadata only. This is a
+// per-chat value, not the account-level default (D-TIMER-001): for 1:1 chats it
+// returns 0, which must never be presented as the account default being "Off".
 func (a *Api) GetDisappearingTimer(chatJID string) (int64, error) {
 	if a.waClient.Store.ID == nil {
 		return 0, fmt.Errorf("not logged in")

@@ -11,7 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lugvitc/amazingwhats/internal/notify"
 	"github.com/lugvitc/amazingwhats/internal/store"
+	"github.com/polymorfa/hypermeow/types"
 	"github.com/polymorfa/hypermeow/types/events"
 	"github.com/purpshell/meowcaller"
 	"github.com/rs/zerolog"
@@ -46,6 +48,10 @@ type ActiveCall struct {
 	IsVideo    bool
 	StartTime  time.Time
 	AnswerTime time.Time
+	// Notified is guarded by callsMu. The 1:1 and group paths can both observe
+	// the same ringing call (group state is filled in by the CallOffer handler),
+	// so this flag keeps the desktop notification to exactly one toast per call.
+	Notified bool
 }
 
 var (
@@ -88,6 +94,99 @@ func (a *Api) emitCallEvent(callID, event string, data map[string]any) {
 		return
 	}
 	a.app.Event.Emit(event, data)
+}
+
+// notifyIncomingCallOnce raises exactly one desktop notification for a ringing
+// call. The call ID is carried in notify.Options.MessageID so the notification
+// action callback can route Accept/Decline straight back to this call.
+//
+// The 1:1 path and the group CallOffer path can both see the same call, so the
+// dedupe flag lives on ActiveCall under callsMu. Delivery itself is attempted
+// once and only once: the Windows backend's PowerShell fallback can both show
+// a toast and return an error, and retrying on that error produced three
+// toasts per message. (D-CALLNOTIF-001)
+func (a *Api) notifyIncomingCallOnce(callID string) {
+	if a.ctx == nil || callID == "" {
+		return
+	}
+	callsMu.Lock()
+	ac := activeCalls[callID]
+	if ac == nil || ac.Notified {
+		callsMu.Unlock()
+		return
+	}
+	ac.Notified = true
+	peerJID := ac.PeerJID
+	groupJID := ac.GroupJID
+	isVideo := ac.IsVideo
+	isGroup := ac.IsGroup
+	callsMu.Unlock()
+
+	// Honour both the global desktop switch and the Calling > "Call
+	// notifications" setting. Both keys default to true when absent, matching
+	// the frontend defaults, so a fresh profile still gets call alerts.
+	if !store.GetNotificationsEnabled() {
+		return
+	}
+	settings := a.GetSettings()
+	if enabled, ok := settings["callNotifications"].(bool); ok && !enabled {
+		return
+	}
+	ring := true
+	if sounds, ok := settings["incomingCallSounds"].(bool); ok {
+		ring = sounds
+	}
+
+	// A group's title comes from the group JID; the person who called is the
+	// sender. For 1:1 calls both roles are the peer.
+	chatJID, senderJID := peerJID, peerJID
+	if isGroup && groupJID != "" {
+		chatJID = groupJID
+	}
+	chat, err := types.ParseJID(chatJID)
+	if err != nil {
+		chat = types.JID{}
+	}
+	sender, err := types.ParseJID(senderJID)
+	if err != nil {
+		sender = chat
+	}
+	name := a.notificationChatName(chat, sender, "")
+	if name == "" || name == "New message" {
+		name = "Incoming call"
+	}
+	body := "Incoming voice call"
+	if isVideo {
+		body = "Incoming video call"
+	}
+	if isGroup {
+		body = "Incoming group voice call"
+		if isVideo {
+			body = "Incoming group video call"
+		}
+	}
+
+	opts := notify.Options{
+		ChatJID:   chatJID,
+		MessageID: callID, // the action callback reads this as the call ID
+		SenderJID: senderJID,
+		Title:     name,
+		Body:      body,
+		CallID:    callID, // selects Accept/Decline actions on every backend
+		Silent:    !ring,
+	}
+	if a.imageCache != nil {
+		if avatar, _, err := a.imageCache.ReadAvatarByJID(chatJID); err == nil {
+			opts.Avatar = avatar
+		}
+	}
+	if len(opts.Avatar) == 0 {
+		opts.FallbackAvatar = notify.PlaceholderAvatar(isGroup)
+	}
+	if err := notify.Notify(opts); err != nil {
+		// Log the error only; notification payloads carry private JIDs/names.
+		log.Println("call notification failed:", err)
+	}
 }
 
 // initMeowcaller initializes the WhatsApp VoIP extension library
@@ -135,6 +234,8 @@ func (a *Api) initMeowcaller() {
 			// Reveal the dedicated call window before telling the frontend about
 			// the call so its listeners are mounted on a visible webview.
 			showCallWindow()
+			// One OS toast for this call; the 1:1 path may have seen it first.
+			a.notifyIncomingCallOnce(offer.CallID)
 			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":   offer.CallID,
 				"peerJID":  peerJID,
@@ -229,6 +330,7 @@ func (a *Api) initMeowcaller() {
 		// shared ActiveCall outside callsMu. (D-AUD-004d, D-AUD-004f)
 		if a.ctx != nil && !isGroup {
 			showCallWindow()
+			a.notifyIncomingCallOnce(call.ID())
 			a.app.Event.Emit("call:incoming", map[string]any{
 				"callID":  call.ID(),
 				"peerJID": call.Peer().String(),

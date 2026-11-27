@@ -10,8 +10,10 @@ import {
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 import {
   GetNotificationsEnabled,
+  GetStatusReactionsEnabled,
   SendTestNotification,
   SetNotificationsEnabled,
+  SetStatusReactionsEnabled,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import { EventsOn } from "../../lib/wailsRuntime"
 
@@ -88,10 +90,13 @@ function Category({
 }
 
 const NotificationsSettingsScreen = () => {
-  const { showPreviews, updateSetting } = useAppSettingsStore()
+  const { showPreviews, callNotifications, incomingCallSounds, updateSetting } =
+    useAppSettingsStore()
 
   const [desktopNotifications, setDesktopNotifications] = useState(true)
   const [desktopBusy, setDesktopBusy] = useState(false)
+  const [statusReactions, setStatusReactions] = useState(true)
+  const [statusReactionsBusy, setStatusReactionsBusy] = useState(false)
   const [expanded, setExpanded] = useState<string | null>("messages")
   const [testStatus, setTestStatus] = useState<string | null>(null)
 
@@ -106,13 +111,25 @@ const NotificationsSettingsScreen = () => {
         console.error("Failed to load notifications state:", err)
       })
 
+    GetStatusReactionsEnabled()
+      .then(enabled => {
+        if (!cancelled) setStatusReactions(!!enabled)
+      })
+      .catch(err => {
+        console.error("Failed to load status reaction notification state:", err)
+      })
+
     const unsub = EventsOn("wa:notifications_toggled", (enabled: boolean) => {
       setDesktopNotifications(!!enabled)
+    })
+    const unsubStatusReactions = EventsOn("wa:status_reactions_toggled", (enabled: boolean) => {
+      setStatusReactions(!!enabled)
     })
 
     return () => {
       cancelled = true
       unsub()
+      unsubStatusReactions()
     }
   }, [])
 
@@ -130,6 +147,24 @@ const NotificationsSettingsScreen = () => {
       setDesktopBusy(false)
     }
   }, [desktopBusy, desktopNotifications])
+
+  const handleToggleStatusReactions = useCallback(async () => {
+    if (statusReactionsBusy) return
+    const next = !statusReactions
+    setStatusReactionsBusy(true)
+    setStatusReactions(next)
+    try {
+      await SetStatusReactionsEnabled(next)
+      // Keep the generic settings snapshot in sync so a later SaveSettings
+      // from another screen cannot restore the old value.
+      await updateSetting("statusReactions", next)
+    } catch (err) {
+      console.error("Failed to toggle status reaction notifications:", err)
+      setStatusReactions(!next)
+    } finally {
+      setStatusReactionsBusy(false)
+    }
+  }, [statusReactionsBusy, statusReactions, updateSetting])
 
   const handleTest = async () => {
     setTestStatus(null)
@@ -198,30 +233,43 @@ const NotificationsSettingsScreen = () => {
         <Category
           id="status"
           title="Status"
-          summary="Unavailable"
+          summary={on(statusReactions)}
           icon={<HeartIcon />}
           expanded={expanded}
           onToggle={id => setExpanded(expanded === id ? null : id)}
         >
-          <SettingRow
+          <SwitchRow
             title="Status reactions"
-            description="Notifications for likes on your status."
-            hint="Not available in this client yet."
+            description="Get notified when someone reacts to your status."
+            icon={<HeartIcon />}
+            enabled={statusReactions}
+            disabled={statusReactionsBusy}
+            onToggle={() => void handleToggleStatusReactions()}
+            hint="Requires desktop notifications; alerts appear while the app is in the background."
           />
         </Category>
 
         <Category
           id="calling"
           title="Calling"
-          summary="Unavailable"
+          summary={on(callNotifications)}
           icon={<PhoneIcon />}
           expanded={expanded}
           onToggle={id => setExpanded(expanded === id ? null : id)}
         >
-          <SettingRow
+          <SwitchRow
             title="Call notifications"
-            description="Notifications and sounds for incoming calls."
-            hint="Not available in this client yet."
+            description="Show a Windows notification for incoming calls, with Accept and Decline."
+            icon={<PhoneIcon />}
+            enabled={callNotifications}
+            onToggle={() => updateSetting("callNotifications", !callNotifications)}
+          />
+          <SwitchRow
+            title="Incoming call sounds"
+            description="Play a ringing sound with the call notification."
+            icon={<SoundIcon />}
+            enabled={incomingCallSounds}
+            onToggle={() => updateSetting("incomingCallSounds", !incomingCallSounds)}
           />
         </Category>
       </RowList>

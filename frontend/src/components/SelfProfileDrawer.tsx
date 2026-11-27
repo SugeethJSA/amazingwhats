@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
+  GetMyBusinessCoverPhoto,
   GetMyBusinessProfile,
   GetMyJID,
   GetProfile,
@@ -36,6 +37,14 @@ type BusinessProfile = {
   }>
   business_hours_timezone?: string
   cover_photo_id?: string
+}
+
+// GetMyBusinessCoverPhoto result. dataUrl is only populated when state is
+// "ready" and holds a real, verified cover image; nothing is synthesized.
+type BusinessCoverPhoto = {
+  state?: string
+  dataUrl?: string
+  mimeType?: string
 }
 
 type BusinessForm = {
@@ -81,6 +90,7 @@ export function SelfProfileDrawer() {
   const [name, setName] = useState("")
   const [about, setAbout] = useState("")
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
+  const [cover, setCover] = useState<BusinessCoverPhoto | null>(null)
   const [form, setForm] = useState<BusinessForm>({ description: "", address: "", email: "", websites: "" })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -92,12 +102,14 @@ export function SelfProfileDrawer() {
     setMessage(null)
     try {
       const jid = await GetMyJID()
-      const [self, users, biz, selfAvatar] = await Promise.all([
+      const [self, users, biz, selfAvatar, coverPhoto] = await Promise.all([
         GetProfile(""),
         jid ? GetUserInfo([jid]) : Promise.resolve([]),
         GetMyBusinessProfile(),
         GetSelfAvatar(false).catch(() => ""),
+        GetMyBusinessCoverPhoto().catch(() => null),
       ])
+      setCover(coverPhoto && typeof coverPhoto === "object" ? coverPhoto : null)
       setProfile(self ?? null)
       setAvatar(selfAvatar || cachedAvatar || "")
       setName(text(self?.push_name) || text(self?.full_name))
@@ -113,6 +125,7 @@ export function SelfProfileDrawer() {
     } catch {
       setProfile(null)
       setBusiness(null)
+      setCover(null)
       // Never surface raw binding errors; the drawer shows a truthful fallback.
     } finally {
       setLoading(false)
@@ -138,6 +151,17 @@ export function SelfProfileDrawer() {
 
   const displayName = text(profile?.push_name) || text(profile?.full_name) || "Your profile"
   const phone = text(profile?.phno)
+
+  // Only render an image the binding verified as the real cover photo. The
+  // cover ID on the profile tells us a cover exists on the phone even when
+  // this client cannot download it, which drives the honest fallback hint.
+  const coverURL =
+    cover?.state === "ready" &&
+    typeof cover.dataUrl === "string" &&
+    cover.dataUrl.startsWith("data:image/")
+      ? cover.dataUrl
+      : ""
+  const coverOnPhone = Boolean(text(business?.cover_photo_id)) && !coverURL
 
   const saveName = async () => {
     if (!name.trim() || saving) return
@@ -233,8 +257,25 @@ export function SelfProfileDrawer() {
             <p className="px-5 py-8 text-sm text-light-muted dark:text-dark-muted">Loading profile.</p>
           ) : (
             <>
-              {/* Cover strip is decorative: no cover-photo URL is exposed by the client. */}
-              <div className="h-28 bg-gradient-to-br from-green-deep to-teal" aria-hidden="true" />
+              {/* Show the real cover only when the binding verified a downloadable
+                  image. Otherwise keep the decorative strip and state plainly
+                  that the cover lives on the phone; never fabricate one. */}
+              {coverURL ? (
+                <div className="h-28 bg-light-tertiary dark:bg-dark-tertiary">
+                  <img src={coverURL} alt="Business cover photo" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div
+                  className="relative h-28 bg-gradient-to-br from-green-deep to-teal"
+                  aria-hidden={!coverOnPhone}
+                >
+                  {coverOnPhone && (
+                    <span className="absolute bottom-2 right-5 rounded-full bg-black/30 px-2 py-0.5 text-[11px] text-white">
+                      Cover photo set on your phone
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="-mt-12 px-5">
                 <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-light-bg bg-light-tertiary dark:border-dark-bg dark:bg-dark-tertiary">
                   {avatar ? (
@@ -334,7 +375,7 @@ export function SelfProfileDrawer() {
                   <div className={ROW}>
                     <div className={LABEL}>Cover photo</div>
                     <p className="mt-1 text-sm text-light-muted dark:text-dark-muted">
-                      {text(business.cover_photo_id) ? "Set on your phone" : "Not set"}
+                      {coverURL ? "Shown above" : coverOnPhone ? "Set on your phone" : "Not set"}
                     </p>
                   </div>
                   {business.business_hours && business.business_hours.length > 0 && (

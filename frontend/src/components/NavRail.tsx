@@ -56,6 +56,15 @@ function ProfileGlyph() {
   )
 }
 
+/** Original inline star glyph for the starred-messages destination. */
+function StarredIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+      <path d="m12 2.6 2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.45l-5.81 3.05L7.3 14.03 2.6 9.45l6.5-.95L12 2.6z" />
+    </svg>
+  )
+}
+
 interface RailItem {
   view: SidebarView
   label: string
@@ -125,6 +134,25 @@ export function NavRail() {
             </div>
           )
         })}
+
+        {/* Starred messages is a real destination backed by the
+            ListStarredMessages binding. The host list pane listens for this
+            same-window event (the same pattern used for settings categories)
+            and swaps in the starred view. */}
+        <div className="relative flex w-full justify-center">
+          <button
+            type="button"
+            aria-label="Starred messages"
+            title="Starred messages"
+            onClick={() => {
+              setScreen("chats")
+              window.dispatchEvent(new CustomEvent("wa:open-starred-messages"))
+            }}
+            className={`${ITEM_BASE} text-light-muted hover:bg-black/5 hover:text-light-text dark:text-dark-muted dark:hover:bg-white/10 dark:hover:text-dark-text`}
+          >
+            <StarredIcon />
+          </button>
+        </div>
 
         <div className="relative flex w-full justify-center">
           {settingsActive && (

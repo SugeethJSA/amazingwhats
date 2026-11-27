@@ -10,6 +10,7 @@ import { useUIStore } from "../../store"
 import { useLightboxContext } from "../../store/lightboxContext"
 import type { Message, MediaMessageContent } from "../../store/types"
 import { LRUCache } from "../../lib/lruCache"
+import { VoiceNotePlayer } from "./VoiceNotePlayer"
 
 // TODO: fix word wrap for longer words in content
 
@@ -360,7 +361,10 @@ export function MediaContent({
   // rows blazed past during a fast scroll don't fetch. Thumbnails share the same
   // observer so off-screen rows don't hit SQLite on every remount.
   useEffect(() => {
-    const autoLoads = type === "image" || type === "sticker" || (type === "video" && isGif)
+    // Voice notes (audio) auto-download like images so the custom player can
+    // render with real bytes/waveform instead of a first-click download gate.
+    const autoLoads =
+      type === "image" || type === "sticker" || type === "audio" || (type === "video" && isGif)
     const id = message.Info.ID
     const wantsThumb =
       type === "image" &&
@@ -551,24 +555,12 @@ export function MediaContent({
       )
     if (type === "audio") {
       if (messageBody?.ptt) {
-        // Voice notes must actually play (D-AUD-003b): the old static mic button
-        // and fake progress bar were dead controls. Keep the mic as a decorative
-        // icon and hand playback to the browser's native audio controls.
-        return (
-          <div className="flex items-center gap-2 w-75 h-14 rounded-lg bg-gray-200 dark:bg-gray-800 px-3">
-            <svg
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              className="shrink-0 text-gray-600 dark:text-gray-300 fill-current"
-              aria-hidden="true"
-            >
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-            </svg>
-            <audio src={mediaSrc} controls preload="metadata" className="flex-1 min-w-0 h-10" />
-          </div>
-        )
+        // WhatsApp-style voice note: custom player with author line, quoted
+        // preview, circular play/pause, waveform slider, durations, speed and
+        // sender avatar. Playback/seek/speed all drive a real HTMLAudioElement.
+        return <VoiceNotePlayer src={mediaSrc} message={message} />
       }
+      // Non-PTT audio (music/sound files) keeps the native controls.
       return <audio src={mediaSrc} controls className="w-75 h-14" />
     }
   }

@@ -8,6 +8,7 @@ export {
 
 export {
     BlockedContact,
+    BusinessCoverPhotoResult,
     BusinessLinkResult,
     BusinessProfileUpdateInput,
     CallStats,
@@ -31,8 +32,10 @@ export {
     PollOptionVotes,
     PollVotesResult,
     PrivacySettingsResponse,
+    QuickReply,
     SearchParams,
     SearchResult,
+    StarredMessage,
     StatusPrivacyEntry,
     StickerPackItem,
     StickerPackResult,

@@ -722,6 +722,39 @@ func notificationReplyAutoSend(action, text string) (bool, string) {
 }
 
 func (a *Api) handleNotificationAction(action, chatJID, messageID, text string) {
+	// Incoming-call toasts carry the ringing call ID in messageID (D-CALLNOTIF-001).
+	if notify.IsCallAction(action) {
+		callID := messageID
+		if callID == "" {
+			return
+		}
+		if action == notify.ActionAcceptCall {
+			showCallWindow()
+		}
+		a.startBackground(func() {
+			if action == notify.ActionAcceptCall {
+				if err := a.AcceptCall(callID); err != nil {
+					log.Println("accept call from notification failed:", err)
+					return
+				}
+				if a.app != nil {
+					// The overlay uses this to leave the ringing state.
+					a.app.Event.Emit("call:accepted", map[string]any{"callID": callID})
+				}
+				return
+			}
+			if err := a.RejectCall(callID); err != nil {
+				log.Println("reject call from notification failed:", err)
+				return
+			}
+			if a.app != nil {
+				// RejectCall has no OnEnd; clear the overlay explicitly.
+				a.app.Event.Emit("call:ended", map[string]any{"callID": callID, "reason": "declined"})
+			}
+		})
+		return
+	}
+
 	if a.app == nil || chatJID == "" {
 		return
 	}
@@ -1138,12 +1171,12 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// on shutdown, so this cannot hold up ServiceShutdown.
 	a.startBackground(func() {
 		if !a.updaterReady.Load() {
-			slog.Warn("Skipping startup update check: updater is not configured", "source", "updater")
+			LogUpdaterFailure("startup: unavailable", errors.New("updater was not initialised in this build"))
 			return
 		}
 		rel, err := a.app.Updater.Check(ctx)
 		if err != nil {
-			slog.Warn(fmt.Sprintf("Startup update check failed: %v", err), "source", "updater")
+			LogUpdaterFailure("startup check", err)
 			return
 		}
 		if rel == nil {
@@ -1167,14 +1200,12 @@ func (a *Api) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 // D-PKG-004.
 func (a *Api) CheckForUpdates() error {
 	if !a.updaterReady.Load() {
-		slog.Warn("Update check requested but updater is not configured", "source", "updater")
-		a.app.Event.Emit("wa:update_error", "Updates are unavailable in this build.")
+		ReportUpdaterFailure(a.app, "unavailable", errors.New("updater was not initialised in this build"))
 		return nil
 	}
 	go func() {
 		if err := a.app.Updater.CheckAndInstall(context.Background()); err != nil {
-			slog.Warn(fmt.Sprintf("Update check failed: %v", err), "source", "updater")
-			a.app.Event.Emit("wa:update_error", "Could not check for updates.")
+			ReportUpdaterFailure(a.app, "check and install", err)
 		}
 	}()
 	return nil
@@ -1325,6 +1356,17 @@ func (a *Api) mainEventHandler(evt any) {
 		}
 
 		if reaction := v.Message.GetReactionMessage(); reaction != nil {
+			// Reactions to the user's own status arrive as regular reaction
+			// messages in the status@broadcast feed (HyperMeow has no dedicated
+			// status-reaction event). Raise a real desktop notification for them;
+			// reaction removals (empty emoji) are ignored.
+			if v.Info.Chat.Server == types.BroadcastServer &&
+				v.Info.Chat.User == types.StatusBroadcastJID.User &&
+				!v.Info.IsFromMe && reaction.GetText() != "" {
+				emoji := reaction.GetText()
+				a.startBackground(func() { a.notifyStatusReaction(v, emoji) })
+			}
+
 			a.startBackground(func() {
 				targetID := reaction.GetKey().GetID()
 				targetMsg, err := a.messageStore.GetMessageWithMedia(v.Info.Chat.String(), targetID)

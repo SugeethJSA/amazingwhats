@@ -16,3 +16,20 @@ func TestDispatchUsesRegisteredHandler(t *testing.T) {
 		t.Fatalf("unexpected dispatch: %q %q %q %q", gotAction, gotChat, gotMessage, gotText)
 	}
 }
+
+func TestIsCallAction(t *testing.T) {
+	for _, tc := range []struct {
+		action string
+		want   bool
+	}{
+		{ActionAcceptCall, true},
+		{ActionDeclineCall, true},
+		{ActionOpen, false},
+		{ActionReply, false},
+		{"", false},
+	} {
+		if got := IsCallAction(tc.action); got != tc.want {
+			t.Fatalf("IsCallAction(%q) = %v, want %v", tc.action, got, tc.want)
+		}
+	}
+}

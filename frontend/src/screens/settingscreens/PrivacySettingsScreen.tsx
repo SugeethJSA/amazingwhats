@@ -171,9 +171,11 @@ const PrivacySettingsScreen = () => {
     }
   }
 
-  // No default disappearing-timer control: whatsmeow exposes a setter but no
-  // getter for the account-level timer, so its current value cannot be read
-  // back. Rendering a picker seeded with 0 would always claim "Off".
+  // D-TIMER-001: HyperMeow exposes SetDefaultDisappearingTimer but no getter
+  // for the account-level default (no client method, no appstate/global setting,
+  // no handled notification). A picker seeded with 0 would falsely claim
+  // "Off", so the row below states the limitation honestly instead. Revisit
+  // when the fork adds a real GetDefaultDisappearingTimer binding.
 
   return (
     <div className="flex flex-col gap-6">
@@ -233,8 +235,8 @@ const PrivacySettingsScreen = () => {
           />
           <SettingRow
             title="Default message timer"
-            description="Set how long new messages stay before disappearing."
-            hint="This client cannot read the current account default; set timers per chat instead."
+            description="How long new messages stay before disappearing. This is an account-level setting stored on your WhatsApp account."
+            hint="Value not shown: this client cannot read the account default back — HyperMeow only exposes a setter, so any value displayed here would be a guess. The in-app per-chat timer control is group-only (1:1 chats read back as 0); set the account default or a 1:1 chat timer on the phone."
           />
         </RowList>
       </SettingsSection>

@@ -34,6 +34,43 @@ export class BlockedContact {
     }
 }
 
+/**
+ * BusinessCoverPhotoResult is the bindable result of GetMyBusinessCoverPhoto.
+ * DataURL is always empty unless State is "ready"; it is a data URL for a
+ * picture whose ID matched cover_photo_id, not a guaranteed cover download.
+ * State is one of:
+ * 
+ * 	"not_set"     - the account has no business cover photo
+ * 	"unavailable" - a cover is set on the phone, but this client cannot resolve
+ * 	                it into a downloadable image (no image is fabricated)
+ * 	"ready"       - DataURL holds an image from a matching picture ID
+ */
+export class BusinessCoverPhotoResult {
+    "state": string;
+    "dataUrl": string;
+    "mimeType"?: string;
+
+    /** Creates a new BusinessCoverPhotoResult instance. */
+    constructor($$source: Partial<BusinessCoverPhotoResult> = {}) {
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("dataUrl" in $$source)) {
+            this["dataUrl"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BusinessCoverPhotoResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): BusinessCoverPhotoResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new BusinessCoverPhotoResult($$parsedSource as Partial<BusinessCoverPhotoResult>);
+    }
+}
+
 export class BusinessLinkResult {
     "jid": string;
     "push_name": string;
@@ -1099,6 +1136,54 @@ export class PrivacySettingsResponse {
     }
 }
 
+/**
+ * QuickReply is a saved message snippet that can be inserted into the composer.
+ */
+export class QuickReply {
+    "id": string;
+    "shortcut": string;
+    "message": string;
+    "keywords": string[];
+
+    /**
+     * unix milliseconds
+     */
+    "createdAt": number;
+
+    /** Creates a new QuickReply instance. */
+    constructor($$source: Partial<QuickReply> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("shortcut" in $$source)) {
+            this["shortcut"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("keywords" in $$source)) {
+            this["keywords"] = [];
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new QuickReply instance from a string or object.
+     */
+    static createFrom($$source: any = {}): QuickReply {
+        const $$createField3_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("keywords" in $$parsedSource) {
+            $$parsedSource["keywords"] = $$createField3_0($$parsedSource["keywords"]);
+        }
+        return new QuickReply($$parsedSource as Partial<QuickReply>);
+    }
+}
+
 export class SearchParams {
     "query": string;
     "type"?: string;
@@ -1182,6 +1267,84 @@ export class SearchResult {
     static createFrom($$source: any = {}): SearchResult {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new SearchResult($$parsedSource as Partial<SearchResult>);
+    }
+}
+
+/**
+ * StarredMessage is the JSON shape exposed to the frontend. Field names match
+ * SearchResult so the starred view can reuse the search results presentation.
+ */
+export class StarredMessage {
+    "chat_jid": string;
+    "message_id": string;
+    "sender_jid": string;
+
+    /**
+     * Timestamp is the message timestamp in unix seconds when the local message
+     * store knows it; otherwise it falls back to StarredAt.
+     */
+    "timestamp": number;
+    "text": string;
+    "is_from_me": boolean;
+    "has_media": boolean;
+    "media_type": number;
+    "edited": boolean;
+    "forwarded": boolean;
+    "chat_name": string;
+
+    /**
+     * StarredAt is when the star was set, in unix seconds.
+     */
+    "starred_at": number;
+
+    /** Creates a new StarredMessage instance. */
+    constructor($$source: Partial<StarredMessage> = {}) {
+        if (!("chat_jid" in $$source)) {
+            this["chat_jid"] = "";
+        }
+        if (!("message_id" in $$source)) {
+            this["message_id"] = "";
+        }
+        if (!("sender_jid" in $$source)) {
+            this["sender_jid"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = 0;
+        }
+        if (!("text" in $$source)) {
+            this["text"] = "";
+        }
+        if (!("is_from_me" in $$source)) {
+            this["is_from_me"] = false;
+        }
+        if (!("has_media" in $$source)) {
+            this["has_media"] = false;
+        }
+        if (!("media_type" in $$source)) {
+            this["media_type"] = 0;
+        }
+        if (!("edited" in $$source)) {
+            this["edited"] = false;
+        }
+        if (!("forwarded" in $$source)) {
+            this["forwarded"] = false;
+        }
+        if (!("chat_name" in $$source)) {
+            this["chat_name"] = "";
+        }
+        if (!("starred_at" in $$source)) {
+            this["starred_at"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StarredMessage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StarredMessage {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new StarredMessage($$parsedSource as Partial<StarredMessage>);
     }
 }
 

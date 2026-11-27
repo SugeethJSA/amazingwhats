@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react"
+import { create } from "zustand"
 import {
   DownloadMediaToFile,
   EditMessage,
@@ -61,6 +62,58 @@ type ReceiptState = "sending" | "sent" | "delivered" | "read"
 // Phone-number part of a JID, ignoring device and server suffixes. Readers and
 // roster entries may arrive in different JID forms; compare on this part.
 const jidKey = (jid: string) => (jid || "").split("@")[0].split(":")[0]
+
+/** A role we can prove from GetGroupInfo — never inferred or fabricated. */
+export type MemberRole = "owner" | "admin"
+export type MemberRoleIndex = Record<string, MemberRole>
+
+// Digits alone are lossy: a short or truncated phone value can collide with an
+// unrelated identity. Only a full-length user part may produce a digits key,
+// and exact JID keys are always preferred when resolving a sender.
+const MIN_ROLE_DIGITS = 8
+
+/** Exact, normalised JID key. Non-JID values (e.g. a formatted phone) yield none. */
+export function jidRoleKey(value: string | undefined | null): string | null {
+  const raw = (value || "").trim().toLowerCase()
+  const at = raw.indexOf("@")
+  if (at <= 0 || at === raw.length - 1) return null
+  const user = raw.slice(0, at).split(":")[0]
+  const server = raw.slice(at + 1)
+  if (!user || !server) return null
+  return `jid:${user}@${server}`
+}
+
+/** Digits fallback key, only for a long enough identity (never a short phno). */
+export function digitRoleKey(value: string | undefined | null): string | null {
+  const digits = jidKey(value || "").replace(/\D/g, "")
+  if (digits.length < MIN_ROLE_DIGITS) return null
+  return `digits:${digits}`
+}
+
+/** Every defensible key one roster identity can contribute to the index. */
+export function roleKeysFor(value: string | undefined | null): string[] {
+  const keys: string[] = []
+  const exact = jidRoleKey(value)
+  if (exact) keys.push(exact)
+  const digits = digitRoleKey(value)
+  if (digits) keys.push(digits)
+  return keys
+}
+
+/**
+ * Frontend-only member-role cache, keyed by chat id. It lives outside the chat
+ * store because a chat-list refresh rebuilds ChatItem objects and would drop
+ * the roles mid-conversation. Only ChatDetail writes it, from GetGroupInfo.
+ */
+interface MemberRoleStore {
+  rolesByChat: Record<string, MemberRoleIndex>
+  setRoles: (chatId: string, roles: MemberRoleIndex) => void
+}
+export const useMemberRoleStore = create<MemberRoleStore>(set => ({
+  rolesByChat: {},
+  setRoles: (chatId, roles) =>
+    set(state => ({ rolesByChat: { ...state.rolesByChat, [chatId]: roles } })),
+}))
 
 /**
  * Tick state is derived from real per-reader data, never from a single volatile
@@ -181,6 +234,24 @@ function SenderAvatar({
 }
 
 /**
+ * Small role badge shown next to a group sender's name. Only rendered when
+ * ChatDetail resolved a real group_owner / is_admin entry for that identity;
+ * sr-only text gives assistive tech the same context as the visible label.
+ */
+function MemberRoleTag({ role }: { role: MemberRole }) {
+  const label = role === "owner" ? "Owner" : "Admin"
+  return (
+    <span
+      className="shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-green-800 dark:bg-green-900/30 dark:text-green-tint"
+      title={`Group ${label.toLowerCase()}`}
+    >
+      <span className="sr-only">Group role: </span>
+      {label}
+    </span>
+  )
+}
+
+/**
  * Inline progress for one message. Kept as its own tiny component so a byte
  * event updates only this node, not the whole (expensive) message row. The
  * boolean is a stable primitive selector: for every other message it stays
@@ -274,6 +345,25 @@ export function MessageItem({
   const reactionPillRef = useRef<HTMLButtonElement>(null)
   // Group roster from the chat store; only used to decide "everyone read".
   const participantJIDs = useChatStore(state => state.chatsById.get(chatId)?.participantJIDs)
+  // Role index from the same GetGroupInfo call (exact JIDs + long-digit keys).
+  const participantRoles = useMemberRoleStore(state => state.rolesByChat[chatId])
+  // Prefer an exact canonical JID match (PN or action_jid/LID). Only then try
+  // the lossy digits fallback, which requires a full-length identity. An
+  // unknown or ambiguous sender stays untagged.
+  const senderRole = (() => {
+    if (!isGroup || isFromMe || !participantRoles) return undefined
+    const exact = jidRoleKey(message.Info.Sender)
+    if (exact) {
+      const role = participantRoles[exact]
+      if (role === "owner" || role === "admin") return role
+    }
+    for (const value of [message.Info.Sender, senderPhone]) {
+      const key = digitRoleKey(value)
+      const role = key ? participantRoles[key] : undefined
+      if (role === "owner" || role === "admin") return role
+    }
+    return undefined
+  })()
   const [showReaderDetails, setShowReaderDetails] = useState(false)
   const receiptAnchorRef = useRef<HTMLButtonElement>(null)
   // Derived directly from the message; no state/effect needed (a state+effect
@@ -843,15 +933,18 @@ export function MessageItem({
               no left-side context), otherwise only for received group messages. */}
           {isAnnounceGroup && (
             <div className="flex items-baseline justify-center gap-4 mb-0.5 pt-0.5">
-              <button
-                type="button"
-                onClick={event => openSenderActions(event.currentTarget)}
-                aria-label={`Contact actions for ${senderName}`}
-                className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
-                style={{ color: senderColor }}
-              >
-                {senderName}
-              </button>
+              <span className="flex min-w-0 items-baseline gap-1">
+                <button
+                  type="button"
+                  onClick={event => openSenderActions(event.currentTarget)}
+                  aria-label={`Contact actions for ${senderName}`}
+                  className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
+                  style={{ color: senderColor }}
+                >
+                  {senderName}
+                </button>
+                {senderRole && <MemberRoleTag role={senderRole} />}
+              </span>
               {senderName.startsWith("~") && senderPhone && (
                 <span className="shrink-0 text-[11px] text-black/70 dark:text-white/70">
                   {senderPhone}
@@ -965,15 +1058,18 @@ export function MessageItem({
 
           {!isAnnounceGroup && !isFromMe && chatId.endsWith("@g.us") && firstInGroup && (
             <div className="flex items-baseline justify-between gap-4 mb-0.5 pt-0.5">
-              <button
-                type="button"
-                onClick={event => openSenderActions(event.currentTarget)}
-                aria-label={`Contact actions for ${senderName}`}
-                className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
-                style={{ color: senderColor }}
-              >
-                {senderName}
-              </button>
+              <span className="flex min-w-0 items-baseline gap-1">
+                <button
+                  type="button"
+                  onClick={event => openSenderActions(event.currentTarget)}
+                  aria-label={`Contact actions for ${senderName}`}
+                  className="max-w-full truncate text-left text-[11px] font-semibold hover:underline underline-offset-2"
+                  style={{ color: senderColor }}
+                >
+                  {senderName}
+                </button>
+                {senderRole && <MemberRoleTag role={senderRole} />}
+              </span>
               {/* WhatsApp shows the phone number next to the name for senders
                   that aren't saved contacts (pushName-only, "~"-prefixed). */}
               {senderName.startsWith("~") && senderPhone && (

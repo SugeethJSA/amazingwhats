@@ -294,3 +294,133 @@ func TestWindowsAvatarToastXML(t *testing.T) {
 		}
 	}
 }
+
+func callOptions() Options {
+	return Options{
+		ChatJID:   "123@s.whatsapp.net",
+		MessageID: "call-42",
+		SenderJID: "123@s.whatsapp.net",
+		Title:     "Alice",
+		Body:      "Incoming voice call",
+		CallID:    "call-42",
+	}
+}
+
+// callToastDoc parses the parts of a call toast that the generic
+// parsedWindowsToast helper does not cover (audio and the reply input).
+type callToastDoc struct {
+	Launch string `xml:"launch,attr"`
+	Audio  struct {
+		Src    string `xml:"src,attr"`
+		Loop   string `xml:"loop,attr"`
+		Silent string `xml:"silent,attr"`
+	} `xml:"audio"`
+	Actions struct {
+		Input  []struct{ ID string `xml:"id,attr"` } `xml:"input"`
+		Action []struct {
+			Content   string `xml:"content,attr"`
+			Arguments string `xml:"arguments,attr"`
+			Type      string `xml:"activationType,attr"`
+		} `xml:"action"`
+	} `xml:"actions"`
+}
+
+func parseCallToast(t *testing.T, raw string) callToastDoc {
+	t.Helper()
+	var doc callToastDoc
+	if err := xml.Unmarshal([]byte(raw), &doc); err != nil {
+		t.Fatalf("call toast XML is not well formed: %v\n%s", err, raw)
+	}
+	return doc
+}
+
+func TestWindowsCallToastHasAcceptAndDeclineActions(t *testing.T) {
+	opts := callOptions()
+	n := buildWindowsNotification(opts, "C:\\icons\\appicon.png")
+	doc := parseCallToast(t, renderWindowsToastXML(t, n))
+
+	if len(doc.Actions.Input) != 0 {
+		t.Fatalf("call toast must not carry a reply input: %+v", doc.Actions.Input)
+	}
+	if len(doc.Actions.Action) != 2 {
+		t.Fatalf("want Accept and Decline actions, got %+v", doc.Actions.Action)
+	}
+	for i, want := range []struct{ action, label string }{
+		{ActionAcceptCall, "Accept"},
+		{ActionDeclineCall, "Decline"},
+	} {
+		got := doc.Actions.Action[i]
+		if got.Content != want.label || got.Type != toast.Foreground {
+			t.Fatalf("action %d = %+v, want %q/%s", i, got, want.label, toast.Foreground)
+		}
+		values, err := url.ParseQuery(got.Arguments)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if values.Get("action") != want.action || values.Get("messageId") != opts.CallID ||
+			values.Get("callId") != opts.CallID {
+			t.Fatalf("action %d arguments did not round-trip: %v", i, values)
+		}
+	}
+	if doc.Audio.Src != toast.LoopingCall || doc.Audio.Loop != "true" || doc.Audio.Silent != "" {
+		t.Fatalf("call toast audio = %+v, want a looping call tone", doc.Audio)
+	}
+	launch, err := url.ParseQuery(doc.Launch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if launch.Get("callId") != opts.CallID {
+		t.Fatalf("launch arguments did not carry the call ID: %v", launch)
+	}
+}
+
+func TestWindowsSilentCallToast(t *testing.T) {
+	opts := callOptions()
+	opts.Silent = true
+	n := buildWindowsNotification(opts, "C:\\icons\\appicon.png")
+	doc := parseCallToast(t, renderWindowsToastXML(t, n))
+	if doc.Audio.Silent != "true" || doc.Audio.Src != "" {
+		t.Fatalf("silent call toast audio = %+v, want silent", doc.Audio)
+	}
+}
+
+func TestWindowsCallActivationDispatch(t *testing.T) {
+	previous := actionHandler
+	t.Cleanup(func() { actionHandler = previous })
+
+	var gotAction, gotChat, gotMessage, gotText string
+	SetActionHandler(func(action, chatJID, messageID, text string) {
+		gotAction, gotChat, gotMessage, gotText = action, chatJID, messageID, text
+	})
+	opts := callOptions()
+	for _, action := range []string{ActionAcceptCall, ActionDeclineCall} {
+		handleWindowsActivation(activationArgs(action, opts), nil)
+		if gotAction != action || gotChat != opts.ChatJID || gotMessage != opts.CallID || gotText != "" {
+			t.Fatalf("%s activation dispatched %q %q %q %q", action, gotAction, gotChat, gotMessage, gotText)
+		}
+	}
+}
+
+func TestWindowsAvatarCallToastXML(t *testing.T) {
+	opts := callOptions()
+	opts.CallID = `call&"42`
+	opts.MessageID = opts.CallID
+	raw := buildWindowsAvatarToastXML(opts, `C:\Temp\avatar.png`)
+	doc := parseCallToast(t, raw)
+	if len(doc.Actions.Action) != 2 || len(doc.Actions.Input) != 0 {
+		t.Fatalf("avatar call toast actions = %+v / %+v", doc.Actions.Action, doc.Actions.Input)
+	}
+	for i, want := range []string{ActionAcceptCall, ActionDeclineCall} {
+		values, err := url.ParseQuery(doc.Actions.Action[i].Arguments)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if values.Get("action") != want || values.Get("callId") != opts.CallID ||
+			values.Get("messageId") != opts.CallID {
+			t.Fatalf("avatar call action %d did not round-trip: %v", i, values)
+		}
+	}
+	if doc.Audio.Src != toast.LoopingCall {
+		t.Fatalf("avatar call toast audio = %+v, want a looping call tone", doc.Audio)
+	}
+}

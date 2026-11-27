@@ -1,6 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from "react"
-import { UserAvatar } from "../../assets/svgs/chat_icons"
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react"
+import { UserAvatar, SearchIcon } from "../../assets/svgs/chat_icons"
+import { EditIcon } from "../../assets/svgs/message_menu_icons"
 import { useMediaHubStore } from "../../store/useMediaHubStore"
+import { useChatStore } from "../../store/useChatStore"
+import { runShortcut } from "../../lib/shortcuts"
 import {
   Mediaicon,
   BlockIcon,
@@ -46,6 +49,8 @@ import {
   GetUserInfo,
   GetNewsletterInfo,
   NewsletterToggleMute,
+  ToggleChatPin,
+  ToggleChatLabel,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import * as api from "../../../bindings/github.com/lugvitc/amazingwhats/api/models.js"
 import { EventsOn } from "../../lib/wailsRuntime"
@@ -80,7 +85,7 @@ function SettingsSwitch({
       aria-label={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green ${
         checked ? "bg-green" : "bg-gray-300 dark:bg-gray-600"
       }`}
     >
@@ -90,6 +95,18 @@ function SettingsSwitch({
         }`}
       />
     </button>
+  )
+}
+
+/** Consistent, reusable hint for reference rows this build cannot implement. */
+function UnsupportedHint({ children }: { children: ReactNode }) {
+  return (
+    <p
+      role="note"
+      className="px-4 pb-3 -mt-1 text-xs leading-relaxed text-gray-600 dark:text-dark-muted"
+    >
+      {children}
+    </p>
   )
 }
 
@@ -127,6 +144,8 @@ export function ChatInfo({
   const [subjectDraft, setSubjectDraft] = useState("")
   const [inviteLink, setInviteLink] = useState("")
   const [inviteBusy, setInviteBusy] = useState(false)
+  const [shareStatus, setShareStatus] = useState("")
+  const [searchNote, setSearchNote] = useState("")
   const [showJoinDialog, setShowJoinDialog] = useState(false)
   const [myJid, setMyJid] = useState("")
   const [isAdmin, setIsAdmin] = useState(false)
@@ -157,9 +176,16 @@ export function ChatInfo({
   const [userInfoBusy, setUserInfoBusy] = useState(false)
   const [linkError, setLinkError] = useState("")
   const [showAddParticipant, setShowAddParticipant] = useState(false)
+  const [memberSearch, setMemberSearch] = useState("")
   const [addSearch, setAddSearch] = useState("")
   const [addResults, setAddResults] = useState<any[]>([])
   const [addBusy, setAddBusy] = useState(false)
+  const [savedLabels, setSavedLabels] = useState<Record<string, string>>({})
+  const [showAddToList, setShowAddToList] = useState(false)
+  const [labelBusy, setLabelBusy] = useState(false)
+  const [labelError, setLabelError] = useState("")
+  const [pinned, setPinned] = useState(false)
+  const [pinBusy, setPinBusy] = useState(false)
   const [newsletterInfo, setNewsletterInfo] = useState<{
     name?: string
     description?: string
@@ -186,6 +212,9 @@ export function ChatInfo({
   useEffect(() => {
     if (isOpen) {
       setShowAllParticipants(false)
+      setMemberSearch("")
+      setShareStatus("")
+      setSearchNote("")
       if (chatType === "contact") {
         GetBlockList()
           .then(list => {
@@ -235,6 +264,29 @@ export function ChatInfo({
       })
       .catch(() => {})
   }, [isOpen, chatId])
+
+  // Pin state is read from the real chat store (backend-backed on load).
+  useEffect(() => {
+    if (!isOpen) return
+    setPinned(!!useChatStore.getState().chatsById.get(chatId)?.pinned)
+  }, [isOpen, chatId])
+
+  // Label names are the same locally-named labels the message/chat menus use.
+  // There is no GetLabels binding: only names the user created are real here.
+  useEffect(() => {
+    if (!isOpen) return
+    try {
+      const raw = localStorage.getItem("amazingwhats.labelNames")
+      const parsed = raw ? JSON.parse(raw) : {}
+      setSavedLabels(
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, string>)
+          : {},
+      )
+    } catch {
+      setSavedLabels({})
+    }
+  }, [isOpen])
 
   // Load newsletter info for newsletter chats
   useEffect(() => {
@@ -286,24 +338,46 @@ export function ChatInfo({
     }
   }
 
-  const handleCopyInviteLink = async () => {
-    if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink)
-      return
-    }
+  /** Share the real group invite link (native share when present, else copy). */
+  const handleShare = async () => {
+    if (inviteBusy) return
     setInviteBusy(true)
+    setShareStatus("")
     try {
-      const link = await GetGroupInviteLink(chatId)
-      setInviteLink(link)
-      navigator.clipboard.writeText(link)
+      const link = inviteLink || (await GetGroupInviteLink(chatId))
+      if (!inviteLink) setInviteLink(link)
+      if (!link) throw new Error("No invite link returned")
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title: groupInfo?.group_name || chatName, text: link })
+          setShareStatus("Invite link shared")
+          return
+        } catch {
+          // Cancelled/denied native share: fall through to the clipboard.
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(link)
+        setShareStatus("Invite link copied to clipboard")
+      } catch {
+        setShareStatus("Invite link loaded, but it couldn't be shared automatically.")
+      }
     } catch (e) {
-      console.error("Failed to get invite link:", e)
+      console.error("Failed to share invite link:", e)
+      setShareStatus("Couldn't load the invite link. Try again.")
     } finally {
       setInviteBusy(false)
     }
   }
 
+  /** Opens the real message search screen via the same shortcut the header uses. */
+  const handleSearch = () => {
+    setSearchNote(runShortcut("search") ? "" : "Message search isn't available right now.")
+  }
+
   const handleSaveSubject = async () => {
+    // Only group admins may change the subject (WhatsApp parity).
+    if (chatType !== "group" || !isAdmin) return
     const name = subjectDraft.trim()
     if (!name) return
     setActionBusy(true)
@@ -315,6 +389,41 @@ export function ChatInfo({
       console.error("Failed to set group name:", e)
     } finally {
       setActionBusy(false)
+    }
+  }
+
+  const handleTogglePin = async () => {
+    if (pinBusy) return
+    const next = !pinned
+    const store = useChatStore.getState()
+    setPinBusy(true)
+    // Optimistic, exactly like the chat-list pin action.
+    store.updateSingleChat(chatId, { pinned: next })
+    store.resortChats()
+    setPinned(next)
+    try {
+      await ToggleChatPin(chatId, next)
+    } catch (e) {
+      console.error("Failed to toggle chat pin:", e)
+      store.updateSingleChat(chatId, { pinned: pinned })
+      store.resortChats()
+      setPinned(pinned)
+    } finally {
+      setPinBusy(false)
+    }
+  }
+
+  const handleAddToLabel = async (labelId: string) => {
+    setLabelBusy(true)
+    setLabelError("")
+    try {
+      await ToggleChatLabel(chatId, labelId, true)
+      setShowAddToList(false)
+    } catch (e) {
+      console.error("Failed to add chat to list:", e)
+      setLabelError("Couldn't add this group to the list. Try again.")
+    } finally {
+      setLabelBusy(false)
     }
   }
 
@@ -504,15 +613,25 @@ export function ChatInfo({
   }
 
   const participants = groupInfo?.group_participants ?? []
-  const sortedParticipants = participants.sort((a, b) => {
+  const sortedParticipants = [...participants].sort((a, b) => {
     if (a.is_admin && !b.is_admin) return -1
     if (!a.is_admin && b.is_admin) return 1
     return 0
   })
-  const visibleParticipants = showAllParticipants
-    ? sortedParticipants
-    : sortedParticipants.slice(0, MAX_VISIBLE)
-  const hasMore = (groupInfo?.participant_count ?? sortedParticipants.length) > MAX_VISIBLE
+  const memberTerm = memberSearch.trim().toLowerCase()
+  const filteredParticipants = memberTerm
+    ? sortedParticipants.filter(p => {
+        const c = p.contact
+        return [c.full_name, c.push_name, c.phno, c.jid]
+          .filter(Boolean)
+          .some(value => String(value).toLowerCase().includes(memberTerm))
+      })
+    : sortedParticipants
+  const visibleParticipants =
+    showAllParticipants || memberTerm
+      ? filteredParticipants
+      : filteredParticipants.slice(0, MAX_VISIBLE)
+  const hasMore = filteredParticipants.length > MAX_VISIBLE && !showAllParticipants && !memberTerm
 
   if (!isOpen) return null
 
@@ -531,17 +650,18 @@ export function ChatInfo({
         aria-label={chatType === "group" ? "Group info" : "Contact info"}
         className="fixed inset-y-0 right-0 z-40 flex h-full w-full max-w-[400px] flex-col overflow-hidden border-l border-gray-200 bg-white shadow-xl dark:border-white/5 dark:bg-dark-secondary lg:static lg:z-auto lg:w-[400px] lg:max-w-none lg:shadow-none"
       >
-        {/* Header */}
-        <div className="flex items-center p-4 bg-light-secondary dark:bg-dark-secondary">
+        {/* Header — Escape is handled by the parent ChatDetail, which closes
+            this panel through onClose; keep the close control reachable. */}
+        <div className="flex items-center gap-3 p-4 bg-light-secondary dark:bg-dark-secondary">
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-dark-tertiary rounded-full transition-colors mr-3"
+            className="p-2 rounded-full transition-colors hover:bg-gray-200 dark:hover:bg-dark-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
             aria-label="Close"
           >
             <GoBackIcon />
           </button>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-            {chatType === "group" ? "Group Info" : "Contact Info"}
+            {chatType === "group" ? "Group info" : "Contact info"}
           </h2>
         </div>
 
@@ -553,9 +673,9 @@ export function ChatInfo({
             </div>
           ) : (
             <>
-              {/* Profile Section */}
+              {/* Profile / header block */}
               <div className="bg-light-secondary dark:bg-dark-secondary p-6 flex flex-col items-center">
-                <div className="relative w-32 h-32 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold text-4xl overflow-hidden mb-4 group">
+                <div className="relative w-36 h-36 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold text-4xl overflow-hidden mb-4 group">
                   {chatAvatar ? (
                     <img src={chatAvatar} alt={chatName} className="w-full h-full object-cover" />
                   ) : (
@@ -586,13 +706,14 @@ export function ChatInfo({
                       />
                       <label
                         htmlFor="group-photo-upload"
-                        className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 cursor-pointer transition-colors rounded-full"
+                        className="absolute inset-0 flex items-end justify-center pb-3 bg-black/0 hover:bg-black/30 cursor-pointer transition-colors rounded-full focus-within:outline focus-within:outline-2 focus-within:outline-green"
                       >
                         <svg
                           viewBox="0 0 24 24"
                           width="28"
                           height="28"
                           className="fill-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-hidden="true"
                         >
                           <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
                         </svg>
@@ -600,39 +721,161 @@ export function ChatInfo({
                     </>
                   )}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  {chatType === "group"
-                    ? groupInfo?.group_name
-                    : contactInfo?.full_name || "~ " + contactInfo?.push_name || chatName}
-                </h3>
+
+                {/* Subject — inline editable with the real SetGroupName binding */}
+                {chatType === "group" && subjectEdit ? (
+                  <div className="w-full flex flex-col gap-2">
+                    <input
+                      autoFocus
+                      className="w-full rounded-lg border border-gray-300 dark:border-white/10 bg-transparent px-3 py-2 text-sm text-center text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-green"
+                      value={subjectDraft}
+                      onChange={e => setSubjectDraft(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") void handleSaveSubject()
+                      }}
+                      placeholder="Group subject"
+                      aria-label="Group subject"
+                    />
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSubjectEdit(false)}
+                        className="rounded-md px-3 py-1 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSubject}
+                        disabled={actionBusy || !subjectDraft.trim()}
+                        className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={chatType !== "group" || !isAdmin}
+                    onClick={() => {
+                      setSubjectDraft(groupInfo?.group_name || chatName)
+                      setSubjectEdit(true)
+                    }}
+                    aria-label={
+                      chatType === "group" ? "Edit group subject" : undefined
+                    }
+                    className="group/subject max-w-full flex items-center gap-2 rounded-md px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green disabled:cursor-default"
+                  >
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {chatType === "group"
+                        ? groupInfo?.group_name || chatName
+                        : contactInfo?.full_name || "~ " + contactInfo?.push_name || chatName}
+                    </h3>
+                    {chatType === "group" && isAdmin && (
+                      <span className="text-gray-500 dark:text-dark-muted opacity-60 group-hover/subject:opacity-100">
+                        <EditIcon />
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 {chatType === "contact" && contactInfo && (
                   <p className="text-sm text-gray-600 dark:text-dark-muted">{contactInfo.phno}</p>
                 )}
                 {chatType === "group" && groupInfo && (
                   <p className="text-sm text-gray-600 dark:text-dark-muted">
-                    Group · {groupInfo.participant_count} participants
+                    Group · {groupInfo.participant_count} members
+                  </p>
+                )}
+
+                {/* Share / Search quick actions (both backed by real bindings) */}
+                {chatType === "group" && (
+                  <div className="mt-5 w-full flex items-center justify-center gap-10">
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      disabled={inviteBusy}
+                      aria-label="Share group invite link"
+                      className="flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                    >
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
+                      </svg>
+                      {inviteBusy ? "Sharing…" : "Share"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      aria-label="Search messages"
+                      className="flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                    >
+                      <SearchIcon />
+                      Search
+                    </button>
+                  </div>
+                )}
+                {(shareStatus || searchNote) && (
+                  <p role="status" className="mt-2 text-center text-xs text-gray-600 dark:text-dark-muted">
+                    {shareStatus || searchNote}
                   </p>
                 )}
               </div>
 
-              {/* Group Description */}
-              {chatType === "group" && groupInfo?.group_topic && (
-                <div className="mx-3 border-y border-gray-200 dark:border-dark-tertiary">
+              {/* Group description */}
+              {chatType === "group" && groupInfo && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                   <div className="p-4">
-                    <p className="text-gray-900 dark:text-dark-text text-md break-words whitespace-pre-wrap">
-                      {groupInfo.group_topic}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-dark-muted mt-2">
-                      Group created by{" "}
-                      {groupInfo.group_owner.full_name ||
-                        groupInfo.group_owner.push_name ||
-                        groupInfo.group_owner.phno}
-                      , on {new Date(groupInfo.group_created_at).toLocaleDateString()} at{" "}
-                      {new Date(groupInfo.group_created_at).toLocaleString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm text-gray-600 dark:text-dark-muted">Description</p>
+                      {isAdmin && !topicEdit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTopicDraft(groupInfo.group_topic || "")
+                            setTopicEdit(true)
+                          }}
+                          aria-label="Edit group description"
+                          className="rounded px-2 py-1 text-xs text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                    {topicEdit ? (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          autoFocus
+                          className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text resize-none focus:outline-none focus:ring-2 focus:ring-green"
+                          rows={3}
+                          value={topicDraft}
+                          onChange={e => setTopicDraft(e.target.value)}
+                          placeholder="Group description"
+                          aria-label="Group description"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTopicEdit(false)}
+                            className="rounded-md px-3 py-1 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveTopic}
+                            disabled={actionBusy || !topicDraft.trim()}
+                            className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-900 dark:text-dark-text text-md break-words whitespace-pre-wrap">
+                        {groupInfo.group_topic || "No group description."}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -692,7 +935,7 @@ export function ChatInfo({
                         }
                       }}
                       disabled={userInfoBusy}
-                      className="rounded-lg border border-gray-300 dark:border-dark-border px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 text-gray-600 dark:text-dark-muted"
+                      className="rounded-lg border border-gray-300 dark:border-dark-border px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 text-gray-600 dark:text-dark-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                     >
                       {userInfoBusy ? "Fetching…" : "Fetch"}
                     </button>
@@ -729,7 +972,7 @@ export function ChatInfo({
                         }
                       }}
                       disabled={checkBusy}
-                      className="mt-2 rounded-lg border border-gray-300 dark:border-dark-border px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 text-gray-600 dark:text-dark-muted"
+                      className="mt-2 rounded-lg border border-gray-300 dark:border-dark-border px-3 py-1 text-xs hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 text-gray-600 dark:text-dark-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                     >
                       {checkBusy
                         ? "Checking…"
@@ -895,102 +1138,108 @@ export function ChatInfo({
                   )
                 })()}
 
-              {/* Media, links, and docs — opens the combined hub */}
-              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                <button
-                  type="button"
-                  onClick={useMediaHubStore.getState().openHub}
-                  className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                  aria-label="Open media, links and docs"
-                >
-                  <Mediaicon />
-                  <span className="text-gray-900 dark:text-gray-100">Media, links and docs</span>
-                </button>
-              </div>
-
-              {/* Mute notifications */}
-              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                <button
-                  onClick={handleToggleMute}
-                  disabled={muteBusy}
-                  className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-60"
-                >
-                  <div className="flex items-center gap-3">
-                    <MuteIcon />
-                    <span className="text-gray-900 dark:text-gray-100">Mute notifications</span>
-                  </div>
-                  <div onClick={e => e.stopPropagation()}>
-                    <ToggleButton isEnabled={muted} onToggle={handleToggleMute} />
-                  </div>
-                </button>
-
-                {/* Disappearing messages. GetDisappearingTimer only reads group
-                  metadata; for 1:1 chats it always returns 0, so a picker would
-                  misleadingly show "Off" regardless of the real setting. */}
-                {(chatType === "group" || disappearTimer > 0) && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowDisappearPicker(!showDisappearPicker)}
-                      className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <DisappearingMessagesIcon />
-                        <div className="flex-1 text-left">
-                          <p className="text-gray-900 dark:text-gray-100">Disappearing messages</p>
-                          <p className="text-sm text-gray-600 dark:text-dark-muted">
-                            {DISAPPEAR_LABEL[disappearTimer] || "Off"}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                    {showDisappearPicker && (
-                      <div className="mx-4 mb-2 flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-dark-border bg-white p-2 shadow-lg dark:border-white/10 dark:bg-dark-secondary">
-                        {DISAPPEAR_OPTIONS.map(opt => (
-                          <button
-                            key={opt.value}
-                            onClick={() => handleDisappearChange(opt.value)}
-                            disabled={actionBusy}
-                            className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50 ${
-                              disappearTimer === opt.value
-                                ? "font-medium text-green"
-                                : "text-light-text dark:text-dark-text"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Clear chat */}
-              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                <button
-                  onClick={async () => {
-                    if (!confirm("Clear all messages in this chat?")) return
-                    try {
-                      await ClearChat(chatId)
-                      window.location.reload()
-                    } catch (e) {
-                      console.error("Clear chat failed:", e)
-                    }
-                  }}
-                  className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
-                >
-                  <span className="text-gray-900 dark:text-gray-100">Clear messages</span>
-                </button>
-              </div>
-
-              {/* Group Participants */}
+              {/* Participants — admin tag, self marker, search, add and view all */}
               {chatType === "group" && groupInfo && (
                 <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                  <span className="w-full p-4 flex items-center justify-between transition-colors">
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {groupInfo.participant_count} members
+                  <div className="p-4 flex items-center justify-between">
+                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                      Participants ({groupInfo.participant_count})
                     </span>
-                  </span>
+                  </div>
+
+                  {/* Add member (admin only, real AddGroupParticipants flow) */}
+                  {isAdmin && (
+                    <div className="border-t border-gray-200 dark:border-dark-tertiary">
+                      <button
+                        onClick={async () => {
+                          setShowAddParticipant(!showAddParticipant)
+                          if (!showAddParticipant) {
+                            try {
+                              const contacts = await FetchContacts()
+                              setAddResults(contacts)
+                            } catch {
+                              /* ignore */
+                            }
+                          }
+                        }}
+                        className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                      >
+                        <span className="text-blue-600 dark:text-green">Add member</span>
+                      </button>
+                      {showAddParticipant && (
+                        <div className="mx-4 mb-3">
+                          <input
+                            autoFocus
+                            className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-dark-subtle text-light-text dark:text-dark-text mb-2 focus:outline-none focus:ring-2 focus:ring-green"
+                            value={addSearch}
+                            onChange={e => {
+                              const q = e.target.value
+                              setAddSearch(q)
+                              FetchContacts()
+                                .then(all => {
+                                  const filtered = all.filter(
+                                    (c: any) =>
+                                      c.jid &&
+                                      !groupInfo?.group_participants?.some(
+                                        (p: any) => p.contact.jid === c.jid,
+                                      ) &&
+                                      (c.full_name || c.push_name || c.phno || "")
+                                        .toLowerCase()
+                                        .includes(q.toLowerCase()),
+                                  )
+                                  setAddResults(filtered)
+                                })
+                                .catch(() => {})
+                            }}
+                            placeholder="Search contacts..."
+                            aria-label="Search contacts to add"
+                          />
+                          <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-dark-border">
+                            {addResults.length === 0 && (
+                              <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
+                                No contacts to add
+                              </p>
+                            )}
+                            {addResults.map((c: any) => (
+                              <button
+                                key={c.jid}
+                                onClick={async () => {
+                                  setAddBusy(true)
+                                  try {
+                                    await AddGroupParticipants(chatId, [c.jid])
+                                    setGroupInfo(null)
+                                    loadInfo()
+                                    setShowAddParticipant(false)
+                                    setAddSearch("")
+                                  } catch (e) {
+                                    console.error("Failed to add participant:", e)
+                                  } finally {
+                                    setAddBusy(false)
+                                  }
+                                }}
+                                disabled={addBusy}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 border-b border-gray-100 dark:border-dark-tertiary last:border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                              >
+                                {c.full_name || c.push_name || c.phno || c.jid}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Search members (local filter over real GetGroupInfo rows) */}
+                  <div className="px-4 pt-3">
+                    <input
+                      type="search"
+                      value={memberSearch}
+                      onChange={e => setMemberSearch(e.target.value)}
+                      placeholder="Search members"
+                      aria-label="Search members"
+                      className="w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-dark-subtle text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-green"
+                    />
+                  </div>
 
                   <div className="max-h-96 overflow-y-auto">
                     {visibleParticipants.map((participant: any) => {
@@ -1002,6 +1251,7 @@ export function ChatInfo({
                         "~ " + participant.contact.push_name ||
                         participant.contact.phno ||
                         participant.contact.jid
+                      const isMe = userPart(participant.contact.jid) === userPart(myJid)
                       const openActions = (anchor: HTMLElement) =>
                         onContactAction?.(
                           {
@@ -1012,8 +1262,7 @@ export function ChatInfo({
                             avatarUrl: participant.contact.avatar_url,
                             groupJid: chatId,
                             participantIsAdmin: !!participant.is_admin,
-                            canManage:
-                              isAdmin && userPart(participant.contact.jid) !== userPart(myJid),
+                            canManage: isAdmin && !isMe,
                             onGroupChanged: loadInfo,
                           },
                           anchor,
@@ -1027,7 +1276,7 @@ export function ChatInfo({
                             type="button"
                             onClick={event => openActions(event.currentTarget)}
                             aria-label={`Contact actions for ${participantName}`}
-                            className="w-10 h-10 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold overflow-hidden"
+                            className="w-10 h-10 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                           >
                             {participant.contact.avatar_url ? (
                               <img
@@ -1045,7 +1294,7 @@ export function ChatInfo({
                               type="button"
                               onClick={event => openActions(event.currentTarget)}
                               aria-label={`Contact actions for ${participantName}`}
-                              className="max-w-full truncate text-left text-gray-900 dark:text-gray-100 font-medium hover:underline underline-offset-2"
+                              className="max-w-full truncate text-left text-gray-900 dark:text-gray-100 font-medium hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                             >
                               {participantName}
                             </button>
@@ -1059,8 +1308,13 @@ export function ChatInfo({
                               Admin
                             </span>
                           )}
+                          {isMe && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-dark-muted shrink-0">
+                              You
+                            </span>
+                          )}
 
-                          {isAdmin && userPart(participant.contact.jid) !== userPart(myJid) && (
+                          {isAdmin && !isMe && (
                             <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                               {participant.is_admin ? (
                                 <button
@@ -1076,7 +1330,7 @@ export function ChatInfo({
                                     }
                                   }}
                                   disabled={participantBusy === actionJid}
-                                  className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 disabled:opacity-50"
+                                  className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                                 >
                                   Demote
                                 </button>
@@ -1095,7 +1349,7 @@ export function ChatInfo({
                                       }
                                     }}
                                     disabled={participantBusy === actionJid}
-                                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 disabled:opacity-50"
+                                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                                   >
                                     Promote
                                   </button>
@@ -1118,7 +1372,7 @@ export function ChatInfo({
                                       }
                                     }}
                                     disabled={participantBusy === actionJid}
-                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50"
+                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                                   >
                                     Remove
                                   </button>
@@ -1133,97 +1387,33 @@ export function ChatInfo({
                     {hasMore && !showAllParticipants && (
                       <button
                         onClick={() => setShowAllParticipants(true)}
-                        className="w-full p-3 text-sm font-medium text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-dark-tertiary"
+                        className="w-full p-3 text-sm font-medium text-blue-600 dark:text-green hover:bg-gray-100 dark:hover:bg-dark-tertiary focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                       >
                         View all members ({groupInfo.participant_count - MAX_VISIBLE} more)
                       </button>
+                    )}
+                    {memberTerm && filteredParticipants.length === 0 && (
+                      <p className="p-4 text-sm text-gray-600 dark:text-dark-muted">
+                        No members match “{memberSearch.trim()}”.
+                      </p>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Add Participants */}
-              {chatType === "group" && isAdmin && (
-                <div className="border-b border-gray-200 dark:border-dark-tertiary">
-                  <button
-                    onClick={async () => {
-                      setShowAddParticipant(!showAddParticipant)
-                      if (!showAddParticipant) {
-                        try {
-                          const contacts = await FetchContacts()
-                          setAddResults(contacts)
-                        } catch {
-                          /* ignore */
-                        }
-                      }
-                    }}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
-                  >
-                    <span className="text-gray-900 dark:text-gray-100 font-medium">
-                      Add members
-                    </span>
-                  </button>
-                  {showAddParticipant && (
-                    <div className="mx-4 mb-3">
-                      <input
-                        autoFocus
-                        className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm placeholder:text-gray-600 dark:placeholder:text-dark-subtle text-light-text dark:text-dark-text mb-2`}
-                        value={addSearch}
-                        onChange={e => {
-                          const q = e.target.value
-                          setAddSearch(q)
-                          FetchContacts()
-                            .then(all => {
-                              const filtered = all.filter(
-                                (c: any) =>
-                                  c.jid &&
-                                  !groupInfo?.group_participants?.some(
-                                    (p: any) => p.contact.jid === c.jid,
-                                  ) &&
-                                  (c.full_name || c.push_name || c.phno || "")
-                                    .toLowerCase()
-                                    .includes(q.toLowerCase()),
-                              )
-                              setAddResults(filtered)
-                            })
-                            .catch(() => {})
-                        }}
-                        placeholder="Search contacts..."
-                      />
-                      <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-dark-border">
-                        {addResults.length === 0 && (
-                          <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
-                            No contacts to add
-                          </p>
-                        )}
-                        {addResults.map((c: any) => (
-                          <button
-                            key={c.jid}
-                            onClick={async () => {
-                              setAddBusy(true)
-                              try {
-                                await AddGroupParticipants(chatId, [c.jid])
-                                setGroupInfo(null)
-                                loadInfo()
-                                setShowAddParticipant(false)
-                                setAddSearch("")
-                              } catch (e) {
-                                console.error("Failed to add participant:", e)
-                              } finally {
-                                setAddBusy(false)
-                              }
-                            }}
-                            disabled={addBusy}
-                            className="w-full px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 border-b border-gray-100 dark:border-dark-tertiary last:border-0"
-                          >
-                            {c.full_name || c.push_name || c.phno || c.jid}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* Member updates — no dedicated history binding; honest note */}
+              {chatType === "group" && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                  <div className="p-4 pb-1">
+                    <p className="text-sm text-gray-600 dark:text-dark-muted">Member updates</p>
+                  </div>
+                  <UnsupportedHint>
+                    A separate member-update feed isn't available in this build. Admins can review
+                    join requests below; the group's creation details are at the bottom.
+                  </UnsupportedHint>
                 </div>
               )}
+
               {/* Newsletter Info */}
               {chatId.endsWith("@newsletter") && newsletterInfo && (
                 <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
@@ -1243,7 +1433,7 @@ export function ChatInfo({
                           console.error("Failed to toggle newsletter mute:", e)
                         }
                       }}
-                      className="text-sm text-blue-600 dark:text-green hover:underline"
+                      className="text-sm text-blue-600 dark:text-green hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                     >
                       {newsletterMuted ? "Unmute notifications" : "Mute notifications"}
                     </button>
@@ -1251,97 +1441,120 @@ export function ChatInfo({
                 </div>
               )}
 
-              {/* Block/Report (for contacts) */}
-              {chatType === "contact" && (
-                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                  <button
-                    onClick={async () => {
-                      setActionBusy(true)
-                      try {
-                        if (blocked) {
-                          await UnblockContact(chatId)
-                        } else {
-                          await BlockContact(chatId)
-                        }
-                        setBlocked(!blocked)
-                      } catch (e) {
-                        console.error("Block toggle failed:", e)
-                      } finally {
-                        setActionBusy(false)
-                      }
-                    }}
-                    disabled={actionBusy}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-red-600 dark:text-red-400 disabled:opacity-50"
-                  >
-                    <BlockIcon />
-                    <span>
-                      {blocked ? "Unblock" : "Block"}{" "}
-                      {contactInfo?.full_name || contactInfo?.phno || "contact"}
-                    </span>
-                  </button>
-                  <button className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-red-600 dark:text-red-400">
-                    <ReportIcon />
-                    <span>Report contact</span>
-                  </button>
-                </div>
-              )}
+              {/* Media, links, and docs — opens the combined hub */}
+              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                <button
+                  type="button"
+                  onClick={useMediaHubStore.getState().openHub}
+                  className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-100 dark:hover:bg-white/5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                  aria-label="Open media, links and docs"
+                >
+                  <Mediaicon />
+                  <span className="text-gray-900 dark:text-gray-100">Media, links and docs</span>
+                </button>
+              </div>
 
-              {/* Group actions */}
+              {/* Starred messages — no group-scoped starred view is wired here */}
+              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                <div className="p-4 pb-1">
+                  <p className="text-sm text-gray-600 dark:text-dark-muted">Starred messages</p>
+                </div>
+                <UnsupportedHint>
+                  The starred-messages view isn't available in this group drawer yet.
+                </UnsupportedHint>
+              </div>
+
+              {/* Mute notifications / notification settings */}
+              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                <button
+                  onClick={handleToggleMute}
+                  disabled={muteBusy}
+                  aria-label="Notification settings — mute this chat"
+                  className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                >
+                  <div className="flex items-center gap-3">
+                    <MuteIcon />
+                    <span className="text-gray-900 dark:text-gray-100">Notifications</span>
+                  </div>
+                  <div onClick={e => e.stopPropagation()}>
+                    <ToggleButton isEnabled={muted} onToggle={handleToggleMute} />
+                  </div>
+                </button>
+                <UnsupportedHint>
+                  Muting is the notification control available for this chat.
+                </UnsupportedHint>
+
+                {/* Disappearing messages. GetDisappearingTimer only reads group
+                    metadata; for 1:1 chats it always returns 0, so a picker would
+                    misleadingly show "Off" regardless of the real setting. */}
+                {(chatType === "group" || disappearTimer > 0) && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowDisappearPicker(!showDisappearPicker)}
+                      aria-label="Disappearing messages"
+                      aria-expanded={showDisappearPicker}
+                      className="w-full p-4 flex items-center rounded-xl m-2 justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                    >
+                      <div className="flex items-center gap-3">
+                        <DisappearingMessagesIcon />
+                        <div className="flex-1 text-left">
+                          <p className="text-gray-900 dark:text-gray-100">Disappearing messages</p>
+                          <p className="text-sm text-gray-600 dark:text-dark-muted">
+                            {DISAPPEAR_LABEL[disappearTimer] || "Off"}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                    {showDisappearPicker && (
+                      <div className="mx-4 mb-2 flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-dark-border bg-white p-2 shadow-lg dark:border-white/10 dark:bg-dark-secondary">
+                        {DISAPPEAR_OPTIONS.map(opt => (
+                          <button
+                            key={opt.value}
+                            onClick={() => handleDisappearChange(opt.value)}
+                            disabled={actionBusy}
+                            className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green ${
+                              disappearTimer === opt.value
+                                ? "font-medium text-green"
+                                : "text-light-text dark:text-dark-text"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Chat theme / restricted chat / encryption: real settings are
+                    app-wide or absent, so these stay read-only and honest. */}
+                <div className="border-t border-gray-200 dark:border-dark-tertiary pt-1">
+                  <div className="p-3 pb-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">Chat theme</p>
+                  </div>
+                  <UnsupportedHint>
+                    Chat themes are app-wide in Settings → Chats; per-group themes aren't available.
+                  </UnsupportedHint>
+                  <div className="p-3 pb-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">Restricted chat</p>
+                  </div>
+                  <UnsupportedHint>
+                    Restricted chat isn't available in this build. The real group permission
+                    switches below are the supported equivalent.
+                  </UnsupportedHint>
+                  <div className="p-3 pb-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">Encryption</p>
+                  </div>
+                  <UnsupportedHint>
+                    Messages are end-to-end encrypted between participants; encryption cannot be
+                    switched off.
+                  </UnsupportedHint>
+                </div>
+              </div>
+
+              {/* Real group permission settings — visible read-only to members */}
               {chatType === "group" && (
                 <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
-                  {/* Change subject */}
-                  {subjectEdit ? (
-                    <div className="p-4 flex flex-col gap-2">
-                      <input
-                        autoFocus
-                        className={`w-full rounded-lg border border-gray-300 dark:border-white/10 bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text`}
-                        value={subjectDraft}
-                        onChange={e => setSubjectDraft(e.target.value)}
-                        placeholder="Group subject"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setSubjectEdit(false)}
-                          className="rounded-md px-3 py-1 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveSubject}
-                          disabled={actionBusy || !subjectDraft.trim()}
-                          className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setSubjectDraft(groupInfo?.group_name || "")
-                        setSubjectEdit(true)
-                      }}
-                      className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
-                    >
-                      <span className="text-gray-900 dark:text-gray-100">Change subject</span>
-                    </button>
-                  )}
-
-                  {/* Invite link */}
-                  <button
-                    onClick={handleCopyInviteLink}
-                    disabled={inviteBusy}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50"
-                  >
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {inviteBusy
-                        ? "Loading…"
-                        : inviteLink
-                          ? "Invite link copied!"
-                          : "Get invite link"}
-                    </span>
-                  </button>
-
                   {/* Group announce toggle */}
                   <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
                     <span className="text-sm text-gray-900 dark:text-gray-100">Send Messages</span>
@@ -1389,199 +1602,270 @@ export function ChatInfo({
                   <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
                     {groupLocked ? "Group info locked by admins" : "Anyone can edit group info"}
                   </p>
+                </div>
+              )}
 
-                  {/* Group description / topic — admin only */}
-                  {isAdmin && (
-                    <>
-                      {topicEdit ? (
-                        <div className="p-4 flex flex-col gap-2 border-t border-gray-200 dark:border-dark-tertiary">
-                          <textarea
-                            autoFocus
-                            className={`w-full rounded-lg border border-gray-300 dark:border-dark-border bg-transparent px-3 py-2 text-sm text-light-text dark:text-dark-text resize-none`}
-                            rows={3}
-                            value={topicDraft}
-                            onChange={e => setTopicDraft(e.target.value)}
-                            placeholder="Group description"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => setTopicEdit(false)}
-                              className="rounded-md px-3 py-1 text-sm text-light-muted dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-white/5"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleSaveTopic}
-                              disabled={actionBusy || !topicDraft.trim()}
-                              className="rounded-md bg-green px-3 py-1 text-sm font-medium text-action-ink disabled:opacity-50"
-                            >
-                              Save
-                            </button>
+              {/* Admin-only group settings */}
+              {chatType === "group" && isAdmin && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                  {/* Member add mode */}
+                  <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
+                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                      Member Add Mode
+                    </span>
+                    <SettingsSwitch
+                      checked={memberAddMode === "admin_add"}
+                      label="Only admins can add members"
+                      onChange={handleToggleMemberAddMode}
+                    />
+                  </div>
+                  <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
+                    {memberAddMode === "admin_add"
+                      ? "Only admins can add members"
+                      : "All participants can add members"}
+                  </p>
+
+                  {/* Join approval mode */}
+                  <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
+                    <span className="text-sm text-gray-900 dark:text-gray-100">Join Approval</span>
+                    <SettingsSwitch
+                      checked={joinApproval}
+                      label="Require admin approval to join"
+                      onChange={handleToggleJoinApproval}
+                    />
+                  </div>
+                  <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
+                    {joinApproval
+                      ? "Join requests require admin approval"
+                      : "Anyone can join freely"}
+                  </p>
+
+                  {/* Join requests */}
+                  <div className="border-t border-gray-200 dark:border-dark-tertiary">
+                    <button
+                      onClick={handleLoadJoinRequests}
+                      disabled={joinReqBusy}
+                      className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                    >
+                      <span className="text-gray-900 dark:text-gray-100">
+                        {joinReqBusy ? "Loading…" : `Join Requests (${joinRequests.length})`}
+                      </span>
+                    </button>
+                    {showJoinRequests && joinRequests.length > 0 && (
+                      <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary overflow-hidden">
+                        {joinRequests.map(req => (
+                          <div
+                            key={req.jid}
+                            className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-dark-tertiary last:border-0"
+                          >
+                            <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
+                              {req.requester}
+                            </span>
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                onClick={() => handleApproveJoinRequest(req.jid)}
+                                className="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectJoinRequest(req.jid)}
+                                className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                              >
+                                Reject
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
+                        ))}
+                      </div>
+                    )}
+                    {showJoinRequests && joinRequests.length === 0 && !joinReqBusy && (
+                      <p className="px-4 pb-3 text-xs text-gray-600 dark:text-dark-muted">
+                        No pending requests
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Link / Unlink community */}
+                  <div className="border-t border-gray-200 dark:border-dark-tertiary">
+                    {groupInfo?.parent_jid ? (
+                      <div>
+                        <button
+                          onClick={() => handleUnlinkCommunity(groupInfo!.parent_jid!)}
+                          disabled={linkBusy}
+                          className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-orange-600 dark:text-orange-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                        >
+                          <span>Unlink from community</span>
+                        </button>
+                        {linkError && (
+                          <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
                         <button
                           onClick={() => {
-                            setTopicDraft(groupInfo?.group_topic || "")
-                            setTopicEdit(true)
+                            setShowLinkCommunity(!showLinkCommunity)
+                            if (!showLinkCommunity) {
+                              GetCommunityList()
+                                .then(setCommunities)
+                                .catch(() => {})
+                            }
                           }}
-                          className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors border-t border-gray-200 dark:border-dark-tertiary"
+                          className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                         >
-                          <span className="text-gray-900 dark:text-gray-100">Edit description</span>
+                          <span className="text-gray-900 dark:text-gray-100">
+                            Link to community
+                          </span>
                         </button>
-                      )}
-                    </>
-                  )}
-
-                  {/* Member add mode — admin only */}
-                  {isAdmin && (
-                    <>
-                      <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
-                        <span className="text-sm text-gray-900 dark:text-gray-100">
-                          Member Add Mode
-                        </span>
-                        <SettingsSwitch
-                          checked={memberAddMode === "admin_add"}
-                          label="Only admins can add members"
-                          onChange={handleToggleMemberAddMode}
-                        />
+                        {showLinkCommunity && (
+                          <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary max-h-40 overflow-y-auto">
+                            {communities.length === 0 && (
+                              <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
+                                No communities available
+                              </p>
+                            )}
+                            {communities.map(c => (
+                              <button
+                                key={c.jid}
+                                onClick={() => handleLinkCommunity(c.jid)}
+                                disabled={linkBusy}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 border-b border-gray-100 dark:border-dark-tertiary last:border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                              >
+                                {c.name || "Community"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {linkError && (
+                          <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
+                        )}
                       </div>
-                      <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
-                        {memberAddMode === "admin_add"
-                          ? "Only admins can add members"
-                          : "All participants can add members"}
-                      </p>
-                    </>
-                  )}
+                    )}
+                  </div>
+                </div>
+              )}
 
-                  {/* Join approval mode — admin only */}
-                  {isAdmin && (
-                    <>
-                      <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors">
-                        <span className="text-sm text-gray-900 dark:text-gray-100">
-                          Join Approval
-                        </span>
-                        <SettingsSwitch
-                          checked={joinApproval}
-                          label="Require admin approval to join"
-                          onChange={handleToggleJoinApproval}
-                        />
-                      </div>
-                      <p className="px-4 pb-3 -mt-2 text-xs text-gray-600 dark:text-dark-muted">
-                        {joinApproval
-                          ? "Join requests require admin approval"
-                          : "Anyone can join freely"}
-                      </p>
-                    </>
-                  )}
+              {/* Related actions */}
+              {chatType === "group" && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                  {/* Add to favourites → real pin toggle (app's honest equivalent) */}
+                  <button
+                    onClick={handleTogglePin}
+                    disabled={pinBusy}
+                    aria-label={pinned ? "Unpin group from favourites" : "Add group to favourites"}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                  >
+                    <span className="text-gray-900 dark:text-gray-100">
+                      {pinned ? "Remove from favourites" : "Add to favourites"}
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-dark-muted">
+                      {pinned ? "Pinned" : "Pin to top"}
+                    </span>
+                  </button>
 
-                  {/* Join requests — admin only */}
-                  {isAdmin && (
-                    <div className="border-t border-gray-200 dark:border-dark-tertiary">
-                      <button
-                        onClick={handleLoadJoinRequests}
-                        disabled={joinReqBusy}
-                        className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors disabled:opacity-50"
-                      >
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {joinReqBusy ? "Loading…" : `Join Requests (${joinRequests.length})`}
-                        </span>
-                      </button>
-                      {showJoinRequests && joinRequests.length > 0 && (
-                        <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary overflow-hidden">
-                          {joinRequests.map(req => (
-                            <div
-                              key={req.jid}
-                              className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-dark-tertiary last:border-0"
-                            >
-                              <span className="text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
-                                {req.requester}
-                              </span>
-                              <div className="flex gap-2 shrink-0">
-                                <button
-                                  onClick={() => handleApproveJoinRequest(req.jid)}
-                                  className="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => handleRejectJoinRequest(req.jid)}
-                                  className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {showJoinRequests && joinRequests.length === 0 && !joinReqBusy && (
-                        <p className="px-4 pb-3 text-xs text-gray-600 dark:text-dark-muted">
-                          No pending requests
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Link / Unlink community — admin only */}
-                  {isAdmin && (
-                    <div className="border-t border-gray-200 dark:border-dark-tertiary">
-                      {groupInfo?.parent_jid ? (
-                        <div>
-                          <button
-                            onClick={() => handleUnlinkCommunity(groupInfo!.parent_jid!)}
-                            disabled={linkBusy}
-                            className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-orange-600 dark:text-orange-400 disabled:opacity-50"
-                          >
-                            <span>Unlink from community</span>
-                          </button>
-                          {linkError && (
-                            <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
-                          )}
-                        </div>
+                  {/* Add to list → real ToggleChatLabel using the app's saved labels */}
+                  <button
+                    onClick={() => setShowAddToList(!showAddToList)}
+                    aria-expanded={showAddToList}
+                    className="w-full p-4 flex items-center hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                  >
+                    <span className="text-gray-900 dark:text-gray-100">Add to list</span>
+                  </button>
+                  {showAddToList && (
+                    <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary">
+                      {Object.keys(savedLabels).length === 0 ? (
+                        <UnsupportedHint>
+                          Name a label from a message first, then add this group to it here.
+                        </UnsupportedHint>
                       ) : (
-                        <div>
+                        Object.entries(savedLabels).map(([id, name]) => (
                           <button
-                            onClick={() => {
-                              setShowLinkCommunity(!showLinkCommunity)
-                              if (!showLinkCommunity) {
-                                GetCommunityList()
-                                  .then(setCommunities)
-                                  .catch(() => {})
-                              }
-                            }}
-                            className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
+                            key={id}
+                            onClick={() => handleAddToLabel(id)}
+                            disabled={labelBusy}
+                            className="w-full px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 border-b border-gray-100 dark:border-dark-tertiary last:border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                           >
-                            <span className="text-gray-900 dark:text-gray-100">
-                              Link to community
-                            </span>
+                            {name || id}
                           </button>
-                          {showLinkCommunity && (
-                            <div className="mx-4 mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-secondary max-h-40 overflow-y-auto">
-                              {communities.length === 0 && (
-                                <p className="p-3 text-sm text-gray-600 dark:text-dark-muted">
-                                  No communities available
-                                </p>
-                              )}
-                              {communities.map(c => (
-                                <button
-                                  key={c.jid}
-                                  onClick={() => handleLinkCommunity(c.jid)}
-                                  disabled={linkBusy}
-                                  className="w-full px-3 py-2 text-left text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-dark-tertiary disabled:opacity-50 border-b border-gray-100 dark:border-dark-tertiary last:border-0"
-                                >
-                                  {c.name || "Community"}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {linkError && (
-                            <p className="px-4 pb-2 text-xs text-red-500">{linkError}</p>
-                          )}
-                        </div>
+                        ))
+                      )}
+                      {labelError && (
+                        <p className="px-3 pb-2 text-xs text-red-500">{labelError}</p>
                       )}
                     </div>
                   )}
+
+                  {/* Export chat — no export binding */}
+                  <div className="p-4 pb-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">Export chat</p>
+                  </div>
+                  <UnsupportedHint>Chat export isn't available in this build.</UnsupportedHint>
+
+                  {/* Report group — no report binding */}
+                  <div className="p-4 pb-0">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">Report group</p>
+                  </div>
+                  <UnsupportedHint>Reporting a group isn't available in this build.</UnsupportedHint>
+                </div>
+              )}
+
+              {/* Clear chat (real) */}
+              <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                <button
+                  onClick={async () => {
+                    if (!confirm("Clear all messages in this chat?")) return
+                    try {
+                      await ClearChat(chatId)
+                      window.location.reload()
+                    } catch (e) {
+                      console.error("Clear chat failed:", e)
+                    }
+                  }}
+                  className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                >
+                  <span className="text-gray-900 dark:text-gray-100">Clear chat</span>
+                </button>
+              </div>
+
+              {/* Block/Report (for contacts) */}
+              {chatType === "contact" && (
+                <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
+                  <button
+                    onClick={async () => {
+                      setActionBusy(true)
+                      try {
+                        if (blocked) {
+                          await UnblockContact(chatId)
+                        } else {
+                          await BlockContact(chatId)
+                        }
+                        setBlocked(!blocked)
+                      } catch (e) {
+                        console.error("Block toggle failed:", e)
+                      } finally {
+                        setActionBusy(false)
+                      }
+                    }}
+                    disabled={actionBusy}
+                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-red-600 dark:text-red-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
+                  >
+                    <BlockIcon />
+                    <span>
+                      {blocked ? "Unblock" : "Block"}{" "}
+                      {contactInfo?.full_name || contactInfo?.phno || "contact"}
+                    </span>
+                  </button>
+                  {/* No report binding: read-only, never a dead button. */}
+                  <div className="p-4 flex items-start gap-3 text-red-600 dark:text-red-400">
+                    <ReportIcon />
+                    <div>
+                      <p>Report contact</p>
+                      <p className="text-xs text-gray-600 dark:text-dark-muted mt-1">
+                        Reporting isn't available in this build.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1601,7 +1885,8 @@ export function ChatInfo({
                       }
                     }}
                     disabled={actionBusy}
-                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-red-600 dark:text-red-400 disabled:opacity-50"
+                    aria-label="Exit group"
+                    className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors text-red-600 dark:text-red-400 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                   >
                     <ExitGroupIcon />
                     <span>Exit group</span>
@@ -1609,11 +1894,28 @@ export function ChatInfo({
                 </div>
               )}
 
+              {/* Created-by footer — real group_owner + group_created_at */}
+              {chatType === "group" && groupInfo && (
+                <div className="p-4 pb-6">
+                  <p className="text-xs text-gray-600 dark:text-dark-muted">
+                    Group created by{" "}
+                    {groupInfo.group_owner.full_name ||
+                      groupInfo.group_owner.push_name ||
+                      groupInfo.group_owner.phno}
+                    , on {new Date(groupInfo.group_created_at).toLocaleDateString()} at{" "}
+                    {new Date(groupInfo.group_created_at).toLocaleString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              )}
+
               {/* Join Group by Link (always available) */}
               <div className="mx-3 border-b border-gray-200 dark:border-dark-tertiary">
                 <button
                   onClick={() => setShowJoinDialog(true)}
-                  className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors"
+                  className="w-full p-4 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-dark-tertiary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green"
                 >
                   <span className="text-gray-900 dark:text-gray-100">Join Group by Link</span>
                 </button>

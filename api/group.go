@@ -308,6 +308,13 @@ func (a *Api) SetGroupPhoto(groupJID, base64Data string) error {
 	if err != nil {
 		return err
 	}
+	// The frontend reads uploads with FileReader.readAsDataURL, which prefixes
+	// the payload with a data: URL. Accept both that form and raw base64.
+	if strings.HasPrefix(base64Data, "data:") {
+		if comma := strings.IndexByte(base64Data, ','); comma >= 0 {
+			base64Data = base64Data[comma+1:]
+		}
+	}
 	data, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
 		return fmt.Errorf("decode base64: %w", err)

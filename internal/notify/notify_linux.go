@@ -19,8 +19,10 @@ import (
 )
 
 const (
-	linuxActionOpen  = "open"
-	linuxActionReply = "reply"
+	linuxActionOpen         = "open"
+	linuxActionReply        = "reply"
+	linuxActionAcceptCall   = ActionAcceptCall
+	linuxActionDeclineCall  = ActionDeclineCall
 
 	// maxTrackedNotifications bounds the ID -> context table. Notification IDs
 	// are recycled by servers; old entries are evicted FIFO.
@@ -33,6 +35,9 @@ type notificationContext struct {
 	chatJID   string
 	messageID string
 	senderJID string
+	// isCall distinguishes a ringing-call toast from a message toast so the
+	// freedesktop "default" (body click) action can answer the call.
+	isCall bool
 }
 
 var (
@@ -93,12 +98,26 @@ func handleLinuxAction(id uint32, key string) {
 	}
 
 	switch key {
-	case "default", linuxActionOpen:
+	case "default":
+		// go-toast's Linux counterpart labels the body click "Accept" for a
+		// call toast, so route it to the same answer path as the button.
+		if ctx.isCall {
+			dispatch(ActionAcceptCall, ctx.chatJID, ctx.messageID, "")
+		} else {
+			dispatch(ActionOpen, ctx.chatJID, ctx.messageID, "")
+		}
+	case linuxActionOpen:
 		dispatch(ActionOpen, ctx.chatJID, ctx.messageID, "")
 	case linuxActionReply:
 		// The freedesktop notification spec has no inline text input, so the
 		// reply action only focuses the chat; text is deliberately empty.
 		dispatch(ActionReply, ctx.chatJID, ctx.messageID, "")
+	case linuxActionAcceptCall:
+		// Call notifications carry the ringing call ID in messageID so the
+		// backend can route straight to AcceptCall.
+		dispatch(ActionAcceptCall, ctx.chatJID, ctx.messageID, "")
+	case linuxActionDeclineCall:
+		dispatch(ActionDeclineCall, ctx.chatJID, ctx.messageID, "")
 	}
 }
 
@@ -114,9 +133,28 @@ func trackNotification(id uint32, ctx notificationContext) {
 	contextOrder = append(contextOrder, id)
 }
 
-// Notify sends a freedesktop notification with Open and Reply actions. The
-// chat avatar (or, failing that, the message thumbnail) is attached as a
-// scaled image-data hint; the embedded app icon is used as app_icon.
+// callOrMessageActions mirrors windowsActions: a ringing call exposes
+// Answer/Decline, everything else keeps Open/Reply. The freedesktop spec has
+// no inline text entry, so Reply stays a focus-only action here.
+func callOrMessageActions(opts Options) []notify.Action {
+	if opts.CallID != "" {
+		return []notify.Action{
+			notify.NewDefaultAction("Accept"),
+			{Key: linuxActionAcceptCall, Label: "Accept"},
+			{Key: linuxActionDeclineCall, Label: "Decline"},
+		}
+	}
+	return []notify.Action{
+		notify.NewDefaultAction("Open"),
+		{Key: linuxActionOpen, Label: "Open"},
+		{Key: linuxActionReply, Label: "Reply"},
+	}
+}
+
+// Notify sends a freedesktop notification with Open and Reply actions, or
+// Accept/Decline for a ringing call. The chat avatar (or, failing that, the
+// message thumbnail) is attached as a scaled image-data hint; the embedded app
+// icon is used as app_icon.
 func Notify(opts Options) error {
 	n, err := getNotifier()
 	if err != nil {
@@ -132,11 +170,9 @@ func Notify(opts Options) error {
 		AppIcon: "file://" + iconPath,
 		Summary: opts.Title,
 		Body:    opts.Body,
-		Actions: []notify.Action{
-			notify.NewDefaultAction("Open"),
-			{Key: linuxActionOpen, Label: "Open"},
-			{Key: linuxActionReply, Label: "Reply"},
-		},
+		// Incoming calls get Answer/Decline instead of the message actions; the
+		// exact same action keys are used on Windows so the API handler is shared.
+		Actions: callOrMessageActions(opts),
 		// Leave visibility to the notification server's own settings.
 		ExpireTimeout: notify.ExpireTimeoutSetByNotificationServer,
 	}
@@ -156,11 +192,12 @@ func Notify(opts Options) error {
 	if err != nil {
 		return fmt.Errorf("send notification: %w", err)
 	}
-	if opts.Actions {
+	if opts.Actions || opts.CallID != "" {
 		trackNotification(id, notificationContext{
 			chatJID:   opts.ChatJID,
 			messageID: opts.MessageID,
 			senderJID: opts.SenderJID,
+			isCall:    opts.CallID != "",
 		})
 	}
 	return nil

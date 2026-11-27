@@ -33,6 +33,41 @@ func assetHandler(assets fs.FS) http.Handler {
 	})
 }
 
+const (
+	// updaterRepository is the GitHub Releases feed the in-app updater reads.
+	updaterRepository = "SugeethJSA/amazingwhats"
+	// updaterChecksumAsset is the exact name of the checksum sidecar published
+	// alongside every updater asset (see the release workflows).
+	updaterChecksumAsset = "SHA256SUMS"
+)
+
+// updaterAssetMatcher pins the updater to the single-entry archives produced
+// by the release workflows. The GitHub provider's default matcher accepts any
+// asset whose name contains both the platform and the architecture; our
+// releases also ship a licensed ZIP and a raw exe, and only an archive with a
+// single top-level entry can be promoted by Wails' helper for the swap.
+// Falling back to the default is done only for an unrecognised platform.
+func updaterAssetMatcher(req updater.CheckRequest, assets []github.ReleaseAsset) int {
+	var want string
+	switch req.Platform {
+	case "windows":
+		want = "amazingwhats-windows-" + req.Arch + ".zip"
+	case "darwin":
+		want = "amazingwhats-darwin-" + req.Arch + ".zip"
+	case "linux":
+		want = "amazingwhats-linux-" + req.Arch + ".AppImage"
+	}
+	if want == "" {
+		return github.DefaultAssetMatcher(req, assets)
+	}
+	for i, a := range assets {
+		if a.Name == want {
+			return i
+		}
+	}
+	return -1
+}
+
 func run(assets fs.FS) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		// Legacy config migration runs inside misc.defaultConfigDir() at package
@@ -158,18 +193,28 @@ func run(assets fs.FS) cli.ActionFunc {
 		// them and let the app run normally offline and in dev builds. The
 		// service is only marked ready when BOTH steps succeed, so no code path
 		// ever calls Updater.Check on an uninitialised updater.
-		currentVersion := apiPkg.NormalizeUpdateVersion(ctx.App.Version)
+		//
+		// D-UPDATER-001: production Wails builds replace app.Logger with a
+		// handler that writes to io.Discard, so warnings sent there were
+		// invisible in a shipped binary. Every updater diagnostic below uses
+		// the global slog logger, which honours AMAZINGWHATS_LOG_FILE from
+		// main.go and therefore reaches a real log file in production.
+		rawVersion := ctx.App.Version
+		currentVersion := apiPkg.NormalizeUpdateVersion(rawVersion)
+		apiPkg.LogUpdaterSnapshot(rawVersion, currentVersion, updaterRepository, updaterChecksumAsset)
+
 		provider, err := github.New(github.Config{
-			Repository:    "SugeethJSA/amazingwhats",
-			ChecksumAsset: "SHA256SUMS",
+			Repository:    updaterRepository,
+			ChecksumAsset: updaterChecksumAsset,
+			AssetMatcher:  updaterAssetMatcher,
 		})
 		if err != nil {
-			app.Logger.Warn("updater: GitHub provider unavailable", "error", err)
+			apiPkg.LogUpdaterFailure("github provider", err)
 		} else if err := app.Updater.Init(updater.Config{
 			CurrentVersion: currentVersion,
 			Providers:      []updater.Provider{provider},
 		}); err != nil {
-			app.Logger.Warn("updater: init failed", "error", err)
+			apiPkg.LogUpdaterFailure("updater init", err)
 		} else {
 			apiPkg.MarkUpdaterReady(api)
 		}

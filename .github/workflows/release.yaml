@@ -141,12 +141,42 @@ jobs:
           wails3 generate bindings -ts
           git diff --exit-code -- frontend/bindings
 
-      - name: Build binaries
+      - name: Build version info
+        id: version
         shell: bash
         run: |
-          # D-AUD-009a: gate nightly flags on the event, not on a string env var.
-          wails3 build PRODUCTION=true ARCH=amd64 \
-            ${{ github.event_name == 'schedule' && 'LDFLAGS="-s -w -X main.version=v1.0.0 -X main.buildType=nightly"' || '' }}
+          # D-UPDATER-001: nightly deliberately keeps the v1.0.0 version core.
+          # It is published under the "nightly" prerelease tag, which the
+          # GitHub provider's /releases/latest call skips, so an installed
+          # nightly build is always older than any rolling release
+          # (vYEAR.MONTH.<UTC timestamp>) and can be upgraded. Do not switch
+          # nightly to the rolling timestamp scheme — that would make stable
+          # releases look older than a nightly build and suppress the update.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "nightly=true" >> "$GITHUB_OUTPUT"
+            echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          else
+            echo "nightly=false" >> "$GITHUB_OUTPUT"
+            echo "date=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build binaries
+        shell: bash
+        env:
+          NIGHTLY: ${{ steps.version.outputs.nightly }}
+          COMMIT: ${{ github.sha }}
+          BUILD_DATE: ${{ steps.version.outputs.date }}
+        run: |
+          # D-AUD-009a: the event gate is a real boolean output, compared
+          # explicitly in bash rather than used as a truthy string.
+          # D-UPDATER-001: stamp commit/date as well as version so the
+          # updater's version snapshot can be traced back to a build.
+          if [ "$NIGHTLY" = "true" ]; then
+            LDFLAGS="-s -w -X main.version=v1.0.0 -X main.commit=$COMMIT -X main.date=$BUILD_DATE -X main.buildType=nightly"
+            wails3 build PRODUCTION=true ARCH=amd64 LDFLAGS="$LDFLAGS"
+          else
+            wails3 build PRODUCTION=true ARCH=amd64
+          fi
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv bin/amazingwhats.exe "bin/${{ matrix.binary }}"

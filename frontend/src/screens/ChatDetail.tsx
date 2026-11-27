@@ -27,6 +27,8 @@ import { useContactStore } from "../store/useContactStore"
 import { MessageList, type MessageListHandle } from "../components/chat/MessageList"
 import { preloadImages, visibleImageIDs } from "../components/chat/MediaContent"
 import { ChatHeader } from "../components/chat/ChatHeader"
+import { PinnedMessageBanner } from "../components/chat/PinnedMessageBanner"
+import { BackfillProgress, type BackfillIndicatorState } from "../components/chat/BackfillProgress"
 import { ChatInput } from "../components/chat/ChatInput"
 import { ChatInfo } from "../components/chat/ChatInfo"
 import { ForwardDialog } from "../components/chat/ForwardDialog"
@@ -34,8 +36,10 @@ import { ContactActionSheet } from "../components/chat/ContactActionSheet"
 import { useContactActions } from "../hooks/useContactActions"
 import { registerShortcut } from "../lib/shortcuts"
 import type { ChatItem, Message } from "../store/types"
+import { roleKeysFor, useMemberRoleStore } from "../components/chat/MessageItem"
+import type { MemberRole, MemberRoleIndex } from "../components/chat/MessageItem"
 import clsx from "clsx"
-import { formatPhone, phoneFromJID, sanitizeHtml } from "../lib/utils"
+import { formatPhone, phoneFromJID } from "../lib/utils"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 import { getEase } from "../store/useEaseStore"
@@ -63,6 +67,45 @@ const START_INDEX = 1_000_000
 // Stable empty list so the mark-read effect does not re-run on every render.
 const EMPTY_MESSAGES: Message[] = []
 
+/**
+ * Build the sender-role index from one GetGroupInfo response. Each identity
+ * contributes an exact JID key and, only when long enough, a digits fallback
+ * key — so a short phone value cannot collide with an unrelated sender.
+ * "owner" comes only from group_owner, "admin" only from is_admin; an
+ * unconfirmed member gets no entry at all.
+ */
+function buildParticipantRoles(groupInfo: {
+  group_owner?: { jid?: string; phno?: string } | null
+  group_participants?: Array<{
+    contact?: { jid?: string; phno?: string } | null
+    is_admin?: boolean
+    action_jid?: string
+  }> | null
+}): MemberRoleIndex {
+  const ownerKeys = new Set(
+    [groupInfo.group_owner?.jid, groupInfo.group_owner?.phno].flatMap(value => roleKeysFor(value)),
+  )
+  const roles: MemberRoleIndex = {}
+  for (const participant of groupInfo.group_participants ?? []) {
+    const keys = [
+      ...roleKeysFor(participant.contact?.jid),
+      ...roleKeysFor(participant.contact?.phno),
+      ...roleKeysFor(participant.action_jid),
+    ]
+    if (keys.length === 0) continue
+    // Ownership is a fact from group_owner; adminship is a fact from is_admin.
+    // Owner wins when a participant is both; nothing else is labelled.
+    const role: MemberRole | undefined = keys.some(key => ownerKeys.has(key))
+      ? "owner"
+      : participant.is_admin
+        ? "admin"
+        : undefined
+    if (!role) continue
+    for (const key of keys) roles[key] = role
+  }
+  return roles
+}
+
 type SendPayload = {
   type: string
   text?: string
@@ -87,6 +130,9 @@ interface FailedSend {
   preview: string
   notificationId: number
 }
+
+/** Terminal outcome of a per-chat ON_DEMAND history backfill. */
+type BackfillResult = "loaded" | "exhausted" | "failed"
 
 function messagePreview(message: Message): string {
   const content = message.Content
@@ -187,12 +233,26 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [backfillPending, setBackfillPending] = useState(false)
+  // Null until the first `chunk` arrives: an indeterminate bar with no count
+  // is more honest than a fabricated zero. The backend supplies an accumulated
+  // stored count, never a total, so no percentage is derived from it.
+  const [backfillStored, setBackfillStored] = useState<number | null>(null)
+  const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null)
   const [initialLoad, setInitialLoad] = useState(true)
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
+
+  // Single view model for the indicator: live while pending, one brief terminal
+  // status afterwards, then idle. This is what guarantees the "Asking..." text
+  // is replaced rather than left behind when the backfill finishes.
+  const backfillIndicator: BackfillIndicatorState = backfillPending
+    ? { kind: "running", stored: backfillStored }
+    : backfillResult
+      ? { kind: backfillResult }
+      : { kind: "idle" }
 
   // One source of truth for the scroll-to-latest affordance: GSAP, keyboard
   // tab order and visibility all follow it, so a faded-out button cannot stay
@@ -216,6 +276,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const initialLoadPromiseRef = useRef<Promise<void> | null>(null)
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusRequestRef = useRef<string | null>(null)
+  // Owns the short-lived terminal status; cleared on chat change/unmount and
+  // whenever a new backfill starts so an old timer cannot blank a new run.
+  const backfillStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const easeShowRef = useRef(getEase("DropDown", "open"))
   const easeHideRef = useRef(getEase("DropDown", "close"))
@@ -224,8 +287,6 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   const isNewsletter = chatId.endsWith("@newsletter")
   const [chatSubtitle, setChatSubtitle] = useState("")
   const [pinnedMessages, setPinnedMessages] = useState<store.PinnedMessage[]>([])
-  // Which pinned message the banner jumps to next (cycles like WhatsApp).
-  const pinnedCycleRef = useRef(0)
 
   const loadPinned = useCallback(async () => {
     try {
@@ -238,7 +299,6 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
   }, [chatId])
 
   useEffect(() => {
-    pinnedCycleRef.current = 0
     loadPinned()
     const unsub = EventsOn("wa:pinned_update", (data: { chatId: string }) => {
       if (data?.chatId === chatId) loadPinned()
@@ -272,7 +332,12 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
               participantJIDs.push(`${String(contact.phno).replace(/\D/g, "")}@s.whatsapp.net`)
             }
           }
+          // Member roles come from the same group-info response: group_owner
+          // plus is_admin and each participant's canonical action_jid. Keep a
+          // PN/LID-keyed index in the dedicated role cache so message rows can
+          // show an honest "Owner"/"Admin" tag without a per-row RPC.
           useChatStore.getState().updateSingleChat(chatId, { participantJIDs })
+          useMemberRoleStore.getState().setRoles(chatId, buildParticipantRoles(groupInfo))
 
           // WhatsApp-style participants line under the group name:
           // "You, Alice, ~ Bob, +91 98765 43210, …"
@@ -309,6 +374,61 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     }
     loadMentionableContacts()
   }, [chatId, chatType])
+
+  // On failure keep the last known roles rather than replacing them with a
+  // guessed empty set.
+  const refreshMemberRoles = useCallback(() => {
+    GetGroupInfo(chatId)
+      .then(info => {
+        useMemberRoleStore.getState().setRoles(chatId, buildParticipantRoles(info))
+      })
+      .catch(() => {})
+  }, [chatId])
+
+  // Promote/demote actions from a message sender's contact sheet dispatch a
+  // shared event. Refresh the index so sender tags never go stale.
+  useEffect(() => {
+    if (chatType !== "group") return
+    const onGroupChanged = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === chatId) refreshMemberRoles()
+    }
+    window.addEventListener("wa:contact-action-group-changed", onGroupChanged)
+    return () => window.removeEventListener("wa:contact-action-group-changed", onGroupChanged)
+  }, [chatId, chatType, refreshMemberRoles])
+
+  // Actions taken from the Group Info panel reload that panel locally instead
+  // of dispatching the shared event. Refresh once on close so history tags
+  // catch up, without an extra fetch on every opening.
+  const wasInfoOpenRef = useRef(false)
+  useEffect(() => {
+    if (chatType === "group" && wasInfoOpenRef.current && !chatInfoOpen) refreshMemberRoles()
+    wasInfoOpenRef.current = chatInfoOpen
+  }, [chatInfoOpen, chatType, refreshMemberRoles])
+
+  // useContactActions calls the Group Info panel's local onGroupChanged
+  // callback instead of dispatching the shared event, so tags would go stale
+  // while that panel stays open. The backend pairs group mutations with a
+  // payload-less wa:chat_list_refresh. Listen only while this group's panel is
+  // open and debounce, so unrelated refreshes (new messages, polls, ...) can
+  // never turn into a stream of GetGroupInfo calls.
+  const roleRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (chatType !== "group" || !chatInfoOpen) return
+    const unsub = EventsOn("wa:chat_list_refresh", () => {
+      if (roleRefreshTimerRef.current) clearTimeout(roleRefreshTimerRef.current)
+      roleRefreshTimerRef.current = setTimeout(() => {
+        roleRefreshTimerRef.current = null
+        refreshMemberRoles()
+      }, 600)
+    })
+    return () => {
+      unsub()
+      if (roleRefreshTimerRef.current) {
+        clearTimeout(roleRefreshTimerRef.current)
+        roleRefreshTimerRef.current = null
+      }
+    }
+  }, [chatType, chatInfoOpen, refreshMemberRoles])
 
   const scrollToBottom = useCallback((instant = false) => {
     requestAnimationFrame(() => {
@@ -721,43 +841,109 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     return request
   }, [chatId, isNewsletter, prependMessages, addNotification])
 
+  // End the live indicator and leave one brief, honest status. Centralised so
+  // both backend `done` events and a failed RequestHistorySync call behave the
+  // same way — neither can leave stale "Asking..." text behind.
+  const showBackfillResult = useCallback((result: BackfillResult) => {
+    setBackfillPending(false)
+    if (backfillStatusTimerRef.current) clearTimeout(backfillStatusTimerRef.current)
+    setBackfillResult(result)
+    backfillStatusTimerRef.current = setTimeout(() => {
+      backfillStatusTimerRef.current = null
+      setBackfillResult(null)
+    }, 2600)
+  }, [])
+
   // Per-chat backfill events are separate from the global startup sync strip.
+  // `stored` is an accumulated count from the backend, never a total: the
+  // indicator stays indeterminate and reports the count honestly.
   useEffect(() => {
     const unsub = EventsOn(
       "wa:history_backfill",
-      (data: { chatJID?: string; phase?: string; exhausted?: boolean; failed?: boolean }) => {
+      (data: {
+        chatJID?: string
+        sessionID?: string
+        phase?: string
+        stored?: number
+        exhausted?: boolean
+        failed?: boolean
+        done?: boolean
+      }) => {
         if (data?.chatJID !== chatId) return
-        if (data.phase === "done") {
-          setBackfillPending(false)
+
+        const stored =
+          typeof data.stored === "number" && Number.isFinite(data.stored) && data.stored >= 0
+            ? data.stored
+            : null
+        const isDone = data.phase === "done" || data.done === true
+
+        if (isDone) {
+          // Terminal phase: stop the live indicator first, then show exactly
+          // one honest status for a moment. Never leave "Asking..." on screen.
+          showBackfillResult(
+            data.failed ? "failed" : data.exhausted ? "exhausted" : "loaded",
+          )
+
           if (data.exhausted) {
             hasMoreRef.current = false
             setHasMore(false)
             return
           }
           if (data.failed) {
-            addNotification("Couldn't load older messages from your phone. Try again.", { tone: "error" })
+            addNotification("Couldn't load older messages from your phone. Try again.", {
+              tone: "error",
+            })
             return
           }
+          // Normal completion/timeout: any rows that arrived are in the local
+          // DB now, so pull them into the open list once more.
+          void loadMoreMessages()
+          return
         }
-        // New older rows are in the local DB now; pull them into the open list.
-        hasMoreRef.current = true
-        setHasMore(true)
-        void loadMoreMessages()
+
+        if (data.phase === "started") {
+          // A fresh run supersedes any stale terminal status and its timer.
+          if (backfillStatusTimerRef.current) {
+            clearTimeout(backfillStatusTimerRef.current)
+            backfillStatusTimerRef.current = null
+          }
+          setBackfillResult(null)
+          setBackfillStored(null)
+          setBackfillPending(true)
+          return
+        }
+
+        if (data.phase === "chunk") {
+          setBackfillPending(true)
+          // Guard against out-of-order chunks: the count only ever climbs.
+          if (stored !== null) setBackfillStored(prev => Math.max(prev ?? 0, stored))
+          // New older rows are in the local DB now; pull them into the open list.
+          hasMoreRef.current = true
+          setHasMore(true)
+          void loadMoreMessages()
+        }
       },
     )
     return () => unsub()
-  }, [chatId, loadMoreMessages, addNotification])
+  }, [chatId, loadMoreMessages, addNotification, showBackfillResult])
 
   const requestOlderFromPhone = useCallback(async () => {
     if (backfillPending) return
+    // A fresh click owns the top slot: clear any lingering terminal status.
+    if (backfillStatusTimerRef.current) {
+      clearTimeout(backfillStatusTimerRef.current)
+      backfillStatusTimerRef.current = null
+    }
+    setBackfillResult(null)
+    setBackfillStored(null)
     setBackfillPending(true)
     try {
       await RequestHistorySync(chatId, 50)
     } catch {
-      setBackfillPending(false)
+      showBackfillResult("failed")
       addNotification("Couldn't ask your phone for older messages. Try again.", { tone: "error" })
     }
-  }, [chatId, backfillPending, addNotification])
+  }, [chatId, backfillPending, addNotification, showBackfillResult])
 
   const handleQuotedClick = useCallback(
     async (messageId: string) => {
@@ -1244,6 +1430,15 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     setHasMore(true)
     setIsLoadingMore(false)
     setIsAtBottom(true)
+    // Backfill status is per-chat: never let one conversation's indicator or
+    // brief result bleed into the next one.
+    setBackfillPending(false)
+    setBackfillStored(null)
+    setBackfillResult(null)
+    if (backfillStatusTimerRef.current) {
+      clearTimeout(backfillStatusTimerRef.current)
+      backfillStatusTimerRef.current = null
+    }
     setActiveChatId(chatId)
     const initialRequest = loadInitialMessages(generation)
     initialLoadPromiseRef.current = initialRequest
@@ -1258,6 +1453,10 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
       if (highlightTimerRef.current) {
         clearTimeout(highlightTimerRef.current)
         highlightTimerRef.current = null
+      }
+      if (backfillStatusTimerRef.current) {
+        clearTimeout(backfillStatusTimerRef.current)
+        backfillStatusTimerRef.current = null
       }
     }
   }, [chatId, loadInitialMessages, setActiveChatId])
@@ -1428,43 +1627,15 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           isTyping={typingIndicator?.isTyping ?? false}
         />
 
-        {/* Pinned-messages banner: shows the latest pin, click cycles through
-            pins newest-first and jumps to each message (WhatsApp behavior). */}
-        {pinnedMessages.length > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              const idx = pinnedCycleRef.current % pinnedMessages.length
-              const target = pinnedMessages[pinnedMessages.length - 1 - idx]
-              pinnedCycleRef.current = idx + 1
-              handleQuotedClick(target.message_id)
-            }}
-            aria-label={`Pinned message, ${pinnedMessages.length} total. Activate to jump to the next one.`}
-            className="flex w-full items-center gap-2 border-b border-gray-200 dark:border-dark-border bg-light-secondary px-4 py-2 text-left text-sm cursor-pointer hover:bg-gray-100 dark:border-white/5 dark:bg-dark-bg dark:hover:bg-white/5"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              className="shrink-0 fill-current text-green-dark dark:text-green"
-            >
-              <path d="M16 3a1 1 0 0 1 .95 1.31l-.9 2.72 3.42 3.42a1 1 0 0 1-.21 1.57l-3.62 2.07-1.9 4.75a1 1 0 0 1-1.64.33L9 16.07l-4.29 4.3-1.42-1.42 4.3-4.29-3.1-3.1a1 1 0 0 1 .33-1.64l4.75-1.9 2.07-3.62A1 1 0 0 1 12.5 4z" />
-            </svg>
-            <span
-              className="flex-1 truncate text-gray-700 dark:text-gray-200 [&_*]:inline"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHtml(
-                  pinnedMessages[pinnedMessages.length - 1].text || "Pinned message",
-                ),
-              }}
-            />
-            {pinnedMessages.length > 1 && (
-              <span className="shrink-0 text-xs text-gray-600 dark:text-dark-muted">
-                {pinnedMessages.length}
-              </span>
-            )}
-          </button>
-        )}
+        {/* Pinned-messages subheader: real pins for this chat only, with the
+            sender name and a short preview. Activates the existing quote-jump
+            path (paginate -> scrollToMessage -> 500ms highlight). */}
+        <PinnedMessageBanner
+          key={chatId}
+          chatId={chatId}
+          pins={pinnedMessages}
+          onJump={handleQuotedClick}
+        />
 
         <div className="flex-1 relative overflow-hidden">
           {/* Static chat wallpaper: painted once behind the list instead of
@@ -1541,7 +1712,9 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
           </button>
 
           <div className={clsx("relative z-10 h-full", (!isReady || initialLoad) && "invisible")}>
-            {!isNewsletter && isReady && !hasMore && !backfillPending && (
+            {/* Existing per-chat trigger, unchanged apart from yielding the
+                top slot to the brief terminal status so they never overlap. */}
+            {!isNewsletter && isReady && !hasMore && !backfillPending && !backfillResult && (
               <button
                 type="button"
                 onClick={() => void requestOlderFromPhone()}
@@ -1552,11 +1725,7 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
                 Load older from phone
               </button>
             )}
-            {backfillPending && (
-              <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-gray-300 backdrop-blur">
-                Asking your phone for older messages...
-              </div>
-            )}
+            <BackfillProgress state={backfillIndicator} />
             <MessageList
               key={`${chatId}:${isReady ? "ready" : "loading"}`}
               ref={messageListRef}

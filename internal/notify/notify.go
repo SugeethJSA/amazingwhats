@@ -3,10 +3,13 @@
 // its native notification backend without leaking platform types into the Wails
 // service.
 //
-// The two user actions exposed to notification servers are "open" (focus the
-// chat) and "reply" (focus the chat and pre-fill a typed reply). Not all
-// platforms support inline text entry; the handler always receives a text
-// string, empty where the platform cannot supply one.
+// The user actions exposed to notification servers are "open" (focus the
+// chat), "reply" (focus the chat and pre-fill a typed reply), and the two call
+// actions "call_accept" / "call_decline" (answer or reject a ringing call).
+// Not all platforms support inline text entry; the handler always receives a
+// text string, empty where the platform cannot supply one. For call actions
+// the ringing call's ID is delivered in the messageID slot so the API layer
+// can route straight back to AcceptCall / RejectCall.
 package notify
 
 import (
@@ -25,7 +28,18 @@ const (
 	ActionOpen = "open"
 	// ActionReply raises wa:notification_reply for the notification's message.
 	ActionReply = "reply"
+	// ActionAcceptCall answers the ringing call carried in messageID.
+	ActionAcceptCall = "call_accept"
+	// ActionDeclineCall rejects the ringing call carried in messageID.
+	ActionDeclineCall = "call_decline"
 )
+
+// IsCallAction reports whether action is one of the two ringing-call actions.
+// Platform activation callbacks use it to admit these actions alongside the
+// message actions they already accept.
+func IsCallAction(action string) bool {
+	return action == ActionAcceptCall || action == ActionDeclineCall
+}
 
 // Options describes a single desktop notification. ChatJID and MessageID are
 // carried back through activation callbacks so the API layer can emit the
@@ -44,10 +58,19 @@ type Options struct {
 	// without ever replacing the app icon.
 	FallbackAvatar []byte
 	Actions        bool // whether to expose Open/Reply actions
+
+	// CallID marks an incoming-call notification. When set, the backend renders
+	// Answer/Decline actions instead of the message Open/Reply pair and carries
+	// this ID back in the ActionHandler's messageID argument.
+	CallID string
+	// Silent suppresses the notification sound. Call notifications ring by
+	// default (a looping call tone on Windows) unless this is set.
+	Silent bool
 }
 
 // ActionHandler is invoked when the user activates a notification action.
-// text is the inline reply where supported, otherwise empty.
+// text is the inline reply where supported, otherwise empty. For call actions
+// messageID is the ringing call's ID and text is always empty.
 type ActionHandler func(action, chatJID, messageID, text string)
 
 var (

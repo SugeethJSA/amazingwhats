@@ -17,6 +17,9 @@ import {
   GetCachedAvatar,
   SendLocation,
   PickAttachmentFile,
+  ListQuickReplies,
+  CreateQuickReply,
+  DeleteQuickReply,
 } from "../../../bindings/github.com/lugvitc/amazingwhats/api/api.js"
 import type { Message } from "../../store/types"
 import { useContactStore } from "../../store/useContactStore"
@@ -30,6 +33,16 @@ import { GifPicker } from "./GifPicker"
 import { useAppSettingsStore } from "../../store/useAppSettingsStore"
 
 const EmojiPicker = lazy(() => import("./EmojiPickerLazy"))
+/** Mirrors the API's QuickReply JSON shape; kept local so the picker does not
+ *  depend on generated binding types being present before regeneration. */
+interface QuickReplyItem {
+  id: string
+  shortcut: string
+  message: string
+  keywords: string[]
+  createdAt: number
+}
+
 interface ChatInputProps {
   chatId: string
   disabled?: boolean
@@ -105,6 +118,13 @@ const AudioIcon = () => (
 const MicIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
     <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v5.5A3.5 3.5 0 0 0 12 15Zm6-3.5a6 6 0 0 1-5 5.92V21h2v1H9v-1h2v-3.58a6 6 0 0 1-5-5.92h2a4 4 0 0 0 8 0h2Z" />
+  </svg>
+)
+
+/** Local bolt glyph for saved quick replies — no bundled brand assets. */
+const QuickRepliesIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+    <path d="M13 2 5 13h6l-1 9 8-11h-6l1-9Z" />
   </svg>
 )
 
@@ -313,6 +333,13 @@ export function ChatInput({
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [scheduleAt, setScheduleAt] = useState("")
   const [gifPickerOpen, setGifPickerOpen] = useState(false)
+  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false)
+  const [quickReplies, setQuickReplies] = useState<QuickReplyItem[]>([])
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false)
+  const [quickReplyShortcut, setQuickReplyShortcut] = useState("")
+  const [quickReplyMessage, setQuickReplyMessage] = useState("")
+  const [quickReplySaving, setQuickReplySaving] = useState(false)
+  const [quickReplyError, setQuickReplyError] = useState("")
 
   const addNotification = useUIStore(state => state.addNotification)
   const giphyApiKey = useAppSettingsStore(state => state.giphyApiKey)
@@ -450,6 +477,21 @@ export function ChatInput({
     return () => document.removeEventListener("keydown", onKey, true)
   }, [attachMenuOpen, attachSubmenuOpen])
 
+  // The quick-reply picker owns its own Escape so it closes without also
+  // closing the conversation, and returns focus to its trigger.
+  useEffect(() => {
+    if (!quickRepliesOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      event.stopPropagation()
+      setQuickRepliesOpen(false)
+      quickRepliesButtonRef.current?.focus()
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => document.removeEventListener("keydown", onKey, true)
+  }, [quickRepliesOpen])
+
   // Move focus into the menu when it opens and into the "More" level when that
   // opens. Returning from the submenu restores focus to its trigger button.
   const submenuWasOpenRef = useRef(false)
@@ -517,6 +559,7 @@ export function ChatInput({
   const attachButtonRef = useRef<HTMLButtonElement>(null)
   const attachMenuRef = useRef<HTMLDivElement>(null)
   const attachMoreButtonRef = useRef<HTMLButtonElement>(null)
+  const quickRepliesButtonRef = useRef<HTMLButtonElement>(null)
 
   // Backdrop click / Escape-equivalent dismissal: close both levels and put
   // focus back where it came from. Item actions manage their own focus (they
@@ -761,6 +804,78 @@ export function ChatInput({
     onEmojiClick(emoji.native)
   }
 
+  // Quick replies are real saved entries (see api/quick_replies.go). The
+  // picker loads them on open; create/delete go through bindings and never
+  // fabricate local-only entries when the backend write fails.
+  const loadQuickReplies = async () => {
+    setQuickRepliesLoading(true)
+    setQuickReplyError("")
+    try {
+      const items = await ListQuickReplies()
+      setQuickReplies(Array.isArray(items) ? items : [])
+    } catch (err) {
+      console.error("Failed to load quick replies:", err)
+      setQuickReplies([])
+      setQuickReplyError("Couldn't load quick replies.")
+    } finally {
+      setQuickRepliesLoading(false)
+    }
+  }
+
+  const toggleQuickReplies = () => {
+    const next = !quickRepliesOpen
+    setQuickRepliesOpen(next)
+    setQuickReplyError("")
+    if (next) void loadQuickReplies()
+  }
+
+  const insertQuickReply = (text: string) => {
+    const el = textareaRef.current
+    const start = el?.selectionStart ?? inputText.length
+    const end = el?.selectionEnd ?? inputText.length
+    const next = inputText.slice(0, start) + text + inputText.slice(end)
+    onInputChange({ target: { value: next } } as React.ChangeEvent<HTMLTextAreaElement>)
+    setQuickRepliesOpen(false)
+    requestAnimationFrame(() => {
+      const caret = Math.min(start + text.length, next.length)
+      el?.focus()
+      el?.setSelectionRange(caret, caret)
+    })
+  }
+
+  const saveQuickReply = async () => {
+    const shortcut = quickReplyShortcut.trim()
+    const message = quickReplyMessage.trim()
+    if (!shortcut || !message) {
+      setQuickReplyError("Enter both a shortcut and a message.")
+      return
+    }
+    setQuickReplySaving(true)
+    setQuickReplyError("")
+    try {
+      await CreateQuickReply(shortcut, message)
+      setQuickReplyShortcut("")
+      setQuickReplyMessage("")
+      await loadQuickReplies()
+      addNotification("Quick reply saved.", { tone: "success", durationMs: 3000 })
+    } catch (err) {
+      console.error("Failed to create quick reply:", err)
+      setQuickReplyError("Couldn't save. Check your connection and try again.")
+    } finally {
+      setQuickReplySaving(false)
+    }
+  }
+
+  const removeQuickReply = async (id: string) => {
+    try {
+      await DeleteQuickReply(id)
+      await loadQuickReplies()
+    } catch (err) {
+      console.error("Failed to delete quick reply:", err)
+      setQuickReplyError("Couldn't delete that quick reply.")
+    }
+  }
+
   const renderReplyPreview = () => {
     if (!replyingTo) return null
     const content = replyingTo.Content
@@ -938,6 +1053,123 @@ export function ChatInput({
           <IconButton ref={emojiButtonRef} onClick={onToggleEmojiPicker} title="Emoji">
             <EmojiIcon />
           </IconButton>
+
+          {/* Quick replies: saved snippets synced to WhatsApp, inserted at the caret. */}
+          <div className="relative">
+            <IconButton
+              ref={quickRepliesButtonRef}
+              onClick={toggleQuickReplies}
+              title="Quick replies"
+            >
+              <QuickRepliesIcon />
+            </IconButton>
+            {quickRepliesOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setQuickRepliesOpen(false)} />
+                <div
+                  role="dialog"
+                  aria-label="Quick replies"
+                  className="absolute bottom-12 left-0 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-100 bg-white p-3 shadow-xl dark:border-dark-border dark:bg-dark-elevated"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      Quick replies
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuickRepliesOpen(false)}
+                      aria-label="Close quick replies"
+                      className={`rounded p-1 text-light-muted hover:bg-gray-100 dark:hover:bg-white/5 ${FOCUS_RING}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {quickReplyError && (
+                    <p role="alert" className="mb-2 text-xs text-danger-ink dark:text-danger-soft">
+                      {quickReplyError}
+                    </p>
+                  )}
+                  <div className="max-h-48 overflow-y-auto">
+                    {quickRepliesLoading ? (
+                      <p className="px-2 py-3 text-xs text-light-muted dark:text-dark-muted">
+                        Loading…
+                      </p>
+                    ) : quickReplies.length === 0 ? (
+                      <p className="px-2 py-3 text-xs text-light-muted dark:text-dark-muted">
+                        No quick replies yet. Add one below.
+                      </p>
+                    ) : (
+                      quickReplies.map(item => (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => insertQuickReply(item.message || item.shortcut)}
+                            title={item.message}
+                            className={`min-w-0 flex-1 px-2 py-2 text-left ${FOCUS_RING}`}
+                          >
+                            <span className="block truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {item.shortcut}
+                            </span>
+                            <span className="block truncate text-xs text-light-muted dark:text-dark-muted">
+                              {item.message}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void removeQuickReply(item.id)}
+                            aria-label={`Delete quick reply ${item.shortcut}`}
+                            title="Delete quick reply"
+                            className={`mr-1 rounded p-1 text-danger-ink hover:bg-gray-200 dark:hover:bg-white/10 ${FOCUS_RING}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="mt-2 border-t border-gray-200 pt-2 dark:border-white/10">
+                    <input
+                      aria-label="Quick reply shortcut"
+                      value={quickReplyShortcut}
+                      onChange={event => setQuickReplyShortcut(event.target.value)}
+                      placeholder="Shortcut"
+                      maxLength={128}
+                      className={`mb-1.5 w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-xs text-gray-900 dark:border-white/20 dark:text-gray-100 ${FOCUS_RING}`}
+                    />
+                    <textarea
+                      aria-label="Quick reply message"
+                      value={quickReplyMessage}
+                      onChange={event => setQuickReplyMessage(event.target.value)}
+                      placeholder="Message"
+                      rows={2}
+                      maxLength={4096}
+                      className={`w-full resize-none rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-xs text-gray-900 dark:border-white/20 dark:text-gray-100 ${FOCUS_RING}`}
+                    />
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-light-muted dark:text-dark-muted">
+                        Saved to WhatsApp and this device.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void saveQuickReply()}
+                        disabled={
+                          quickReplySaving ||
+                          !quickReplyShortcut.trim() ||
+                          !quickReplyMessage.trim()
+                        }
+                        className={`shrink-0 rounded-lg bg-green px-3 py-1 text-xs font-medium text-white disabled:opacity-40 ${FOCUS_RING}`}
+                      >
+                        {quickReplySaving ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Text Input */}
           {/* No overflow-hidden here: the mention popover renders above the

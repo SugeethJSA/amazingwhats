@@ -49,7 +49,7 @@ func handleWindowsActivation(args string, data []toast.UserData) {
 		return
 	}
 	action := values.Get("action")
-	if action != ActionOpen && action != ActionReply {
+	if action != ActionOpen && action != ActionReply && !IsCallAction(action) {
 		return
 	}
 	text := ""
@@ -75,6 +75,7 @@ func activationArgs(action string, opts Options) string {
 	v.Set("chatJid", opts.ChatJID)
 	v.Set("messageId", opts.MessageID)
 	v.Set("senderJid", opts.SenderJID)
+	v.Set("callId", opts.CallID)
 	return v.Encode()
 }
 
@@ -139,24 +140,53 @@ func baseWindowsNotification(opts Options, iconPath string) toast.Notification {
 	}
 }
 
-// buildWindowsNotification builds the full toast with Open/Reply actions. A
-// foreground activation type is required for the in-process activation
-// callback to fire. Every value that lands in an XML attribute is escaped
-// first, including the URL-encoded arguments (whose "&" separators otherwise
-// produce the LoadXml failure).
-func buildWindowsNotification(opts Options, iconPath string) toast.Notification {
-	n := baseWindowsNotification(opts, iconPath)
-	n.ActivationArguments = xmlAttribute(activationArgs(ActionOpen, opts))
+// windowsActions resolves the action row for a toast. A ringing call gets a
+// looping call tone and two single-click foreground buttons wired to the
+// AcceptCall / RejectCall paths; it deliberately carries no reply input, since
+// answering a call must never require typing text first. Ordinary messages
+// keep the existing Open/Reply pair and its inline input. Every argument is
+// XML-escaped here so neither builder has to remember to do it again.
+func windowsActions(opts Options) ([]toast.Input, []toast.Action, string, bool) {
+	if opts.CallID != "" {
+		audio := toast.LoopingCall
+		if opts.Silent {
+			audio = toast.Silent
+		}
+		return nil, []toast.Action{
+			{Type: toast.Foreground, Content: "Accept", Arguments: xmlAttribute(activationArgs(ActionAcceptCall, opts))},
+			{Type: toast.Foreground, Content: "Decline", Arguments: xmlAttribute(activationArgs(ActionDeclineCall, opts))},
+		}, audio, !opts.Silent
+	}
 	if opts.Actions {
-		n.Inputs = []toast.Input{{
+		return []toast.Input{{
 			ID:          replyInputID,
 			Title:       "Reply",
 			Placeholder: "Type your reply...",
-		}}
-		n.Actions = []toast.Action{
+		}}, []toast.Action{
 			{Type: toast.Foreground, Content: "Open", Arguments: xmlAttribute(activationArgs(ActionOpen, opts))},
 			{Type: toast.Foreground, Content: "Reply", Arguments: xmlAttribute(activationArgs(ActionReply, opts))},
-		}
+		}, "", false
+	}
+	return nil, nil, "", false
+}
+
+// buildWindowsNotification builds the full toast with Open/Reply or
+// Accept/Decline actions. A foreground activation type is required for the
+// in-process activation callback to fire. Every value that lands in an XML
+// attribute is escaped first, including the URL-encoded arguments (whose "&"
+// separators otherwise produce the LoadXml failure).
+func buildWindowsNotification(opts Options, iconPath string) toast.Notification {
+	n := baseWindowsNotification(opts, iconPath)
+	n.ActivationArguments = xmlAttribute(activationArgs(ActionOpen, opts))
+	inputs, actions, audio, loop := windowsActions(opts)
+	n.Inputs = inputs
+	n.Actions = actions
+	n.Audio = audio
+	n.Loop = loop
+	if opts.CallID != "" {
+		// A ringing call should stay on screen until answered or dismissed,
+		// rather than expiring with the short message-toast duration.
+		n.Duration = toast.Long
 	}
 	return n
 }
@@ -219,24 +249,42 @@ func buildWindowsAvatarToastXML(opts Options, avatarPath string) string {
 	var b strings.Builder
 	b.WriteString(`<toast activationType="Foreground" launch="`)
 	b.WriteString(xmlAttribute(activationArgs(ActionOpen, opts)))
-	b.WriteString(`" duration="Short"><visual><binding template="ToastGeneric">`)
+	duration := "Short"
+	if opts.CallID != "" {
+		duration = "Long"
+	}
+	b.WriteString(`" duration="` + duration + `"><visual><binding template="ToastGeneric">`)
 	b.WriteString(`<image placement="appLogoOverride" hint-crop="circle" src="` + xmlAttribute(avatarPath) + `" />`)
 	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Title) + `]]></text>`)
 	b.WriteString(`<text><![CDATA[` + xmlCDATA(opts.Body) + `]]></text>`)
 	b.WriteString(`</binding></visual>`)
-	if opts.Actions {
+	inputs, actions, audio, loop := windowsActions(opts)
+	if audio == toast.Silent {
+		b.WriteString(`<audio silent="true" />`)
+	} else if audio != "" {
+		b.WriteString(fmt.Sprintf(`<audio src="%s" loop="%t" />`, xmlAttribute(audio), loop))
+	}
+	if len(actions) > 0 {
 		b.WriteString(`<actions>`)
-		b.WriteString(`<input id="` + replyInputID + `" type="text" placeHolderContent="Type your reply..." />`)
-		b.WriteString(`<action activationType="foreground" content="Open" arguments="` + xmlAttribute(activationArgs(ActionOpen, opts)) + `" />`)
-		b.WriteString(`<action activationType="foreground" content="Reply" arguments="` + xmlAttribute(activationArgs(ActionReply, opts)) + `" />`)
+		for _, in := range inputs {
+			b.WriteString(`<input id="` + xmlAttribute(in.ID) + `" type="text" placeHolderContent="` + xmlAttribute(in.Placeholder) + `" />`)
+		}
+		for _, action := range actions {
+			// Arguments were already escaped by windowsActions; escaping twice
+			// would corrupt the round-tripped "&" separators.
+			b.WriteString(`<action activationType="` + xmlAttribute(action.Type) +
+				`" content="` + xmlAttribute(action.Content) +
+				`" arguments="` + action.Arguments + `" />`)
+		}
 		b.WriteString(`</actions>`)
 	}
 	b.WriteString(`</toast>`)
 	return b.String()
 }
 
-// Notify pushes exactly ONE Windows toast per message, using the richest form
-// available (avatar badge + Open/Reply actions, or Open/Reply actions).
+// Notify pushes exactly ONE Windows toast per event, using the richest form
+// available (avatar badge + actions, or actions). For a ringing call the actions
+// are Accept/Decline; for a message they are Open/Reply.
 //
 // go-toast tries COM and falls back to PowerShell. That fallback can display a
 // toast AND return a non-nil error (the COM failure). Treating such an error as

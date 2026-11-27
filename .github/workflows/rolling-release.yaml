@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+      commit: ${{ steps.check.outputs.commit }}
+      short_sha: ${{ steps.check.outputs.short_sha }}
+      date: ${{ steps.check.outputs.date }}
 
     steps:
       - name: Checkout repository
@@ -33,13 +37,46 @@ jobs:
           git fetch origin --tags --force
 
           short_sha="$(git rev-parse --short HEAD)"
-          if git tag --list "v*-${short_sha}" | grep -q .; then
+
+          # D-UPDATER-001: compute the release version ONCE, here, and reuse it
+          # in every build leg and in the publish job. Previously each matrix
+          # leg and the publish job recomputed it independently, so a run that
+          # crossed a UTC day boundary could stamp one version into the exe
+          # and tag the release with another.
+          #
+          # Release tags MUST be monotonically increasing SemVer. The old
+          # "vYYYY.MM.DD-<sha>" form put the commit hash in the prerelease
+          # field, and SemVer compares prerelease identifiers lexically —
+          # a newer commit whose hash sorted lower than an installed build's
+          # hash was judged OLDER and the updater refused to install it
+          # (v2026.11.27-ce118b4 < v2026.11.27-f1dcbe8 although it was
+          # published 8.5 hours later). A numeric patch built from the UTC
+          # day and HHMMSS fixes that: 2026-11-27 12:55:11 ->
+          # v2026.11.27125511. The 10# bases keep it leading-zero-safe.
+          Y=$((10#$(date -u +%Y)))
+          M=$((10#$(date -u +%m)))
+          D=$((10#$(date -u +%d)))
+          HMS=$((10#$(date -u +%H%M%S)))
+          PATCH=$(( D * 1000000 + HMS ))
+          echo "version=v${Y}.${M}.${PATCH}" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+          # The release tag no longer contains the commit hash, so a plain
+          # marker tag keeps commit-level idempotency working without
+          # publishing a second GitHub Release.
+          if git tag --list "rolling-${short_sha}" | grep -q .; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
           else
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           fi
 
   build:
+    # D-UPDATER-001: depend on prepare only to share the single version value.
+    # Deliberately no `if` here: if a publish fails after the marker tag was
+    # pushed, a rerun must still rebuild instead of being skipped forever.
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -123,11 +160,18 @@ jobs:
       - name: Build version info
         id: version
         shell: bash
+        env:
+          # D-UPDATER-001: one version for the whole workflow, computed in
+          # prepare. Re-computing it per job could stamp a different version
+          # into the binary than the tag used for the release.
+          VERSION: ${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+          BUILD_DATE: ${{ needs.prepare.outputs.date }}
         run: |
-          VERSION="v$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          test -n "$VERSION" && test -n "$COMMIT" && test -n "$BUILD_DATE"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+          echo "date=$BUILD_DATE" >> "$GITHUB_OUTPUT"
 
       - name: Build binaries (Linux / macOS)
         if: matrix.os != 'windows-latest'
@@ -359,9 +403,15 @@ jobs:
       - name: Compute version
         id: version
         shell: bash
+        env:
+          # D-UPDATER-001: reuse the prepare job's version verbatim so the
+          # tag always matches the version stamped into the published exe.
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SHORT_SHA: ${{ needs.prepare.outputs.short_sha }}
         run: |
-          VERSION="v$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          test -n "$VERSION" && test -n "$SHORT_SHA"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -420,9 +470,17 @@ jobs:
 
       - name: Create rolling release tag
         shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHORT_SHA: ${{ steps.version.outputs.short_sha }}
         run: |
-          git tag -f ${{ steps.version.outputs.version }}
-          git push -f origin ${{ steps.version.outputs.version }}
+          set -euo pipefail
+          # D-UPDATER-001: the plain marker tag carries no GitHub Release, so
+          # the provider's /releases/latest call never sees it. It exists only
+          # so the prepare job can detect that this commit was already built.
+          git tag -f "$VERSION"
+          git tag -f "rolling-${SHORT_SHA}"
+          git push -f origin "$VERSION" "rolling-${SHORT_SHA}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -431,6 +489,10 @@ jobs:
           name: "Release ${{ steps.version.outputs.version }}"
           body: |
             Rolling release built from commit ${{ github.sha }}.
+
+            Version `${{ steps.version.outputs.version }}` is a UTC timestamp
+            encoded as SemVer (`vYYYY.MM.<DDHHMMSS>`) so the in-app updater's
+            strict SemVer comparison always sees a newer build as newer.
 
             ## Downloads
             - **Linux**: `amazingwhats-linux-amd64.AppImage`

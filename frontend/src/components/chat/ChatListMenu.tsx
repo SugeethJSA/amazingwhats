@@ -13,7 +13,8 @@ import { useChatStore, useUIStore } from "../../store"
  * Honesty rule: an item is only enabled when this client actually implements
  * it. Business-only entries appear only after GetProfile("") confirms a
  * business account, and entries with no screen/binding stay disabled with a
- * short explanation instead of pretending to work.
+ * short explanation instead of pretending to work. "Select chats" and "Lists"
+ * are real local flows owned by ChatScreen (multi-select + saved chat lists).
  */
 export interface ChatListMenuProps {
   /** Top-left corner, already clamped inside the viewport by the caller. */
@@ -24,6 +25,12 @@ export interface ChatListMenuProps {
   onClose: () => void
   onNewGroup: () => void
   onOpenSettings: () => void
+  /** Enter the chat-list multi-select mode (real local selection + bulk actions). */
+  onSelectChats: () => void
+  /** Open the saved/custom chat lists view. */
+  onOpenLists: () => void
+  /** Open the starred-messages view in the chat-list pane. */
+  onOpenStarred: () => void
 }
 
 type IconProps = { children: ReactNode }
@@ -153,6 +160,9 @@ export function ChatListMenu({
   onClose,
   onNewGroup,
   onOpenSettings,
+  onSelectChats,
+  onOpenLists,
+  onOpenStarred,
 }: ChatListMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [isBusiness, setIsBusiness] = useState(false)
@@ -338,25 +348,25 @@ export function ChatListMenu({
       id: "starred-messages",
       label: "Starred messages",
       icon: <StarredIcon />,
-      ariaLabel: "Starred messages — not available",
-      disabled: true,
-      hint: "There's no starred-messages view yet",
+      ariaLabel: "Starred messages - browse messages you starred",
+      hint: "Browse messages you starred across chats",
+      onSelect: onOpenStarred,
     },
     {
       id: "select-chats",
       label: "Select chats",
       icon: <SelectChatsIcon />,
-      ariaLabel: "Select chats — not available",
-      disabled: true,
-      hint: "Chat selection isn't available yet",
+      ariaLabel: "Select chats — choose multiple chats",
+      hint: "Select chats to mark as read, add to a list, or delete",
+      onSelect: onSelectChats,
     },
     {
       id: "lists",
       label: "Lists",
       icon: <ListsIcon />,
-      ariaLabel: "Lists — not available",
-      disabled: true,
-      hint: "Lists aren't available in this client",
+      ariaLabel: "Lists — open saved chat lists",
+      hint: "Open your saved and custom chat lists",
+      onSelect: onOpenLists,
     },
     {
       id: "mark-all-read",

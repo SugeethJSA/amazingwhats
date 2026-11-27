@@ -33,6 +33,7 @@ import { StatusList, StoryViewer, type StatusGroup } from "../components/chat/St
 import { CreateGroupDialog } from "../components/chat/CreateGroupDialog"
 import { CreateChannelDialog } from "../components/chat/CreateChannelDialog"
 import { ChatListMenu } from "../components/chat/ChatListMenu"
+import { ListsView } from "../components/chat/ListsView"
 import { CommunityList, CommunityHome, CommunitiesWelcome } from "../components/chat/Communities"
 import {
   getAvatarColor,
@@ -42,7 +43,7 @@ import {
   formatChatTimestamp,
 } from "../lib/utils"
 import { useAppSettingsStore } from "../store/useAppSettingsStore"
-import { UserAvatar, NewChatIcon, MenuIcon, MutedBellIcon } from "../assets/svgs/chat_icons"
+import { NewChatIcon, MenuIcon, MutedBellIcon } from "../assets/svgs/chat_icons"
 import { SearchIcon } from "../assets/svgs/settings_icons"
 import { GoBackIcon } from "../assets/svgs/header_icons"
 import {
@@ -53,6 +54,7 @@ import {
 import { MessageSearchScreen } from "./MessageSearchScreen"
 import { CallsScreen } from "../components/chat/CallsScreen"
 import { SelfProfileDrawer } from "../components/SelfProfileDrawer"
+import { StarredMessagesView } from "../components/chat/StarredMessagesView"
 import ConfirmDialog from "@/components/common/ConfirmDialog"
 import Wordmark from "@/components/common/Wordmark"
 
@@ -209,10 +211,9 @@ interface HeaderProps {
   menuOpen: boolean
   onNewChat?: () => void
   onSearch?: () => void
-  avatar?: string
 }
 
-const Header = ({ onOpenMenu, menuOpen, onNewChat, onSearch, avatar }: HeaderProps) => (
+const Header = ({ onOpenMenu, menuOpen, onNewChat, onSearch }: HeaderProps) => (
   <div className="h-16 bg-light-secondary dark:bg-dark-bg flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5">
     <Wordmark compact textClassName="text-xl" markClassName="h-6 w-6" />
     <div className="flex items-center gap-1 text-gray-600 dark:text-dark-muted">
@@ -244,9 +245,6 @@ const Header = ({ onOpenMenu, menuOpen, onNewChat, onSearch, avatar }: HeaderPro
       >
         <MenuIcon />
       </button>
-      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 overflow-hidden flex items-center justify-center ml-2">
-        {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" /> : <UserAvatar />}
-      </div>
     </div>
   </div>
 )
@@ -410,11 +408,30 @@ interface ChatListItemContentProps {
   chat: ChatItem
   muted: boolean
   isSelected: boolean
+  /** When true the row toggles multi-select membership instead of opening a chat. */
+  multiSelectMode: boolean
+  isChecked: boolean
   onSelect: (chat: ChatItem) => void
   onContextMenu: (e: React.MouseEvent, chat: ChatItem) => void
   onMenuTrigger: (e: React.MouseEvent, chat: ChatItem) => void
   isMenuOpen: boolean
 }
+
+const SelectionCheckIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="12"
+    height="12"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m5 12 4 4L19 6" />
+  </svg>
+)
 
 // Pure presentational component - memoized to prevent unnecessary re-renders
 const ChatListItemContent = memo(
@@ -422,6 +439,8 @@ const ChatListItemContent = memo(
     chat,
     muted,
     isSelected,
+    multiSelectMode,
+    isChecked,
     onSelect,
     onContextMenu,
     onMenuTrigger,
@@ -440,6 +459,7 @@ const ChatListItemContent = memo(
           // Same selected fill as the sidebar tabs: a signal tint plus a full
           // inset ring (never a one-sided stripe). See .chat-row-selected.
           isSelected && "chat-row-selected bg-green-muted",
+          multiSelectMode && isChecked && "bg-green-muted",
         )}
       >
         <button
@@ -447,9 +467,26 @@ const ChatListItemContent = memo(
           onClick={() => onSelect(chat)}
           onContextMenu={e => onContextMenu(e, chat)}
           aria-current={isSelected ? "true" : undefined}
-          aria-label={`${chat.name}${chat.unreadCount ? `, ${chat.unreadCount} unread` : ""}`}
+          aria-pressed={multiSelectMode ? isChecked : undefined}
+          aria-label={
+            `${chat.name}${chat.unreadCount ? `, ${chat.unreadCount} unread` : ""}` +
+            (multiSelectMode ? `, ${isChecked ? "selected" : "not selected"}` : "")
+          }
           className="flex min-w-0 flex-1 items-center px-3 py-3 text-left"
         >
+          {multiSelectMode && (
+            <span
+              className={clsx(
+                "mr-3 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2",
+                isChecked
+                  ? "border-green bg-green text-action-ink"
+                  : "border-gray-400 dark:border-gray-500",
+              )}
+              aria-hidden="true"
+            >
+              {isChecked && <SelectionCheckIcon />}
+            </span>
+          )}
           {isCommunityChat ? (
             <CommunityStackedAvatar
               communityAvatar={chat.communityAvatar}
@@ -520,19 +557,21 @@ const ChatListItemContent = memo(
             </div>
           </div>
         </button>
-        <button
-          type="button"
-          onClick={e => onMenuTrigger(e, chat)}
-          aria-label={`More options for ${chat.name}`}
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen}
-          className={clsx(
-            "mr-1 flex shrink-0 items-center justify-center rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10",
-            "opacity-70 group-hover:opacity-100",
-          )}
-        >
-          <MenuIcon />
-        </button>
+        {!multiSelectMode && (
+          <button
+            type="button"
+            onClick={e => onMenuTrigger(e, chat)}
+            aria-label={`More options for ${chat.name}`}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            className={clsx(
+              "mr-1 flex shrink-0 items-center justify-center rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10",
+              "opacity-70 group-hover:opacity-100",
+            )}
+          >
+            <MenuIcon />
+          </button>
+        )}
       </div>
     )
   },
@@ -543,6 +582,8 @@ ChatListItemContent.displayName = "ChatListItemContent"
 interface ChatListItemProps {
   chatId: string
   isSelected: boolean
+  multiSelectMode: boolean
+  isChecked: boolean
   onSelect: (chat: ChatItem) => void
   onContextMenu: (e: React.MouseEvent, chat: ChatItem) => void
   onMenuTrigger: (e: React.MouseEvent, chat: ChatItem) => void
@@ -554,6 +595,8 @@ const ChatListItem = memo(
   ({
     chatId,
     isSelected,
+    multiSelectMode,
+    isChecked,
     onSelect,
     onContextMenu,
     onMenuTrigger,
@@ -571,6 +614,8 @@ const ChatListItem = memo(
         chat={chat}
         muted={muted}
         isSelected={isSelected}
+        multiSelectMode={multiSelectMode}
+        isChecked={isChecked}
         onSelect={onSelect}
         onContextMenu={onContextMenu}
         onMenuTrigger={onMenuTrigger}
@@ -945,7 +990,6 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const selectedChatAvatar = useChatStore(state => state.selectedChatAvatar)
   const searchTerm = useChatStore(state => state.searchTerm)
   const setChats = useChatStore(state => state.setChats)
-  const selfAvatar = useSelfAvatarStore(state => state.selfAvatar)
   const setSelfAvatar = useSelfAvatarStore(state => state.setSelfAvatar)
   const selectChat = useChatStore(state => state.selectChat)
   const setSearchTerm = useChatStore(state => state.setSearchTerm)
@@ -959,6 +1003,12 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const [showSubscribeChannel, setShowSubscribeChannel] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [starredOpen, setStarredOpen] = useState(false)
+
+  useEffect(
+    () => EventsOn("wa:open-starred-messages", () => setStarredOpen(true)),
+    [],
+  )
   const [chatFilter, setChatFilter] = useState<ChatListFilter>("all")
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [isInviting, setIsInviting] = useState(false)
@@ -968,6 +1018,15 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   // so the popup stays next to the button and inside the WebView viewport.
   const [listMenu, setListMenu] = useState<{ x: number; y: number } | null>(null)
   const listMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
+
+  // Multi-select is local UI state: it toggles real chat ids and the bulk
+  // actions call the same MarkChatAsRead / DeleteChat bindings the per-chat
+  // menu uses. Nothing here is a cosmetic-only selection.
+  const [multiSelectMode, setMultiSelectMode] = useState(false)
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false)
+  const [listsMode, setListsMode] = useState<"manage" | "add-to-list" | null>(null)
 
   // Sidebar view is store-backed so the persistent left rail can drive it.
   // Keep the local names `view` / `setView` so every existing check below stays
@@ -1011,6 +1070,125 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       clearUnreadCount(chat.id)
     },
     [selectChat, clearUnreadCount],
+  )
+
+  // --- Real multi-select mode ------------------------------------------------
+  const enterMultiSelect = useCallback(() => {
+    setCheckedIds(new Set())
+    setMultiSelectMode(true)
+  }, [])
+
+  const exitMultiSelect = useCallback(() => {
+    setMultiSelectMode(false)
+    setCheckedIds(new Set())
+    setPendingBulkDelete(false)
+  }, [])
+
+  const toggleChecked = useCallback((chatId: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(chatId)) next.delete(chatId)
+      else next.add(chatId)
+      return next
+    })
+  }, [])
+
+  const handleChatRowClick = useCallback(
+    (chat: ChatItem) => {
+      if (multiSelectMode) {
+        toggleChecked(chat.id)
+        return
+      }
+      handleChatSelect(chat)
+    },
+    [multiSelectMode, toggleChecked, handleChatSelect],
+  )
+
+  const selectAllVisible = useCallback(() => {
+    setCheckedIds(new Set(filteredIdsRef.current))
+  }, [])
+
+  const clearChecked = useCallback(() => setCheckedIds(new Set()), [])
+
+  const handleBulkMarkRead = useCallback(async () => {
+    const ids = Array.from(checkedIds)
+    if (ids.length === 0 || bulkBusy) return
+    setBulkBusy(true)
+    try {
+      const results = await Promise.allSettled(ids.map(id => MarkChatAsRead(id, true)))
+      const done: string[] = []
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          useChatStore.getState().clearUnreadCount(ids[index])
+          done.push(ids[index])
+        }
+      })
+      if (done.length > 0) {
+        setCheckedIds(prev => {
+          const next = new Set(prev)
+          done.forEach(id => next.delete(id))
+          return next
+        })
+      }
+      const failed = ids.length - done.length
+      addNotification(
+        failed > 0
+          ? `Marked ${done.length} chat(s) as read; ${failed} failed.`
+          : `Marked ${done.length} chat(s) as read.`,
+        { tone: failed > 0 ? "error" : "success" },
+      )
+    } finally {
+      setBulkBusy(false)
+    }
+  }, [checkedIds, bulkBusy, addNotification])
+
+  const confirmBulkDelete = useCallback(async () => {
+    setPendingBulkDelete(false)
+    const ids = Array.from(checkedIds)
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    try {
+      const results = await Promise.allSettled(ids.map(id => DeleteChat(id)))
+      const done: string[] = []
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          useChatStore.getState().removeChat(ids[index])
+          done.push(ids[index])
+        }
+      })
+      const failed = ids.length - done.length
+      if (done.length > 0) {
+        const store = useChatStore.getState()
+        if (store.selectedChatId && done.includes(store.selectedChatId)) store.selectChat(null)
+        exitMultiSelect()
+      }
+      addNotification(
+        failed > 0
+          ? `Deleted ${done.length} chat(s); ${failed} failed.`
+          : `Deleted ${done.length} chat(s).`,
+        { tone: failed > 0 ? "error" : "success" },
+      )
+    } finally {
+      setBulkBusy(false)
+    }
+  }, [checkedIds, exitMultiSelect, addNotification])
+
+  const openAddToList = useCallback(() => {
+    if (checkedIds.size === 0) return
+    setListsMode("add-to-list")
+  }, [checkedIds])
+
+  const handleListsApplied = useCallback(
+    (name: string, added: number) => {
+      addNotification(
+        added > 0
+          ? `Added ${added} chat(s) to “${name}”.`
+          : `Those chats are already in “${name}”.`,
+        { tone: "success" },
+      )
+      exitMultiSelect()
+    },
+    [addNotification, exitMultiSelect],
   )
 
   // Reuse the existing header trigger; only the menu state is new.
@@ -1264,9 +1442,10 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
   const handleChatContextMenu = useCallback(
     (e: React.MouseEvent, chat: ChatItem) => {
       e.preventDefault()
+      if (multiSelectMode) return
       openChatMenu(e.clientX, e.clientY, chat, (e.currentTarget as HTMLElement) ?? null)
     },
-    [openChatMenu],
+    [openChatMenu, multiSelectMode],
   )
 
   // Keyboard-accessible path: a labelled options button on every chat row.
@@ -1274,6 +1453,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
     (e: React.MouseEvent, chat: ChatItem) => {
       e.preventDefault()
       e.stopPropagation()
+      if (multiSelectMode) return
       const rect = e.currentTarget.getBoundingClientRect()
       openChatMenu(
         Math.min(rect.left, window.innerWidth - 208),
@@ -1282,7 +1462,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         e.currentTarget as HTMLElement,
       )
     },
-    [openChatMenu],
+    [openChatMenu, multiSelectMode],
   )
 
   // Put focus on the first item when the menu opens so arrow keys work at once.
@@ -1361,13 +1541,33 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
 
   // ESC leaves the archived view (and closes the context menu). When a chat
   // is open, ChatDetail's own ESC handler takes precedence — skip here so a
-  // single press doesn't trigger both.
+  // single press doesn't trigger both. Capture phase + stopPropagation in the
+  // multi-select branch is required: ChatDetail also listens on window (bubble),
+  // so a plain `return` here would still let it close the open conversation.
   useEffect(() => {
-    if (!showArchived && !chatMenu && !selectedCommunity) return
+    if (
+      !showArchived &&
+      !chatMenu &&
+      !selectedCommunity &&
+      !multiSelectMode &&
+      !listsMode &&
+      !pendingBulkDelete
+    )
+      return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return
+      // ListsView and the bulk-delete confirmation own Escape while open.
+      if (listsMode || pendingBulkDelete) return
       if (chatMenu) {
         closeChatMenu()
+        return
+      }
+      if (multiSelectMode) {
+        // One Escape press belongs to selection mode only. ChatDetail's
+        // window ESC listener must not see it and close the active chat.
+        e.preventDefault()
+        e.stopPropagation()
+        exitMultiSelect()
         return
       }
       if (useChatStore.getState().selectedChatId) return
@@ -1377,9 +1577,20 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
       }
       setShowArchived(false)
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [showArchived, chatMenu, selectedCommunity, closeChatMenu])
+    // Capture on window so this runs before ChatDetail's bubble listener,
+    // regardless of which effect registered first.
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
+  }, [
+    showArchived,
+    chatMenu,
+    selectedCommunity,
+    multiSelectMode,
+    listsMode,
+    pendingBulkDelete,
+    closeChatMenu,
+    exitMultiSelect,
+  ])
 
   const handleToggleArchive = useCallback(async () => {
     if (!chatMenu) return
@@ -1790,7 +2001,6 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             menuOpen={listMenu !== null}
             onNewChat={() => setShowCreateGroup(true)}
             onSearch={() => setShowSearch(true)}
-            avatar={selfAvatar}
           />
           {view !== "status" && view !== "calls" && (
             <SearchBar
@@ -1949,6 +2159,65 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
             </div>
           )}
 
+          {multiSelectMode && (
+            <div
+              role="toolbar"
+              aria-label="Chat selection actions"
+              className="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-green-muted/40 px-3 py-2 dark:border-white/5"
+            >
+              <button
+                type="button"
+                onClick={exitMultiSelect}
+                aria-label="Cancel selection"
+                className="rounded-full p-1.5 text-gray-600 transition-colors hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10"
+              >
+                <GoBackIcon />
+              </button>
+              <span className="mr-auto px-1 text-xs font-medium text-green-ink">
+                {checkedIds.size} selected
+              </span>
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 dark:text-dark-muted dark:hover:bg-white/10"
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={clearChecked}
+                disabled={checkedIds.size === 0}
+                className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:text-dark-muted dark:hover:bg-white/10"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBulkMarkRead()}
+                disabled={checkedIds.size === 0 || bulkBusy}
+                className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:text-dark-muted dark:hover:bg-white/10"
+              >
+                {bulkBusy ? "Working…" : "Mark read"}
+              </button>
+              <button
+                type="button"
+                onClick={openAddToList}
+                disabled={checkedIds.size === 0}
+                className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:text-dark-muted dark:hover:bg-white/10"
+              >
+                Add to list
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingBulkDelete(true)}
+                disabled={checkedIds.size === 0 || bulkBusy}
+                className="rounded-full px-2.5 py-1 text-xs font-medium text-[var(--color-danger-ink)] transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-white/10"
+              >
+                Delete
+              </button>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto">
             {view === "calls" ? (
               <CallsScreen
@@ -1990,8 +2259,10 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
                 <ChatListItem
                   key={chatId}
                   chatId={chatId}
-                  isSelected={selectedChatId === chatId}
-                  onSelect={handleChatSelect}
+                  isSelected={!multiSelectMode && selectedChatId === chatId}
+                  multiSelectMode={multiSelectMode}
+                  isChecked={multiSelectMode && checkedIds.has(chatId)}
+                  onSelect={handleChatRowClick}
                   onContextMenu={handleChatContextMenu}
                   onMenuTrigger={handleChatMenuTrigger}
                   isMenuOpen={chatMenu?.chat.id === chatId}
@@ -2002,6 +2273,14 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         </>
       )}
     </div>
+  )
+
+  // The starred view replaces the chat-list pane; the conversation pane is
+  // untouched so selecting a starred message can reuse the normal flow.
+  const listPaneContent = starredOpen ? (
+    <StarredMessagesView onClose={() => setStarredOpen(false)} />
+  ) : (
+    listPane
   )
 
   // The right pane is a conversation surface only. Status lives entirely in
@@ -2055,6 +2334,25 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
           onClose={closeListMenu}
           onNewGroup={() => setShowCreateGroup(true)}
           onOpenSettings={onOpenSettings}
+          onSelectChats={enterMultiSelect}
+          onOpenLists={() => setListsMode("manage")}
+          onOpenStarred={() => {
+            closeListMenu()
+            setStarredOpen(true)
+          }}
+        />
+      )}
+      {listsMode && (
+        <ListsView
+          mode={listsMode}
+          presetChatIds={listsMode === "add-to-list" ? Array.from(checkedIds) : undefined}
+          onClose={() => setListsMode(null)}
+          onOpenChat={id => {
+            const chat = getChat(id)
+            if (chat) handleChatSelect(chat)
+            exitMultiSelect()
+          }}
+          onApplied={handleListsApplied}
         />
       )}
       {chatMenu && (
@@ -2159,7 +2457,7 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
               let the detail pane auto-fill the remainder (min 45% keeps it
               usable on narrow windows). The md swap below still owns <768px. */}
           <ResizablePanel defaultSize="340px" minSize="300px" maxSize="520px">
-            {listPane}
+            {listPaneContent}
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel minSize="45%">{detailPane}</ResizablePanel>
@@ -2186,6 +2484,16 @@ export function ChatListScreen({ onOpenSettings }: ChatListScreenProps) {
         tone="danger"
         onConfirm={confirmDeleteChat}
         onCancel={() => setPendingDeleteChat(null)}
+      />
+      <ConfirmDialog
+        open={pendingBulkDelete}
+        title={`Delete ${checkedIds.size} selected chat(s)?`}
+        description="These chats and their local message history are removed from this device. It cannot be undone; conversations on the other device are unaffected."
+        confirmLabel="Delete chats"
+        cancelLabel="Keep chats"
+        tone="danger"
+        onConfirm={() => void confirmBulkDelete()}
+        onCancel={() => setPendingBulkDelete(false)}
       />
     </div>
   )

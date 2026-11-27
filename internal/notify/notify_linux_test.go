@@ -54,3 +54,43 @@ func TestLinuxActionDispatch(t *testing.T) {
 		t.Fatal("untracked notification was dispatched")
 	}
 }
+
+func TestLinuxCallActions(t *testing.T) {
+	callActions := callOrMessageActions(Options{CallID: "call-7"})
+	if len(callActions) != 3 || callActions[1].Key != linuxActionAcceptCall ||
+		callActions[2].Key != linuxActionDeclineCall {
+		t.Fatalf("call actions = %+v, want Accept and Decline", callActions)
+	}
+	messageActions := callOrMessageActions(Options{})
+	if len(messageActions) != 3 || messageActions[1].Key != linuxActionOpen ||
+		messageActions[2].Key != linuxActionReply {
+		t.Fatalf("message actions = %+v, want Open and Reply", messageActions)
+	}
+}
+
+func TestLinuxCallActionDispatch(t *testing.T) {
+	previous := actionHandler
+	t.Cleanup(func() { actionHandler = previous })
+
+	var gotAction, gotMessage string
+	SetActionHandler(func(action, chatJID, messageID, text string) {
+		gotAction, gotMessage = action, messageID
+	})
+
+	trackNotification(11, notificationContext{chatJID: "1@s.whatsapp.net", messageID: "call-7"})
+	handleLinuxAction(11, linuxActionAcceptCall)
+	if gotAction != ActionAcceptCall || gotMessage != "call-7" {
+		t.Fatalf("accept dispatch = %q %q", gotAction, gotMessage)
+	}
+	// The context is one-shot; a second activation must be ignored.
+	handleLinuxAction(11, linuxActionDeclineCall)
+	if gotAction != ActionAcceptCall {
+		t.Fatal("call notification context was not consumed")
+	}
+
+	trackNotification(12, notificationContext{chatJID: "1@s.whatsapp.net", messageID: "call-8"})
+	handleLinuxAction(12, linuxActionDeclineCall)
+	if gotAction != ActionDeclineCall || gotMessage != "call-8" {
+		t.Fatalf("decline dispatch = %q %q", gotAction, gotMessage)
+	}
+}
