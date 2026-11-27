@@ -995,7 +995,7 @@ func (ms *MessageStore) InsertMessage(info *types.MessageInfo, msg *waE2E.Messag
 // can never smuggle HTML/script into the UI.
 func (ms *MessageStore) InsertSystemMessage(chatJID, messageID, text string, timestamp int64) error {
 	text = markdown.StripHTML(text)
-	return ms.runSync(func(tx *sql.Tx) error {
+	if err := ms.runSync(func(tx *sql.Tx) error {
 		_, err := tx.Stmt(ms.stmtInsertMessage).Exec(
 			messageID,
 			chatJID,
@@ -1010,7 +1010,13 @@ func (ms *MessageStore) InsertSystemMessage(chatJID, messageID, text string, tim
 			0,     // type – MediaTypeNone
 		)
 		return err
-	})
+	}); err != nil {
+		return err
+	}
+	// A system line becomes the chat preview (group events, security-code
+	// changes, etc.), so drop the cached row before the UI refresh runs.
+	ms.invalidateChatListCacheForMessage(messageID)
+	return nil
 }
 
 // invalidateChatListCacheForMessage drops the per-chat preview cache entry for

@@ -235,10 +235,16 @@ func buildWindowsAvatarToastXML(opts Options, avatarPath string) string {
 	return b.String()
 }
 
-// Notify pushes a Windows toast with Open and Reply actions. If the rich
-// notification is rejected (for example by a Windows build with a stricter XML
-// parser), it degrades to a plain toast with the same app name and icon instead
-// of returning the same error for every message.
+// Notify pushes exactly ONE Windows toast per message, using the richest form
+// available (avatar badge + Open/Reply actions, or Open/Reply actions).
+//
+// go-toast tries COM and falls back to PowerShell. That fallback can display a
+// toast AND return a non-nil error (the COM failure). Treating such an error as
+// "nothing was shown" and trying another toast shape made one message produce
+// three notifications: with avatar, without avatar, and plain. There is no
+// reliable way to ask the library whether a fallback displayed anything, so
+// delivery is attempted once and only once; the backend error is logged for
+// diagnostics and is never used to trigger a second push.
 func Notify(opts Options) error {
 	iconPath, err := resolveIconPath(opts)
 	if err != nil {
@@ -254,31 +260,17 @@ func Notify(opts Options) error {
 		avatar = opts.Image
 	}
 	if len(avatar) > 0 && iconPath != "" {
-		if err := pushWindowsToastWithAvatar(opts, iconPath, avatar); err == nil {
-			return nil
-		} else {
+		if err := pushWindowsToastWithAvatar(opts, iconPath, avatar); err != nil {
 			warnFailureOnce("toast with avatar", err)
+			return err
 		}
+		return nil
 	}
 
 	notification := buildWindowsNotification(opts, iconPath)
 	if err := notification.Push(); err != nil {
 		warnFailureOnce("toast with actions", err)
-		return pushPlainWindowsNotification(opts, iconPath)
-	}
-	return nil
-}
-
-// pushPlainWindowsNotification keeps the alert flowing even when actions
-// cannot be delivered. go-toast falls back to PowerShell when COM is
-// unavailable; that path cannot deliver callbacks, so the notification is
-// already effectively plain there. Returning nil is deliberate: the caller
-// logs every returned error, and a persistent backend failure must not be
-// logged once per message.
-func pushPlainWindowsNotification(opts Options, iconPath string) error {
-	plain := baseWindowsNotification(opts, iconPath)
-	if err := plain.Push(); err != nil {
-		warnFailureOnce("plain toast", err)
+		return err
 	}
 	return nil
 }

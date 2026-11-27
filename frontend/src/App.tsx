@@ -381,15 +381,8 @@ function App() {
       addNotification(sanitizeErrorMessage(msg), { tone: "error", durationMs: 6000 })
     })
 
-    // Identity changes are auto-trusted for WhatsApp-Web parity, but must be
-    // visible: use the same toast path as other backend security errors.
-    const unsubIdentity = EventsOn("wa:identity_change", (_msg: string) => {
-      // Do not render the raw payload: it contains a contact JID.
-      addNotification("A contact's security code changed. Verify it in WhatsApp on your phone.", {
-        tone: "warning",
-        durationMs: 8000,
-      })
-    })
+    // Security-code changes are recorded as an info line in the contact's chat
+    // by the backend. They deliberately do not raise a toast or side alert.
 
     // Background/startup update discovery. The EventsOn shim passes
     // `event.data` straight to the callback, so the payload object arrives here
@@ -472,7 +465,6 @@ function App() {
       unsubDownloadDone()
       unsubDownloadError()
       unsubError()
-      unsubIdentity()
       unsubUpdateAvailable()
       unsubUpdateError()
       unsubHistory()

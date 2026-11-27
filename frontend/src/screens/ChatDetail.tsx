@@ -1294,6 +1294,20 @@ export function ChatDetail({ chatId, chatName, chatAvatar, onBack }: ChatDetailP
     return () => unsub()
   }, [chatId, updateMessage, updatePendingMessageToSent])
 
+  // Durable in-chat info lines (e.g. a contact's security-code change) arrive
+  // on their own event so they never increment unread counts or raise a toast.
+  useEffect(() => {
+    const unsub = EventsOn(
+      "wa:info_message",
+      (data: { chatId: string; message: Message }) => {
+        if (data?.chatId === chatId && data.message?.Info?.ID) {
+          updateMessage(data.chatId, data.message)
+        }
+      },
+    )
+    return () => unsub()
+  }, [chatId, updateMessage])
+
   // Subscribe to contact presence + listen for typing indicators
   useEffect(() => {
     if (!chatId || chatType !== "contact") return

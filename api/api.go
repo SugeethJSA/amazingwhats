@@ -1447,14 +1447,11 @@ func (a *Api) mainEventHandler(evt any) {
 			"media":    string(v.Media),
 		})
 	case *events.IdentityChange:
-		// AutoTrustIdentity stays enabled for WhatsApp-Web parity, but the
-		// change must never be silent: surface a dedicated, user-visible
-		// security warning (frontend shows it through the toast path).
+		// AutoTrustIdentity stays enabled for WhatsApp-Web parity. The change
+		// is recorded once in the contact's chat as an info line, like
+		// WhatsApp does; it must not raise a toast or side notification.
 		slog.Info(fmt.Sprintf("Identity change for %s (implicit=%t)", v.JID, v.Implicit), "source", "security")
-		a.app.Event.Emit("wa:identity_change", fmt.Sprintf(
-			"Security warning: identity verification failed for %s — their encryption key changed. If unexpected, verify this contact out of band.",
-			v.JID.String(),
-		))
+		a.startBackground(func() { a.handleIdentityChange(v) })
 	case *events.Presence:
 		a.app.Event.Emit("wa:presence", map[string]any{
 			"jid":         v.From.String(),
@@ -1558,6 +1555,48 @@ func (a *Api) contactNameForJID(jid types.JID) string {
 		}
 	}
 	return jid.User
+}
+
+// identityChangeSystemText builds the durable in-chat info line for a contact
+// security-code change. Only a display name is included - never a JID or raw
+// protocol value, which would leak identifiers into chat history.
+func identityChangeSystemText(name string) string {
+	if name == "" {
+		name = "a contact"
+	}
+	return "[system] Security code changed for " + name + ". Verify it with them directly."
+}
+
+// handleIdentityChange records a security-code change in the affected 1:1 chat.
+// The info line is the single, durable record of the event: no toast, side
+// notification or transient pop-up is raised for it.
+func (a *Api) handleIdentityChange(v *events.IdentityChange) {
+	if v == nil || a.waClient == nil || a.messageStore == nil {
+		return
+	}
+	chatJID := canonicalUserJID(a.ctx, a.waClient, v.JID)
+	chatJIDStr := chatJID.String()
+	ts := v.Timestamp.Unix()
+	if ts <= 0 {
+		ts = time.Now().Unix()
+	}
+	msgID := fmt.Sprintf("system_identity_%s_%d", chatJIDStr, time.Now().UnixNano())
+	text := identityChangeSystemText(a.contactNameForJID(v.JID))
+	if err := a.messageStore.InsertSystemMessage(chatJIDStr, msgID, text, ts); err != nil {
+		slog.Warn(fmt.Sprintf("Failed to store identity change message: %v", err), "source", "security")
+		return
+	}
+	// Push the stored row into an already-open chat via a dedicated event. It
+	// must NOT be wa:new_message: that event also increments unread counts and
+	// rewrites the chat-list preview in the main window. No wa:identity_change
+	// event either - the frontend no longer turns it into a toast.
+	if msg, err := a.messageStore.GetDecodedMessage(chatJIDStr, msgID); err == nil && msg != nil {
+		a.app.Event.Emit("wa:info_message", map[string]any{
+			"chatId":  chatJIDStr,
+			"message": msg,
+		})
+	}
+	a.app.Event.Emit("wa:chat_list_refresh")
 }
 
 // formatEphemeralTimer converts a disappearing-timer value in seconds to a
