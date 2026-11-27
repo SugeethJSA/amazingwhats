@@ -155,15 +155,36 @@ jobs:
             wails3 task darwin:create:app:bundle
           fi
 
-      - name: Package Windows binary with AGPL license (zip)
+      - name: Package Windows binary for updater (single-entry zip)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Wails' updater requires exactly one top-level file in an archive.
+          # A LICENSE alongside the exe makes updates fail with "archive must
+          # contain exactly one top-level entry". AGPL license ships in the
+          # separate licensed archive below and in the NSIS installer.
+          $zipName = '${{ matrix.updater_asset }}'
+          Compress-Archive -Path "bin/${{ matrix.binary }}" -DestinationPath "bin/$zipName"
+          Write-Host "Created bin/$zipName"
+
+          $probe = Join-Path $env:RUNNER_TEMP 'wa-updater-zip-probe'
+          if (Test-Path $probe) { Remove-Item -Recurse -Force $probe }
+          Expand-Archive -Path "bin/$zipName" -DestinationPath $probe
+          $entries = @(Get-ChildItem -Force $probe)
+          if ($entries.Count -ne 1 -or $entries[0].PSIsContainer) {
+            throw "Updater archive must contain exactly one top-level file, got: $($entries.Name -join ', ')"
+          }
+          Write-Host "Verified single top-level entry: $($entries[0].Name)"
+
+      - name: Package Windows binary with AGPL license (manual download)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           # D-AUD-009d: AGPL-3.0 requires the license text to ship with the binary.
+          # Distinct filename so it cannot collide with the updater archive.
           Copy-Item LICENSE bin/LICENSE
-          $zipName = '${{ matrix.updater_asset }}'
-          Compress-Archive -Path "bin/${{ matrix.binary }}", "bin/LICENSE" -DestinationPath "bin/$zipName"
-          Write-Host "Created bin/$zipName"
+          Compress-Archive -Path "bin/${{ matrix.binary }}", "bin/LICENSE" -DestinationPath "bin/amazingwhats-windows-licensed.zip"
+          Write-Host "Created bin/amazingwhats-windows-licensed.zip"
 
       # D-PKG-003: NSIS is only needed on Windows. Chocolatey ships on
       # windows-latest; make the NSIS directory explicit as a fallback in case
@@ -309,12 +330,21 @@ jobs:
           path: bin/${{ matrix.updater_asset }}
           if-no-files-found: error
 
+      - name: Upload Windows updater zip
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-portable${{ github.event_name == 'schedule' && '-nightly' || '' }}
+          path: bin/${{ matrix.updater_asset }}
+          if-no-files-found: error
+
       - name: Upload licensed Windows zip
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}-licensed${{ github.event_name == 'schedule' && '-nightly' || '' }}
-          path: bin/${{ matrix.updater_asset }}
+          path: bin/amazingwhats-windows-licensed.zip
+          if-no-files-found: error
 
   publish-nightly:
     if: github.event_name == 'schedule' && needs.prepare.outputs.should_build == 'true'
