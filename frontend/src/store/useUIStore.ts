@@ -89,6 +89,9 @@ interface UIStore {
   setScreen: (screen: AppScreen) => void
   sidebarView: SidebarView
   setSidebarView: (view: SidebarView) => void
+  /** Raw wa:status string, shared with the compact rail's connection dot. */
+  connectionStatus: string
+  setConnectionStatus: (status: string) => void
   /**
    * Category a settings navigation asked for before the lazy SettingsScreen
    * mounted. Consumers read it in their initial state, then clear it on mount.
@@ -146,6 +149,8 @@ export const useUIStore = create<UIStore>(set => ({
   setScreen: screen => set({ screen }),
   sidebarView: "chats",
   setSidebarView: sidebarView => set({ sidebarView }),
+  connectionStatus: "waiting",
+  setConnectionStatus: connectionStatus => set({ connectionStatus }),
   settingsCategoryIntent: null,
   setSettingsCategoryIntent: settingsCategoryIntent => set({ settingsCategoryIntent }),
   sidebarOpen: true,

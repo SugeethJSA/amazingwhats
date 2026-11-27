@@ -71,9 +71,12 @@ func run(assets fs.FS) cli.ActionFunc {
 					if window == nil {
 						return
 					}
-					window.UnMinimise()
-					window.Show()
-					window.Focus()
+					// Same main-thread requirement as the tray's Open action.
+					application.InvokeAsync(func() {
+						window.UnMinimise()
+						window.Show()
+						window.Focus()
+					})
 				},
 			},
 			// These flags only suppress v3's automatic quit when the last window

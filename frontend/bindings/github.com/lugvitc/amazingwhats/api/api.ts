@@ -741,12 +741,10 @@ export function RemoveGroupParticipants(groupJID: string, participantJIDs: strin
 }
 
 /**
- * RequestHistorySync asks the primary device for older messages from a chat.
- * whatsmeow answers with an *events.HistorySync of type ON_DEMAND, which the
- * existing event handler stores and reports through wa:history_progress.
- * 
- * An empty chatJID uses the most recently active chat. count is clamped to the
- * 1..50 range recommended by whatsmeow.
+ * RequestHistorySync asks the primary device for messages immediately BEFORE
+ * the oldest message we have in a chat. WA Web pages backwards from the oldest
+ * local anchor; using the newest message would only re-fetch what we already
+ * have. On empty chatJID the most recently active chat is used.
  */
 export function RequestHistorySync(chatJID: string, count: number): $CancellablePromise<void> {
     return $Call.ByID(993527546, chatJID, count);
@@ -1003,6 +1001,15 @@ export function SetProxy(proxyURL: string): $CancellablePromise<void> {
 
 export function SetPushName(name: string): $CancellablePromise<void> {
     return $Call.ByID(1474677669, name);
+}
+
+/**
+ * SetStartedHidden records that the main window was created hidden (tray-only
+ * start). ServiceStartup uses it to initialise focus state so notifications
+ * are not suppressed while no window is visible.
+ */
+export function SetStartedHidden(hidden: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3492500815, hidden);
 }
 
 export function SetStatusMessage(text: string): $CancellablePromise<void> {

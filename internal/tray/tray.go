@@ -37,13 +37,20 @@ func New(app *application.App, window *application.WebviewWindow, api *apiPkg.Ap
 	systray.SetTooltip("Lantern")
 
 	menu := app.NewMenu()
+	// Wails window operations must run on the main thread. A tray menu click
+	// arrives on a different goroutine; calling Show/Focus there can silently
+	// no-op, which made "Open" appear to do nothing after a hidden start.
 	menu.Add("Open").OnClick(func(_ *application.Context) {
-		window.UnMinimise()
-		window.Show()
-		window.Focus()
+		application.InvokeAsync(func() {
+			window.UnMinimise()
+			window.Show()
+			window.Focus()
+		})
 	})
 	menu.Add("Hide").OnClick(func(_ *application.Context) {
-		window.Hide()
+		application.InvokeAsync(func() {
+			window.Hide()
+		})
 	})
 
 	// The checkbox starts enabled (the store default). ServiceStartup loads

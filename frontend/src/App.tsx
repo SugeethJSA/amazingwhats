@@ -112,26 +112,6 @@ function NotificationToast({
   )
 }
 
-type ConnectionTone = "online" | "connecting" | "offline"
-
-interface ConnectionView {
-  label: string
-  tone: ConnectionTone
-}
-
-/** Maps raw backend status strings to a short, stable, human-readable cue. */
-function connectionView(status: string): ConnectionView {
-  if (status === "logged_in" || status === "success") {
-    return { label: "Connected", tone: "online" }
-  }
-  if (status === "reconnecting") {
-    return { label: "Reconnecting…", tone: "connecting" }
-  }
-  if (status === "disconnected" || status.startsWith("error")) {
-    return { label: "Disconnected", tone: "offline" }
-  }
-  return { label: "Connecting…", tone: "connecting" }
-}
 
 /**
  * Background history sync is driven by the backend, which emits
@@ -187,7 +167,6 @@ function App() {
   const loginStartedRef = useRef(false)
   const [status, setStatus] = useState<string>("waiting")
   const [historySync, setHistorySync] = useState<HistorySyncView>({ phase: "idle" })
-  const connection = connectionView(status)
 
   const theme = useAppSettingsStore(state => state.theme)
   const loaded = useAppSettingsStore(state => state.loaded)
@@ -298,6 +277,8 @@ function App() {
 
     const unsubStatus = EventsOn("wa:status", (status: string) => {
       setStatus(status)
+      // The compact rail shows the durable dot; keep it in sync here.
+      useUIStore.getState().setConnectionStatus(status)
       if (status === "logged_in" || status === "success") {
         useUIStore.getState().setScreen("chats")
         void initSelf()
@@ -542,7 +523,7 @@ function App() {
       {/* Global transient toast stack. Bottom-left keeps security/identity
           warnings over the chat-list column, away from the chat header and the
           composer (which live at the top and bottom of the conversation pane).
-          z-[45] sits above the persistent chrome (conn-status 40, chat-info
+          z-[45] sits above the persistent chrome (rail connection dot, chat-info
           30/40) but below every modal (z-50 and up) and the call overlay
           (z-[9999]). bottom-20 clears the connection pill and the single-pane
           composer. This mounts outside the screen switch, so the stack also
@@ -560,20 +541,6 @@ function App() {
           />
         ))}
       </div>
-
-      {/* Persistent, unobtrusive connection state for long-running sessions.
-          Toasts are the transient layer; this pill is always truthful. */}
-      {screen !== "login" && (
-        <div
-          className={`conn-status conn-status--${connection.tone}`}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          <span className="conn-status-dot" aria-hidden="true" />
-          <span>{connection.label}</span>
-        </div>
-      )}
 
       <main
         id="main-content"

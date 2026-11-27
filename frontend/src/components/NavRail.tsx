@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { useUIStore, type SidebarView } from "../store/useUIStore"
 import { useSelfAvatarStore } from "../store/useSelfAvatarStore"
+import { connectionView } from "../lib/connection"
 import { SettingsIcon } from "../assets/svgs/settings_icons"
 
 /* Inline rail glyphs — owned assets only, no Meta artwork. Decorative: every
@@ -75,6 +76,8 @@ export function NavRail() {
   const setSidebarView = useUIStore(state => state.setSidebarView)
   const setSettingsCategoryIntent = useUIStore(state => state.setSettingsCategoryIntent)
   const selfAvatar = useSelfAvatarStore(state => state.selfAvatar)
+  const connectionStatus = useUIStore(state => state.connectionStatus)
+  const connection = connectionView(connectionStatus)
 
   const items: RailItem[] = [
     { view: "chats", label: "Chats", icon: <ChatsIcon /> },
@@ -147,7 +150,34 @@ export function NavRail() {
         </div>
       </div>
 
-      {/* Profile opens Settings straight into Account — same event/shortcut
+      {/* Durable connection cue: a dot in the rail; hovering or focusing it
+          expands the full human-readable state next to the rail. */}
+      <div className="group relative flex w-full justify-center">
+        <button
+          type="button"
+          aria-label={`Connection: ${connection.label}. ${connection.detail}`}
+          title={connection.label}
+          className={`${ITEM_BASE} h-8 w-8`}
+        >
+          <span className={`conn-status--${connection.tone}`}>
+            <span className="conn-status-dot block" aria-hidden="true" />
+          </span>
+        </button>
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute bottom-1 left-full z-50 ml-2 hidden w-max max-w-[220px] rounded-lg border border-light-border bg-light-bg px-3 py-2 text-xs shadow-lg group-focus-within:block group-hover:block dark:border-dark-border dark:bg-dark-secondary"
+        >
+          <span className="block font-semibold text-light-text dark:text-dark-text">
+            {connection.label}
+          </span>
+          <span className="mt-0.5 block text-light-muted dark:text-dark-muted">
+            {connection.detail}
+          </span>
+        </div>
+      </div>
+
+      {/* Profile opens Settings straight into Account - same event/shortcut
           path App.tsx uses for Ctrl+Alt+P. */}
       <button
         type="button"
